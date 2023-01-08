@@ -1,0 +1,39 @@
+#!/bin/python3
+
+import sys
+import dbus
+from tps import device
+from tps import __init__
+
+# set block device to output of tails-installer e.g.: /org/freedesktop/UDisks2/block_devices/sdb1
+block_device = sys.argv[1]
+
+# get device number of new backup Tails USB
+bus = dbus.SystemBus()
+obj = bus.get_object('org.freedesktop.UDisks2',block_device)
+iface = dbus.Interface(obj, 'org.freedesktop.DBus.Properties')
+dev_num = iface.Get('org.freedesktop.UDisks2.Block',"DeviceNumber")
+
+# find persistence on device
+persistence = device.Partition.find(dev_num)
+
+# persistence device is always on partition 2
+block_device = block_device[:-1]+'2'
+obj = bus.get_object('org.freedesktop.UDisks2',block_device)
+
+if persistence:
+    # unlock persistence
+    iface = dbus.Interface(obj, 'org.freedesktop.UDisks2.Encrypted')
+    iface.Unlock(sys.argv[2],())
+else:
+    # create persistence on device
+    persistence = device.Partition.create(1,sys.argv[2],dev_num)
+
+# get cleartext device
+iface = dbus.Interface(obj, 'org.freedesktop.DBus.Properties')
+cleartext_device = iface.Get('org.freedesktop.UDisks2.Encrypted',"CleartextDevice")
+
+# mount cleartext device at '/media/amnesia/TailsData'
+obj = bus.get_object('org.freedesktop.UDisks2',cleartext_device)
+iface = dbus.Interface(obj, 'org.freedesktop.UDisks2.Filesystem')
+iface.Mount(())
