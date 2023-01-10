@@ -1,0 +1,403 @@
+#!/bin/bash
+
+# For security reviewing this use: https://explainshell.com/ for commands that are unclear.
+# It is recommended that, apart from autosave and lock files, programs should refrain from creating non dot files or directories in a home directory without user consent.
+# TODO comply with the above.
+readonly BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+word_count=5
+timeout=5
+
+choose() {
+	zenity --warning --text='These are all the ways you can screw up badly choosing your own password.\n\nDo you understand?' --ellipsize
+	until [ "$pass" ] && [ "$pass" == "$confirmed" ]; do 
+		pass=$(zenity --password --title='Enter your proposed passphrase')
+		zenity --info --title='Rough passphrase strength estimate' --text="$(keepassxc-cli estimate <<< "$pass")" --ellipsize && \
+		confirmed=$(zenity --password --title='Confirm your proposed passphrase') && \
+		passwd <<< "$pass
+$confirmed
+" || zenity --warning --text='The supplied passphrases do not match.' --ellipsize --title='Passphrases do not match'
+	done
+}
+
+diceware() {
+	pw_display $word_count 1
+	while read word_count; do
+		pw_display $word_count $((++attempt))
+	done < <(zenity --scale --title='Diceware word count' --text='Higher values offer more protection. Click OK to select the password displayed.' --value=5 --min-value=1 --step=1 --max-value=9 --print-partial)
+	clear
+	until passwd <<< "$pass
+$(zenity --password --title='Confirm your passphrase')
+"; do
+		zenity --warning --text="The supplied passphrases do not match.\n\nYour selected passphrase was:\n\n<b>$pass</b>\n\nTo help you remember the phrase, create a mental image or mnemonic using the words.\n\nIt might be a story, scenario, or sentence that can remind you of the words you chose, in order." --title='Passphrases do not match' --ellipsize
+	done
+}
+
+pw_display() {
+	entropy=$(bc -l <<< "scale=2;(l(6^(5*$1))-l($2))/l(2)")
+	(( $1 != last_wc )) && pass=$(keepassxc-cli diceware --words=$1)
+	last_wc=$1
+	clear -x
+	echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n"
+	echo -e "Password Quality: <coming soon>			Entropy: $entropy bit
+\n
+$pass\n\n\n
+
+To help you remember the phrase, create a mental image or mnemonic using the
+words, in order.
+
+It might be a story, scenario, or sentence that you will be able to remember
+and that can remind you of the particular words you chose, in order."
+}
+
+# Splits passphrase to create a fallback if forgotten
+# Parameters:	$1 = password to split
+#		$2 = threshold
+#		$3 = share quantity
+#		$4 = 'dice' for compressed diceware fallbacks
+# Output: shamir shares for user to write down
+fallback() {		#TODO try using ` ` syntax for command substitution to save writing
+    tmp_dir=$(mktemp --directory)
+    cd $tmp_dir
+    line1='sudo apt update
+sudo apt install libgfshare-bin
+'
+    if [ "$4" == 'dice' ]; then
+        line3='
+gfcombine *
+for w in $(bc<<<"ibase=16;obase=6^5;$(xxd -u -p s)")
+do awk NR==$w+1 /*/*/*/*/eff_large.wordlist
+done'
+        total=0
+        padding=$((word_count > 6 ? 30 : 20 ))	# 6 or less words is padded to 80-bit, more 120-bit
+        for word in $1; do
+            ((--word_count))
+            line_num=$(grep -Fxn $word /usr/share/keepassxc/wordlists/eff_large.wordlist | cut -d: -f1)
+            total=$(bc <<<"$total+$((line_num-1))*6^(5*"$word_count")")
+        done
+        hex=$(bc<<<"ibase=10;obase=16;$total")
+        while (( ${#hex} < padding )); do hex=0$hex; done
+	printf $hex | xxd -r -p >pw		# TODO the leading zeros can probably be handled by printf w/o needing the while loop
+    else
+        line3='
+gfcombine -o- *'
+        printf "$1" >pw
+        length=$(wc --chars < pw)
+
+        # Calculate the number of null bytes needed to pad the file
+        # to reach 10 bytes or a multiple of 5. Obfuscates length
+        padding=$((10 - length))
+        ((length > 10 )) && (( length % 5 != 0 )) && padding=$((5 - length % 5))
+
+        # Pad the file with null bytes
+        truncate --size +"$padding" pw
+    fi
+    fallback_settings $2 $3
+    for share in $(for share in s*; do echo $share; done | shuf --head-count=$loc); do
+	line2="base32 -d<<<$(base32 --wrap=0 $share)>$share"
+	
+		if ((backups_made <= $loc - $thresh)); then
+			text="$line2"
+		else
+			text="$line1$line2$line3"
+		fi
+		x=$((backups_made++))
+		((x==1)) && backup=' Backup'
+		((x==2)) && backup=' second Backup'
+		((x==3)) && backup=' third Backup'
+		((x>3)) && backup=" ${x}th Backup"
+		echo $text
+		printf "$text" > share$backups_made
+		until [ "$text" == "$response" ]; do
+			zenity --title="($backups_made/$3) Write this command to restore a forgotten passphrase" --text-info --filename=share$backups_made --width=600 --height=200 --font=monospace
+			response=$(zenity --title='Confirm what you wrote down' --text-info --editable --width=500 --height=200 --font=monospace)
+			if [ "$text" == "$response" ]; then
+				zenity --info --title=Confirmed --text="Fallback command $backups_made of $loc successfully confirmed\n\nStore this paper share in a secure place near your$backup Tails USB: either under lock and key or hidden where only you will find."
+			else
+				zenity zenity --warning --text="The supplied commands do not match." --ellipsize --timeout=3
+			fi
+		done
+	done
+}
+
+# Explains the passphrase fallback and what conditions will recover Bitcoin data, allows tweaking it or skipping it in a 'Change Something' dialog
+# Parameter $1 = threshold for secret sharing
+# Parameter $2 = number of backup locations
+
+fallback_settings() {
+    	loc=$2
+	thresh=$1
+	((loc > 2)) && plur=s || plur=''
+	((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
+	until $(zenity --question --icon-name=info --title='Passphrase fallback' --text="In case you forget your passphrase we will split it across <b>$loc locations</b>, with <b>any $thresh</b> of those able to restore it by typing the written commands in terminal.\n\nYou will need:\n\t\u2022 $loc pieces of paper about the size of an index card\n\t\u2022 Pen or pencil\n\t\u2022 Hard surface to write on to avoid leaving an imprint of the secret.\n\nOne piece of paper can stay near this Tails USB and the other$plur will go offsite 1 to each of your backup locations.\n\n-If <b>$(($thresh - 1))</b> piece$plurt of paper $plurtt stolen, nothing is learned about the passphrase\n\n-If <b>$thresh</b> or more are stolen, an attacker learns your passphrase and can decrypt your Tails USB stick or Backup Tails USB stick$plur.\n\n-If you lose <b>$(($loc-$thresh+1))</b> or more locations, you will <b>NOT</b> be able to recover a forgotten passphrase.\n\n-If you lose all <b>$loc</b> locations you will <b>NOT</b> be able to recover your Bitcoin data.\n\nDo you understand?" --cancel-label='Change Something'); do
+		choice="$(zenity --title='Change backup parameters' --question --extra-button='Skip This' --extra-button='Add Location' --extra-button='Increase Threshold' --switch --text='Add location makes it harder to lose your passphrase and data.\n\nThreshold is how many locations are needed to steal or recover your passphrase.\n\nWhat would you like to change?')"
+		[ "$choice" == 'Skip This' ] && zenity --warning --text='<big>If you skip the passphrase fallback you will <b>NOT</b> be able to access your Bitcoin data if you forget your passphrase.</big>' && return
+		[ "$choice" == 'Add Location' ] && loc=$(zenity --scale --text='How many total locations do you want to store data at?\n\nMinimum 2 is for low value data.\nUse 4 or more for high value data.' --min-value=$thresh --value=$((++loc)) --max-value=$((loc+thresh*2)) --title='Data locations')
+		[ "$choice" == 'Increase Threshold' ] && ((thresh<loc)) && thresh=$(zenity --scale --text='How many locations do you want needed to recover or steal your passphrase?' --min-value=2 --max-value=$loc --value=$(((thresh+loc+1)/2)) --title='Passphrase recovery threshold')
+		((loc > 2)) && plur=s || plur=''
+		((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
+	done
+	git clone https://github.com/BenWestgate/pygfssss
+	python3 pygfssss/gfsplit.py -n$thresh -m255 pw s
+}
+
+# Looks for good signatures
+# Parameter 1 = Good Signatures required
+# Parameter 2 = (optional) if specified run gpg --refresh-keys
+check_sigs() {
+    [ "$2" ] && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked
+    temp_file=$(mktemp)
+    sig_file=$(mktemp)
+    type=info
+    gpg --verify SHA256SUMS.asc SHA256SUMS &>$sig_file
+    good_sig=$(grep --count 'Good signature' $sig_file)
+    (( good_sig < $1 )) && type=warning && keys="$(grep 'using' $sig_file | awk '{print $NF}' | shuf)" && \
+    for key in $keys; do
+        search_key
+        (( good_sig >= $1 )) && { type=info; break;}
+    done
+    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize
+    (( good_sig < $1 )) && check_sigs $1
+    shred --remove $temp_file
+    shred --remove $sig_file
+    unset sig_file temp_file
+}
+
+# searches and displays key info
+# Parameter 1 = (optional) fall back keyserver
+search_key() {
+    echo ''>$temp_file
+    { gpg --search-keys $1 $2 $key >$temp_file; } & PID=$!
+    [ "$1" ] || echo "Searching $key on openpgp.org keyserver..."
+    until grep 'key' $temp_file >/dev/null; do
+        sleep 1; printf '.'
+        pidof gpg >/dev/null || break
+    done
+    pkill gpg >/dev/null
+    if grep '@' $temp_file >/dev/null; then 
+        sed -i 's/(1)/   /' $temp_file
+        fingerprint=$(grep -oP '(?<=0x).*(?=,)' $temp_file)
+        echo ''>>$temp_file
+        grep $fingerprint ./*keys >>$temp_file	&& \
+        zenity --question --title='Do you find this individual trustworthy?' --no-markup --text="$(<$temp_file)" --ellipsize && gpg $1 $2 --recv-key $key && ((++good_sig))
+    else
+        echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
+        search_key '--keyserver' 'keyserver.ubuntu.com'
+    fi
+}
+
+###################################################################################################
+# Begins Execution here
+###################################################################################################
+
+# message you should not store more than -n minus 1 shares with a Tails USB Stick or your Backup Tails USB stick.
+
+# download bitcoin core in background
+wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz,SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & dl=$!
+
+# download bitcoin checksums and signatures in background
+wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & sig_dl=$!
+
+# download trusted builder & developer PGP keys in background
+wget --continue --retry-connrefused --waitretry=10 https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/builder-keys/keys.txt & key_dl=$!
+
+# download chain parameters in background
+wget --continue --retry-connrefused --waitretry=10 https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/chainparams.cpp & get_size=$!
+
+# ask for admin if user set it up
+mkdir --parents $HOME/.local/bin
+echo '#!/bin/bash
+zenity --notification --text="Enter your administration password"
+zenity --password --title="Administration Password"' >$HOME/.local/bin/askpass
+export SUDO_ASKPASS=$HOME/.local/bin/askpass
+chmod +x $HOME/.local/bin/askpass
+replace-su-with-sudo && until { echo "$admin"; } | sudo -S passwd --delete amnesia; do
+	[ "$admin" ] && zenity --notification --text='Wrong Administration Password'
+	admin=$($HOME/.local/bin/askpass)
+done && admin+='\n'
+
+# play video about strong passwords
+#totem "$BCOT_DIR"/How_To_Make_A_Super-Secure_Password-Oc6NiSrlvVc.mp4
+
+# give passphrase advice
+zenity --title='Notes on Passphrases' --warning --text="A passphrase will be used to unlock the encryption of your Persistent Storage and all your Bitcoin data.\n\nThe user is urged to select a passphrase as strong as he or she feels comfortable with.\n\nTails recommends choosing a long passphrase made of <b>five</b> to <b>seven random words</b>.\nBitcoin Core advises using a passphrase of <b>10 or more random characters</b>, or <b>eight or more words</b>.\n\nMathematics can't be bribed. When suddenly out of the blue, your brain refuses to cooperate, having any two of your paper backups can construct a fallback." --width=640
+
+# ask whether user will choose or be given a password
+zenity --question --title='Choose passphrase type' --default-cancel --cancel-label='Random Diceware' --ok-label='Choose my own' --text='Choose whether to be given a secure memorable password or provide your own.\n\nRandom Diceware passphrases are highly recommended.' --ellipsize && choose || { diceware; pw_type='dice'; }
+
+# begin the spaced repetition trainer
+while true; do
+    sleep $((timeout *= 2))
+    tails-screen-locker &>/dev/null
+done &
+
+# give password handling tips
+zenity --info --text="You will be prompted periodically for the password throughout the remainder of this tutorial. If you forget it before a complete backup is created, you will have to start over.\n\nPractice entering this password regularly, daily at first and then at least once a week.\nRepetition will help you commit the password to memory.\n\nYour passphrase should only be used for this USB stick, and especially should not be used for any online account. If you reuse a passphrase and it ends up being leaked, it can be used to try to access your Bitcoin data or funds." --width=600 --title='Tips for the new passphrase'
+
+# setup paper fallback
+fallback $pass 2 2 $pw_type
+
+
+
+
+
+
+
+# setup Tails persistent storage
+tps-frontend-wrapper &
+sleep 1
+# loop until TailsData is mounted
+until mount | grep '/live/persistence/TailsData_unlocked'; do
+	# restart tps if closed it without creating persistence.
+	grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must click Continue to create a Persistent Storage';  }
+	sleep 1
+done
+
+# if we have admin turn the needed features on automatically
+[ "$admin" ] && for feature in PersistentDirectory WelcomeScreen GnuPG Dotfiles; do
+	printf $admin | sudo -S /usr/local/lib/tpscli ensure-is-active $feature	
+done
+
+# loop until needed Persistent features are on
+until /usr/local/lib/tpscli is-active PersistentDirectory && \
+      /usr/local/lib/tpscli is-active WelcomeScreen && \
+      /usr/local/lib/tpscli is-active GnuPG && \
+      /usr/local/lib/tpscli is-active Dotfiles; do
+	{ /usr/local/lib/tpscli is-active PersistentDirectory || { zenity --notification --text='Persistent Folder must be turned on.' --timeout=6; false; }; } && \
+	{ /usr/local/lib/tpscli is-active WelcomeScreen || { zenity --notification --text='Welcome Screen must be turned on.' --timeout=6; false; }; } && \
+	{ /usr/local/lib/tpscli is-active NetworkConnections || { ((i++ < 3)) && zenity --notification --text='Turn on Network Connections to remember your Wi-Fi' --timeout=5; true; }; } && \
+	{ /usr/local/lib/tpscli is-active GnuPG || { zenity --notification --text='GnuPG must be turned on.' --timeout=6; false; }; } && \
+	{ /usr/local/lib/tpscli is-active Dotfiles || { zenity --notification --text='Dotfiles must be turned on.' --timeout=6; false; }; }
+	# restart tps if closed before configured
+	grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must turn on Persistent features to continue';  }
+done
+pkill python3	# closes the Persistent Storage window
+
+# bring signature download to foreground to display progress and wait for it to complete
+printf '\033]2;Downloading Bitcoin Core signatures...\a'
+ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+
+# bring key download to foreground to display progress and wait for it to complete
+printf '\033]2;Downloading Devloper and Builder keys...\a'
+ps -p $key_dl >/dev/null && fg %$(jobs -l | grep $key_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+
+# delete shitcoiners and compromised keys
+grep -v "Akira Takizawa \| Gavin Andresen \| Willy Ko\| Matt Corallo\| Luke Dashjr" keys.txt >keys
+
+# move keys to latest bitcoin-core directory
+mv keys* $(ls -dt bitcoin-core* | head -1)
+
+# switch into most recent bitcoin-core directory
+cd "$(ls -dt bitcoin-core* | head -1)"
+
+# verify signatures in GUI
+printf '\033]2;Verify Bitcoin Core download signatures\a'
+check_sigs 2 # TODO refresh signatures if the user is checking a new version of bitcoin core.
+
+# bring chain params download to foreground then set assumed chainstate size
+ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size chainparams.cpp | sed 's/[^0-9]*//g')
+
+# display information about pruning and initial block download while user waits for download
+prune_MiB=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ( $(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1) ) / 1024 - ( 4 + assumed_chain_state_size ) * 1024 : 1908 ))
+prune_GB=$(( (prune_MiB+1)*2**20/10**9))
+backup_days=$((prune_MiB/309))
+{ until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$BAILS_DIR/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically. You will not have much to do for the next several hours or days. Keep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core (<b>Ctrl+Q</b>) and <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take the USB stick with you or store in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about Tails read the documentation. Another excellent use of time would be browsing the "security in-a-box" website to improve your physical and digital security.' --extra-button='Tails Documentation' --extra-button='Security Tools & Tactics' --extra-button='Continue' --switch --width=552);
+	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html &
+	[ "$docs" == 'Security Tools & Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/ & done &
+	zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=/usr/local/share/pixmaps/bitcoin128.png --info --text="<b>Setup</b>
+---------------------
+Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a few hundred gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552; } &>/dev/null &
+
+# bring bitcoin core download to foreground to display progress and wait for it to complete
+printf '\033]2;Downloading Bitcoin Core...\a'
+ps -p $dl >/dev/null && fg %$(jobs -l | grep $dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+rm -R download ./*.tmp
+
+
+# verify download integrity checksum
+sha256sum --ignore-missing --check SHA256SUMS || {
+    zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nTry downloading Bitcoin Core again by running this script." --ellipsize &
+    rm --verbose ./*
+    sleep 5
+    exit 1
+}
+
+# kill Bitcoin Core if it was already running, wait for it to shutdown safely
+printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
+while test -f $HOME/.bitcoin/bitcoind.pid; do
+    kill "$(<$HOME/.bitcoin/bitcoind.pid)"
+    pkill bitcoin*
+    sleep 1
+done
+
+# extract bitcoin*.tar.* to Bails directory
+printf '\033]2;Extracting Bitcoin Core tarball...\a'
+tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$BAILS_DIR
+
+# display README.md from extracted Bitcoin archive
+zenity --title=README.md --text-info --filename=bitcoin-*/README.md --width=560 --height=580 &
+printf '\033]2;Installing Bitcoin Core...\a'
+# create mime association file
+sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >share/applications/mimeinfo.cache
+
+# create application shortcuts
+echo '[Desktop Entry]
+Version=1.0
+Name=Bitcoin Core
+Comment=Connect to the Bitcoin P2P Network
+Comment[de]=Verbinde mit dem Bitcoin peer-to-peer Netzwerk
+Comment[fr]=Bitcoin, monnaie virtuelle cryptographique pair \u00e0 pair
+Comment[tr]=Bitcoin, e\u015ften e\u015fe kriptografik sanal para birimi
+Exec=/bin/bash -c "/usr/local/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))" %u
+Terminal=false
+Type=Application
+Icon=/usr/local/share/pixmaps/bitcoin128.png
+MimeType=x-scheme-handler/bitcoin;
+Categories=Office;Finance;P2P;Network;Qt;
+StartupWMClass=Bitcoin-qt' >share/applications/bitcoin-qt.desktop
+
+# create autostart desktop file
+echo '[Desktop Entry]
+Type=Application
+Name=Bitcoin
+Exec=/bin/bash -c "/usr/local/bin/bitcoin-qt -min -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))"
+Terminal=false
+Hidden=false' >autostart/bitcoin.desktop
+
+# create config to persist gui settings
+echo "[General]
+bPrune=true
+fUseProxy=true
+strDataDir=/home/amnesia/.bitcoin
+strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >Bitcoin/Bitcoin-Qt.conf
+
+# install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
+if [ "$admin" ]; then
+    echo "$admin" | sudo -S mv $BAILS_DIR/{share,bin,lib,include} '/usr/local'
+    echo "$admin" | sudo -S mv {mimeinfo.cache,bitcoin-qt.desktop} /usr/local/share/applications
+    echo "$admin" | sudo -S mv bitcoin.desktop /etc/xdg/autostart
+    mv Bitcoin-Qt.conf $HOME/.config/Bitcoin
+else
+    dotfiles=/live/persistence/TailsData_unlocked/dotfiles/
+    mkdir $dotfiles/{.config,.local}
+    mv {bitcoin-*/*,$BAILS_DIR/{share,bin,lib,include}} "$dotfiles/.local"
+    mv {mimeinfo.cache,bitcoin-qt.desktop} $dotfiles/.local/share/applications
+    mv {autostart,Bitcoin} $dotfiles/.config
+    ln $dotfiles /live/persistence/TailsData_unlocked/Persistent/.bitcoin
+    ln --symbolic $HOME/debug.log $HOME/.bitcoin/debug.log # moves debug log to amnesia so it doesn't persist restarts
+    ln --symbolic /media/$USER/ $HOME/.bitcoin/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+    
+fi
+
+# return to original directory
+cd -
+
+# make backup Tails
+for ((i=1; i<loc;i++)); do
+    zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
+    $HOME/.local/bin/tails-backup	# check if this goes on path automatically otherwise add it.  # if it doesn't, use ~/bin
+done
+
+
+# TODO use du -b $HOME/.bitcoin/wallets to detect when new descriptor wallets have been added, force a backup to be made each time it increments by the size of a blank descriptor wallet, consider using gnome3-pinentry to prevent the user from doing anything else without dismissing it.
+# TODO 21012 bytes is the size of a new blank descriptor wallet with a 1 character name, so when the data in wallets grows (min to max since last backup) by more than that a backup will be forced.
