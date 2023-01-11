@@ -37,8 +37,8 @@ pw_display() {
 	(( $1 != last_wc )) && pass=$(keepassxc-cli diceware --words=$1)
 	last_wc=$1
 	clear -x
-	echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n"
-	echo -e "Password Quality: <coming soon>			Entropy: $entropy bit
+	echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+	echo -n -e "Password Quality: <coming soon>			Entropy: $entropy bit
 \n
 $pass\n\n\n
 
@@ -97,11 +97,14 @@ gfcombine -o- *'
     # allows tweaking it or skipping it in a 'Change Something' dialog
     ((loc > 2)) && plur=s || plur=''
     ((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
-    until $(zenity --question --icon-name=info --title='Passphrase fallback' --text="In case you forget your passphrase we will split it across <b>$loc locations</b>, with <b>any $thresh</b> of those able to restore it by typing the written commands in terminal.\n\nYou will need:\n\t• $loc pieces of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret.\n\nOne piece of paper can stay near this Tails USB and the other$plur will go offsite 1 to each of your backup locations.\n\n-If <b>$(($thresh - 1))</b> piece$plurt of paper $plurtt stolen, nothing is learned about the passphrase\n\n-If <b>$thresh</b> or more are stolen, an attacker learns your passphrase and can decrypt your Tails USB stick or Backup Tails USB stick$plur.\n\n-If you lose <b>$(($loc-$thresh+1))</b> or more locations, you will <b>NOT</b> be able to recover a forgotten passphrase.\n\n-If you lose all <b>$loc</b> locations you will <b>NOT</b> be able to recover your Bitcoin data.\n\nDo you understand?" --cancel-label='Change Something' --ellipsize); do
-        choice="$(zenity --title='Change backup parameters' --question --extra-button='Skip This' --extra-button='Add Location' --extra-button='Increase Threshold' --switch --text='Add location makes it harder to lose your passphrase and data.\n\nThreshold is how many locations are needed to steal or recover your passphrase.\n\nWhat would you like to change?' --ellipsize)"
-        [ "$choice" == 'Skip This' ] && zenity --warning --text='<big>If you skip the passphrase fallback you will <b>NOT</b> be able to access your Bitcoin data if you forget your passphrase.</big>' && return
+    until $(zenity --question --icon-name=info --title='Passphrase fallback' --text="In case you forget your passphrase we will split it across <b>$loc locations</b>, with <b>any $thresh</b> of those able to restore it by typing the written commands in terminal.\n\nYou will need:\n\t• $loc pieces of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret.\n\nOne piece of paper can stay near this Tails USB and the other$plur will go offsite 1 to each of your backup locations.\n\n-If <b>$((thresh - 1))</b> piece$plurt of paper $plurtt stolen, nothing is learned about the passphrase\n\n-If <b>$thresh</b> or more are stolen, an attacker learns your passphrase and can decrypt your Tails USB stick or Backup Tails USB stick$plur.\n\n-If you lose <b>$((loc-thresh+1))</b> or more locations, you will <b>NOT</b> be able to recover a forgotten passphrase.\n\n-If you lose all <b>$loc</b> locations you will <b>NOT</b> be able to recover your Bitcoin data.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
+        choice="$(zenity --title='Change backup parameters' --question --extra-button='Add Location' --extra-button='Increase Threshold' --extra-button='Skip This' --switch --text='Add location makes it harder to lose your passphrase and data.\n\nThreshold is how many locations are needed to steal or recover your passphrase.\n\nWhat would you like to change?' --ellipsize)"
+        [ "$choice" == 'Skip This' ] && zenity --warning --text='<big>If you skip the passphrase fallback you will <b>NOT</b> be able to access your Bitcoin data if you forget your passphrase.</big>' --ellipsize && return
         [ "$choice" == 'Add Location' ] && loc=$(zenity --scale --text='How many total locations do you want to store data at?\n\nMinimum 2 is for low value data.\nUse 4 or more for high value data.' --min-value=$thresh --value=$((loc+=2)) --max-value=$((loc+thresh*2-1)) --title='Data locations')
         [ "$choice" == 'Increase Threshold' ] && ((thresh<loc)) && thresh=$(zenity --scale --text='How many locations do you want needed to recover or steal your passphrase?\n\nMinimum 2 is for low value data.\nUse 3 or more for high value data.' --min-value=2 --max-value=$loc --value=$(((thresh+loc+1)/2)) --title='Passphrase recovery threshold')
+        # reset the variables to sensible values if exited
+        [ "$loc" ] || loc=$((thresh*2-2))
+        [ "$thresh" ] || thresh=$((loc/2+1))
         ((loc > 2)) && plur=s || plur=''
         ((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
     done
@@ -205,7 +208,7 @@ zenity --notification --text="Enter your administration password"
 zenity --password --title="Administration Password"' >$HOME/.local/bin/askpass
 export SUDO_ASKPASS=$HOME/.local/bin/askpass
 chmod +x $HOME/.local/bin/askpass
-replace-su-with-sudo && until { echo "$admin"; } | sudo -S passwd --delete amnesia; do
+replace-su-with-sudo && until { echo "$admin"; } | sudo -S passwd --delete amnesia &>/dev/null; do
 	[ "$admin" ] && zenity --notification --text='Wrong Administration Password'
 	admin=$($HOME/.local/bin/askpass)
 done && admin+='\n'
