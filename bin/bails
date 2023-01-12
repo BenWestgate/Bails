@@ -134,6 +134,8 @@ gfcombine -o- *'
             fi
         done
     done
+    mv pygfssss $BAILS_DIR/lib/python3/site-packages
+    cd -
 }
 
 # Looks for good signatures
