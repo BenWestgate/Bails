@@ -7,8 +7,7 @@
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
 # It is recommended that, apart from autosave and lock files, programs should refrain from creating non dot files or directories in a home directory without user consent.
 # TODO comply with the above.
-readonly BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-read -p $BAILS_DIR
+
 word_count=$(($1+$2+1))	# 5 for lo value, 7 for high value
 timeout=5
 
@@ -43,9 +42,9 @@ pw_display() {
 	last_wc=$1
 	clear -x
 	echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-	echo -n -e "Password Quality: <coming soon>			Entropy: $entropy bit
+	echo -e "Password Quality: <coming soon>			Entropy: $entropy bit
 \n
-$pass\n\n\n
+$pass\n\n
 
 To help you remember the phrase, create a mental image or mnemonic using the
 words, in order.
@@ -113,11 +112,10 @@ gfcombine -o- *'
         ((loc > 2)) && plur=s || plur=''
         ((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
     done
-
-    python3 pygfssss/gfsplit.py -n$thresh -m255 pw s
-    for share in $(for share in s*; do echo $share; done | shuf --head-count=$loc); do
+    python3 $BAILS_DIR/lib/python3/site-packages/pygfssss/gfsplit.py -n$thresh -m$loc pw s
+    for share in s*; do
         line2="base32 -d<<<$(base32 --wrap=0 $share)>$share"
-        if ((backups_made <= $loc - $thresh)); then
+        if ((backups_made <= loc - thresh)); then
             text="$line2"
         else
             text="$line1$line2$line3"
@@ -127,7 +125,6 @@ gfcombine -o- *'
         ((x==2)) && backup=' second Backup'
         ((x==3)) && backup=' third Backup'
         ((x>3)) && backup=" ${x}th Backup"
-        echo $text
         printf "$text" > share$backups_made
         until [ "$text" == "$response" ]; do
             zenity --title="Write this command to restore a forgotten passphrase ($backups_made/$loc)" --text-info --filename=share$backups_made --width=600 --height=216 --font=monospace
@@ -139,8 +136,6 @@ gfcombine -o- *'
             fi
         done
     done
-
-    cd -
 }
 
 # Looks for good signatures
@@ -189,6 +184,8 @@ search_key() {
 # Begins Execution here
 ###################################################################################################
 
+cd $BAILS_DIR
+
 # message you should not store more than -n minus 1 shares with a Tails USB Stick or your Backup Tails USB stick.
 
 # TODO use an until sha256sums --check SHA256SUMS; do wget *tar.gz,SHA256SUMS; done*
@@ -196,9 +193,8 @@ search_key() {
 # download bitcoin core in background
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & dl=$!
 
-
-    git clone https://github.com/BenWestgate/pygfssss
-    mv pygfssss $BAILS_DIR/lib/python3/site-packages
+git clone https://github.com/BenWestgate/pygfssss
+mv pygfssss lib/python3/site-packages
 
 # download bitcoin checksums and signatures in background
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & sig_dl=$!
@@ -241,8 +237,12 @@ zenity --info --text="You will be prompted periodically for the password through
 
 # setup paper fallback
 fallback $pass $1 $2 $pw_type
+cd -
+shred --remove $tmp_dir/*
+shred --remove $tmp_dir
+unset $tmp_dir
 
-# FIXME if persistence is already Unlocked (use command from tails-backup to check) and correct features are enabled, skip over this.
+# TODO FIXME if persistence is already Unlocked (use command from tails-backup to check) and correct features are enabled, skip over this.
 
 # setup Tails persistent storage
 tps-frontend-wrapper &
