@@ -1,0 +1,5 @@
+#!/bin/bash
+# For high value Bitcoin data, will create 3 backup locations with
+# 3 locations needed to restore a forgotten passphrase
+# and 3 Good signatures to verify the download.
+bin/bails 2 4 3
