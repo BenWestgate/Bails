@@ -62,6 +62,7 @@ and that can remind you of the particular words you chose, in order."
 fallback() {		#TODO try using ` ` syntax for command substitution to save writing
     thresh=$2
     loc=$3
+    return	# added for testing to remove passphrase stuff
     tmp_dir=$(mktemp --directory)
     cd $tmp_dir
     line1='sudo apt update
@@ -112,6 +113,9 @@ gfcombine -o- *'
         ((loc > 2)) && plur=s || plur=''
         ((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
     done
+    # bring pygfssss download to foreground to wait if it's not done
+    ps -p $gfshare_dl >/dev/null && fg %$(jobs -l | grep $gfshare_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+    # split the passphrase using shamir secret sharing
     python3 $BAILS_DIR/lib/python3/site-packages/pygfssss/gfsplit.py -n$thresh -m$loc pw s
     for share in s*; do
         line2="base32 -d<<<$(base32 --wrap=0 $share)>$share"
@@ -193,8 +197,7 @@ cd $BAILS_DIR
 # download bitcoin core in background
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & dl=$!
 
-git clone https://github.com/BenWestgate/pygfssss
-mv pygfssss lib/python3/site-packages
+{ git clone https://github.com/BenWestgate/pygfssss; mv pygfssss lib/python3/site-packages; } & gfshare_dl=$!
 
 # download bitcoin checksums and signatures in background
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & sig_dl=$!
@@ -218,22 +221,22 @@ done && admin+='\n'
 #totem "$BCOT_DIR"/How_To_Make_A_Super-Secure_Password-Oc6NiSrlvVc.mp4
 
 # give passphrase advice
-zenity --title='Notes on Passphrases' --warning --text="A passphrase will be used to unlock the encryption of your Persistent Storage and all your Bitcoin data.\n\nThe user is urged to select a passphrase as strong as he or she feels comfortable with.\n\nTails recommends choosing a long passphrase made of <b>five</b> to <b>seven random words</b>.\nBitcoin Core advises using a passphrase of <b>10 or more random characters</b>, or <b>eight or more words</b>.\n\nMathematics can't be bribed. When suddenly out of the blue, your brain refuses to cooperate, having any two of your paper backups can construct a fallback." --width=640
+#zenity --title='Notes on Passphrases' --warning --text="A passphrase will be used to unlock the encryption of your Persistent Storage and all your Bitcoin data.\n\nThe user is urged to select a passphrase as strong as he or she feels comfortable with.\n\nTails recommends choosing a long passphrase made of <b>five</b> to <b>seven random words</b>.\nBitcoin Core advises using a passphrase of <b>10 or more random characters</b>, or <b>eight or more words</b>.\n\nMathematics can't be bribed. When suddenly out of the blue, your brain refuses to cooperate, having any two of your paper backups can construct a fallback." --width=640
 
 # ask whether user will choose or be given a password
-zenity --question --title='Choose passphrase type' --default-cancel --cancel-label='Random Diceware' --ok-label='Choose my own' --text='Choose whether to be given a secure memorable password or provide your own.\n\nRandom Diceware passphrases are highly recommended.' --ellipsize && choose || { diceware; pw_type='dice'; }
+#zenity --question --title='Choose passphrase type' --default-cancel --cancel-label='Random Diceware' --ok-label='Choose my own' --text='Choose whether to be given a secure memorable password or provide your own.\n\nRandom Diceware passphrases are highly recommended.' --ellipsize && choose || { diceware; pw_type='dice'; }
 
 # update $admin variable to new passphrase
-[ "$admin" ] && admin="$pass"
+#[ "$admin" ] && admin="$pass"
 
 # begin the spaced repetition trainer
-while true; do
-    sleep $((timeout *= 2))
-    tails-screen-locker &>/dev/null
-done &
+#while true; do
+#    sleep $((timeout *= 2))
+#    tails-screen-locker &>/dev/null
+#done &
 
 # give password handling tips
-zenity --info --text="You will be prompted periodically for the password throughout the remainder of this tutorial. If you forget it before a complete backup is created, you will have to start over.\n\nPractice entering this password regularly, daily at first and then at least once a week.\nRepetition will help you commit the password to memory.\n\nYour passphrase should only be used for your Bails USB sticks, and especially should not be used for any online account. If you reuse a passphrase and it ends up being leaked, it can be used to try to access your Bitcoin data or funds." --width=600 --title='Tips for the new passphrase'
+#zenity --info --text="You will be prompted periodically for the password throughout the remainder of this tutorial. If you forget it before a complete backup is created, you will have to start over.\n\nPractice entering this password regularly, daily at first and then at least once a week.\nRepetition will help you commit the password to memory.\n\nYour passphrase should only be used for your Bails USB sticks, and especially should not be used for any online account. If you reuse a passphrase and it ends up being leaked, it can be used to try to access your Bitcoin data or funds." --width=600 --title='Tips for the new passphrase'
 
 # setup paper fallback
 fallback $pass $1 $2 $pw_type
@@ -255,12 +258,14 @@ until mount | grep '/live/persistence/TailsData_unlocked'; do
 done
 
 # if we have admin turn the needed features on automatically
-[ "$admin" ] && for feature in PersistentDirectory WelcomeScreen GnuPG Dotfiles; do
-	printf $admin | sudo -S /usr/local/lib/tpscli ensure-is-active $feature	
-done
-
-# loop until needed Persistent features are on
-until /usr/local/lib/tpscli is-active PersistentDirectory && \
+if [ "$admin" ]; then
+    for feature in PersistentDirectory WelcomeScreen GnuPG; do
+	printf "$admin" | sudo -S /usr/local/lib/tpscli ensure-is-active $feature	
+    done
+    # TODO add fields here needed for autostart, .config/Bitcoin and .bitcoin to persistence.conf, then mount them.
+# otherwise loop until needed Persistent features are on
+else
+    until /usr/local/lib/tpscli is-active PersistentDirectory && \
       /usr/local/lib/tpscli is-active WelcomeScreen && \
       /usr/local/lib/tpscli is-active GnuPG && \
       /usr/local/lib/tpscli is-active Dotfiles; do
@@ -287,13 +292,16 @@ check_sigs $3 # TODO refresh signatures if the user is checking a new version of
 
 # bring chain params download to foreground then set assumed chainstate size
 ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
-assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $BAILS_DIR/chainparams.cpp | sed 's/[^0-9]*//g')
 
 # display information about pruning and initial block download while user waits for download
-prune_MiB=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ( $(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1) ) / 1024 - ( 4 + assumed_chain_state_size ) * 1024 : 1908 ))
+#prune_MiB=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ( $(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1) ) / 1024 - ( 4 + assumed_chain_state_size ) * 1024 : 1908 ))
+available_storage=$(df --output=avail /live/persistence/TailsData_unlocked | tail -1)
+prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1908 ))
 prune_GB=$(( (prune_MiB+1)*2**20/10**9))
 backup_days=$((prune_MiB/309))
-# TODO Move to to After initial backup creation.
+
+# TODO Move to After initial backup creation.
 { until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$BAILS_DIR/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically. You will not have much to do for the next several hours or days. Keep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core (<b>Ctrl+Q</b>) and <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about Tails read the documentation. Another excellent use of time would be browsing the "security in-a-box" website to improve your physical and digital security.' --extra-button='Tails Documentation' --extra-button='Security Tools & Tactics' --extra-button='Continue' --switch --width=552);
 	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html &
 	[ "$docs" == 'Security Tools & Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/ & done &
@@ -306,7 +314,7 @@ printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $dl >/dev/null && fg %$(jobs -l | grep $dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 rm -R download ./*.tmp
 
-# verify download integrity checksum
+# verify download integrity checksum		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 sha256sum --ignore-missing --check SHA256SUMS || {
     zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nTry downloading Bitcoin Core again by running this script." --ellipsize &
     rm --verbose ./*
@@ -329,6 +337,8 @@ tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --directory=$BAILS_DIR
 # display README.md from extracted Bitcoin archive	FIXME path is broken
 zenity --title=README.md --text-info --filename=$BAILS_DIR/bitcoin-*/README.md --width=560 --height=580 &
 printf '\033]2;Installing Bitcoin Core...\a'
+cd $BAILS_DIR
+
 # create mime association file
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >share/applications/mimeinfo.cache
 
