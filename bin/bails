@@ -188,7 +188,7 @@ search_key() {
 # Begins Execution here
 ###################################################################################################
 
-cd $BAILS_DIR
+cd $HOME/Downloads
 
 # message you should not store more than -n minus 1 shares with a Tails USB Stick or your Backup Tails USB stick.
 
@@ -240,10 +240,10 @@ done && admin+='\n'
 
 # setup paper fallback
 fallback $pass $1 $2 $pw_type
-cd -
-shred --remove $tmp_dir/*
-shred --remove $tmp_dir
-unset $tmp_dir
+#cd -
+#shred --remove $tmp_dir/*
+#shred --remove $tmp_dir
+#unset $tmp_dir
 
 # TODO FIXME if persistence is already Unlocked (use command from tails-backup to check) and correct features are enabled, skip over this.
 
@@ -276,7 +276,8 @@ else
 	{ /usr/local/lib/tpscli is-active Dotfiles || { zenity --notification --text='Dotfiles must be turned on.' --timeout=6; false; }; }
 	# restart tps if closed before configured
 	grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must turn on Persistent features to continue';  }
-done
+    done
+fi
 pkill python3	# closes the Persistent Storage window
 
 # bring signature download to foreground to display progress and wait for it to complete
@@ -329,7 +330,7 @@ while test -f $HOME/.bitcoin/bitcoind.pid; do
     pkill bitcoin*
     sleep 1
 done
-
+zenity --info --text="about to extract bitcoin.\n\nI am in $PWD"
 # extract bitcoin*.tar.* to Bails directory
 printf '\033]2;Extracting Bitcoin Core tarball...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --directory=$BAILS_DIR
