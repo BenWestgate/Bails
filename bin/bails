@@ -188,6 +188,10 @@ search_key() {
 # Begins Execution here
 ###################################################################################################
 
+# enables job control so background downloads can be foregrounded to show progress while if user waits
+set -m 
+
+# set Download directory
 cd $HOME/Downloads
 
 # message you should not store more than -n minus 1 shares with a Tails USB Stick or your Backup Tails USB stick.
@@ -293,7 +297,7 @@ check_sigs $3 # TODO refresh signatures if the user is checking a new version of
 
 # bring chain params download to foreground then set assumed chainstate size
 ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
-assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $BAILS_DIR/chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $HOME/Downloads/chainparams.cpp | sed 's/[^0-9]*//g')
 
 # display information about pruning and initial block download while user waits for download
 #prune_MiB=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ( $(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1) ) / 1024 - ( 4 + assumed_chain_state_size ) * 1024 : 1908 ))
@@ -313,10 +317,10 @@ Bitcoin Core is the original Bitcoin client and it builds the backbone of the ne
 # bring bitcoin core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $dl >/dev/null && fg %$(jobs -l | grep $dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
-rm -R download ./*.tmp
+rm -R $HOME/Downloads/{download,*.tmp}
 
 # verify download integrity checksum		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
-sha256sum --ignore-missing --check SHA256SUMS || {
+sha256sum --ignore-missing --check SHA256SUMS && zenity --notification "Bitcoin Core download successfully verified." || {
     zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nTry downloading Bitcoin Core again by running this script." --ellipsize &
     rm --verbose ./*
     sleep 5
@@ -330,14 +334,24 @@ while test -f $HOME/.bitcoin/bitcoind.pid; do
     pkill bitcoin*
     sleep 1
 done
-zenity --info --text="about to extract bitcoin.\n\nI am in $PWD"
+
 # extract bitcoin*.tar.* to Bails directory
 printf '\033]2;Extracting Bitcoin Core tarball...\a'
-tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --directory=$BAILS_DIR
+mkdir $BAILS_DIR/bitcoin
+tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1
 
-# display README.md from extracted Bitcoin archive	FIXME path is broken
-zenity --title=README.md --text-info --filename=$BAILS_DIR/bitcoin-*/README.md --width=560 --height=580 &
+# display README.md from extracted Bitcoin archive
+zenity --title=README.md --text-info --filename=README.md --width=560 --height=580 &
 printf '\033]2;Installing Bitcoin Core...\a'
+
+# copy files to data directory
+mkdir $HOME/Peristent/.bitcoin
+mv {bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
+
+# merge folders to Bails directory
+rsync -a --exclude='*log*' * $BAILS_DIR		#FIXME after testing use: rsync -a --remove-source-files --exclude='*log*' * $BAILS_DIR
+
+# open Bails directory
 cd $BAILS_DIR
 
 # create mime association file
@@ -376,16 +390,14 @@ strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.oni
 
 # install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
 if [ "$admin" ]; then
-    echo "$admin" | sudo -S mv $BAILS_DIR/bitcoin-*/* /usr/local
-    echo "$admin" | sudo -S mv $BAILS_DIR/{share,bin,lib,include} /usr/local
+    echo "$admin" | sudo -S mv --backup {bin,include,lib,share} /usr/local
     echo "$admin" | sudo -S mv {mimeinfo.cache,bitcoin-qt.desktop} /usr/local/share/applications
-    echo "$admin" | sudo -S mv bitcoin.desktop /etc/xdg/autostart
-    mv Bitcoin-Qt.conf $HOME/.config/Bitcoin
+    echo "$admin" | sudo -S mv autostart/bitcoin.desktop /etc/xdg/autostart
+    mv Bitcoin $HOME/.config	#TODO this may throw error since .config/Bitcoin will be a mountpoint, may need Bitcoin/Bitcoin-Qt.conf $HOME/.config FIXME can use LINK in persistence.conf here
 else
-    dotfiles=/live/persistence/TailsData_unlocked/dotfiles/
+    dotfiles='/live/persistence/TailsData_unlocked/dotfiles'
     mkdir $dotfiles/{.config,.local}
-        echo "$admin" | sudo -S mv $BAILS_DIR/bitcoin-*/* "$dotfiles/.local"
-    mv {bitcoin-*/*,$BAILS_DIR/{share,bin,lib,include}} "$dotfiles/.local"
+    mv {bin,include,lib,share} "$dotfiles/.local"
     mv {mimeinfo.cache,bitcoin-qt.desktop} $dotfiles/.local/share/applications
     mv {autostart,Bitcoin} $dotfiles/.config
     ln $dotfiles /live/persistence/TailsData_unlocked/Persistent/.bitcoin
@@ -396,10 +408,13 @@ fi
 # return to original directory
 cd -
 
+# copy the rest of the project (documentation) to the Persistent Storage
+rsync -a --remove-source-files --exclude='*log*' * $BAILS_DIR $HOME/Persistent/
+
 # make backup Tails
 for ((i=1; i<loc;i++)); do
     zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
-    $HOME/.local/bin/tails-backup	# check if this goes on path automatically otherwise add it.  # if it doesn't, use ~/bin
+    tails-backup	#TODO check if this goes on $PATH automatically otherwise add it.  # if it doesn't, use ~/bin	# if icons and shortcuts don't work in ~/share use BOTH
 done
 
 
