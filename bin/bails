@@ -205,7 +205,7 @@ cd $HOME/Downloads
 # download bitcoin core in background
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & dl=$!
 
-{ git clone https://github.com/BenWestgate/pygfssss; mv pygfssss lib/python3/site-packages; } & gfshare_dl=$!
+{ git clone https://github.com/BenWestgate/pygfssss; mv pygfssss $BAILS_DIR/lib/python3/site-packages; } & gfshare_dl=$!
 
 # download bitcoin checksums and signatures in background
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & sig_dl=$!
