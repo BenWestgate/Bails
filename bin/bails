@@ -350,7 +350,8 @@ zenity --title=README.md --text-info --filename=README.md --width=560 --height=5
 printf '\033]2;Installing Bitcoin Core...\a'
 
 # copy files to data directory
-mkdir $HOME/Peristent/.bitcoin
+exit 1
+mkdir $HOME/Persistent/.bitcoin
 mv {bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
 
 # merge folders to Bails directory
