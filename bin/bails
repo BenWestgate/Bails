@@ -152,16 +152,20 @@ check_sigs() {
     type=info
     gpg --verify SHA256SUMS.asc SHA256SUMS &>$sig_file
     good_sig=$(grep --count 'Good signature' $sig_file)
-    (( good_sig < $1 )) && type=warning && keys="$(grep 'using' $sig_file | awk '{print $NF}' | shuf)" && \
-    for key in $keys; do
-        search_key
-        (( good_sig >= $1 )) && { type=info; break;}
-    done
+    if (( good_sig < $1 )); then
+        type=warning
+        keys="$(grep 'using' $sig_file | awk '{print $NF}' | shuf)"
+        for key in $keys; do
+            search_key
+            (( good_sig >= $1 )) && { type=info; break; }
+        done
+    fi
     zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize &
-    (( good_sig < $1 )) && check_sigs $1
+
     shred --remove $temp_file
     shred --remove $sig_file
     unset sig_file temp_file
+    (( good_sig < $1 )) && check_sigs $1
 }
 
 # searches and displays key info
@@ -287,13 +291,13 @@ pkill python3	# closes the Persistent Storage window
 # bring signature download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core signatures...\a'
 ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
-
+zenity --info 'are the signatures downloaded?'
 # switch into most recent bitcoin-core directory
 cd "$(ls -dt bitcoin-core* | head -1)"
 
 # verify signatures in GUI
 printf '\033]2;Verify Bitcoin Core download signatures\a'
-check_sigs $3 # TODO refresh signatures if the user is checking a new version of bitcoin core.
+check_sigs $3 # TODO refresh signatures if the user is updating bitcoin core.
 
 # bring chain params download to foreground then set assumed chainstate size
 ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
