@@ -157,7 +157,7 @@ check_sigs() {
         search_key
         (( good_sig >= $1 )) && { type=info; break;}
     done
-    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize
+    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize &
     (( good_sig < $1 )) && check_sigs $1
     shred --remove $temp_file
     shred --remove $sig_file
@@ -323,7 +323,7 @@ rm -R $HOME/Downloads/{download,*.tmp}
 if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification "Bitcoin Core download successfully verified."
 else
-    zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nTrying to download Bitcoin Core again by re-running this script." --ellipsize &
+    zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize &&
     rm --verbose ./*
     sleep 5
     # launch script again
