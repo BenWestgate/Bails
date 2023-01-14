@@ -320,12 +320,17 @@ ps -p $dl >/dev/null && fg %$(jobs -l | grep $dl | cut -f1 -d' ' | tr -c -d '[:d
 rm -R $HOME/Downloads/{download,*.tmp}
 
 # verify download integrity checksum		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
-sha256sum --ignore-missing --check SHA256SUMS && zenity --notification "Bitcoin Core download successfully verified." || {
-    zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nTry downloading Bitcoin Core again by running this script." --ellipsize &
+if sha256sum --ignore-missing --check SHA256SUMS; then
+    zenity --notification "Bitcoin Core download successfully verified."
+else
+    zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nTrying to download Bitcoin Core again by re-running this script." --ellipsize &
     rm --verbose ./*
     sleep 5
-    exit 1
-}
+    # launch script again
+    $BAILS_DIR/bin/bails $1 $2 $3
+    exit
+fi
+
 
 # kill Bitcoin Core if it was already running, wait for it to shutdown safely
 printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
