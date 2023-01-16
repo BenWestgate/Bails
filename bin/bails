@@ -206,7 +206,7 @@ cd $HOME/Downloads
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & dl=$!
 
 # clone pygfsss in background
-git clone https://github.com/BenWestgate/pygfssss $BAILS_DIR/lib/python3/site-packages & gfshare_dl=$!
+git clone https://github.com/BenWestgate/pygfssss $BAILS_DIR/lib/python3/site-packages/pygfssss & gfshare_dl=$!
 
 # download bitcoin checksums and signatures in background
 wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & sig_dl=$!
@@ -265,7 +265,7 @@ until mount | grep '/live/persistence/TailsData_unlocked'; do
 	grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must click Continue to create a Persistent Storage';  }
 	sleep 1
 done
-
+unset admin	#TODO remove this after unpriviledged is done debugging
 # if we have admin turn the needed features on automatically
 if [ "$admin" ]; then
     for feature in PersistentDirectory WelcomeScreen GnuPG; do
@@ -288,6 +288,15 @@ else
     done
 fi
 pkill python3	# closes the Persistent Storage window
+
+unset admin	#TODO remove this after unpriviledged is done testing.
+# install Bails executables, shortcuts and icons.
+if [ "$admin" ]; then
+    echo "$admin" | sudo -S rsync $BAILS_DIR/{bin,lib,share} /usr/local
+else
+    rsync $BAILS_DIR/{bin,lib,share} $HOME/.local
+fi
+
 # TODO make sure signature files download first.
 # bring signature download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core signatures...\a'
@@ -297,7 +306,7 @@ zenity --info --text 'are the signatures downloaded?'
 cd "$(ls -dt bitcoin-core* | head -1)"
 
 # verify signatures in GUI
-printf '\033]2;Verify Bitcoin Core download signatures\a'
+printf '\033]2;Verify Bitcoin Core signatures\a'
 check_sigs $3 # TODO refresh signatures if the user is updating bitcoin core.
 
 # bring chain params download to foreground then set assumed chainstate size
@@ -348,7 +357,7 @@ done
 # extract bitcoin*.tar.* to Bails directory
 printf '\033]2;Extracting Bitcoin Core tarball...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1
-
+zenity --info --text="I am in $PWD about to open README.md"
 # display README.md from extracted Bitcoin archive
 zenity --title=README.md --text-info --filename=README.md --width=560 --height=580 &
 printf '\033]2;Installing Bitcoin Core...\a'
@@ -417,7 +426,7 @@ else
     # symlink the dotfiles to $HOME
     echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
     echo 'export QT_QPA_PLATFORM="wayland;xcb"' | tee -a $HOME/.bashrc
-    cp -a $HOME/.bashrc $dotfiles
+    rsync $HOME/.bashrc $dotfiles/
     cd $dotfiles
     for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
     for file in $(find . -type f); do ln --symbolic $PWD${file:1} $HOME${file:1}; done
