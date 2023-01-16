@@ -355,16 +355,17 @@ while test -f $HOME/.bitcoin/bitcoind.pid; do
 done
 
 # extract bitcoin*.tar.* to Bails directory
-printf '\033]2;Extracting Bitcoin Core tarball...\a'
-tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1
-zenity --info --text="I am in $PWD about to open README.md"
-# display README.md from extracted Bitcoin archive
-zenity --title=README.md --text-info --filename=README.md --width=560 --height=580 &
 printf '\033]2;Installing Bitcoin Core...\a'
-
-# copy files to data directory
-mkdir $HOME/Persistent/.bitcoin
-mv {bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
+mkdir --parents $HOME/Persistent/.bitcoin
+if [ "$admin" ]; then
+    echo "$admin" | sudo -S tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=/usr/local
+    ln --symbolic /usr/local/{bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
+else
+    tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$HOME/.local
+    ln --symbolic $HOME/.local/{bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
+fi
+# display README.md from extracted Bitcoin archive
+zenity --title=README.md --text-info --filename=$HOME/Persistent/README.md --width=560 --height=580 &
 
 # merge folders to Bails directory
 rsync -a --exclude='*log*' * $BAILS_DIR		#FIXME after testing use: rsync -a --remove-source-files --exclude='*log*' * $BAILS_DIR
@@ -424,9 +425,10 @@ else
     ln --symbolic /tmp/debug.log $HOME/Persistent/.bitcoin/debug.log # links debug.log to tmp so it won't persist restart
     ln --symbolic /media/$USER/ $HOME/Persistent/.bitcoin/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
     # symlink the dotfiles to $HOME
-    echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
-    echo 'export QT_QPA_PLATFORM="wayland;xcb"' | tee -a $HOME/.bashrc
-    rsync $HOME/.bashrc $dotfiles/
+    # add $HOME/.local/bin to $PATH
+    echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $dotfiles/.bashrc
+    # bypass wayland so bitcoin-qt works
+    echo 'export QT_QPA_PLATFORM="wayland;xcb"' | tee -a $dotfiles/.bashrc
     cd $dotfiles
     for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
     for file in $(find . -type f); do ln --symbolic $PWD${file:1} $HOME${file:1}; done
@@ -439,7 +441,7 @@ cd $HOME/Persistent
 # copy the rest of the project (documentation) to the Persistent Storage
 rsync -a --remove-source-files --exclude='*log*' $BAILS_DIR $HOME/Persistent/
 exit
-export QT_QPA_PLATFORM="wayland;xcb"
+# export QT_QPA_PLATFORM="wayland;xcb" TODO Remove if launches without it
 gtk-launch bitcoin-qt
 
 # make backup Tails
