@@ -10,7 +10,8 @@
 
 dotfiles=/live/persistence/TailsData_unlocked/dotfiles
 local_dir=$dotfiles/.local
-word_count=$(($1+$2+1))	# 5 for lo value, 7 for high value
+data_dir=$HOME/Persistent/.bitcoin
+word_count=$((9-16/($1+$2)))	# 5 for lo value, 7 for high value
 timeout=5
 
 choose() {	# TODO I need to actually add this information before shipping a Beta TODO
@@ -175,7 +176,7 @@ check_sigs() {
 search_key() {
     echo ''>$temp_file
     { gpg --search-keys $1 $2 $key >$temp_file; } & PID=$!
-    [ "$1" ] || echo "Searching $key on openpgp.org keyserver..."
+    [ "$1" ] || echo -e "\nSearching $key on openpgp.org keyserver..."
     until grep 'key' $temp_file >/dev/null; do
         sleep 1; printf '.'
         pidof gpg >/dev/null || break
@@ -188,6 +189,13 @@ search_key() {
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver' 'keyserver.ubuntu.com'
     fi
+}
+
+link_dotfiles() {
+    cd $dotfiles
+    for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
+    for file in $(find . -type f); do ln --symbolic $PWD${file:1} $HOME${file:1}; done
+    cd -
 }
 
 ###################################################################################################
@@ -271,7 +279,7 @@ done
 unset admin	#TODO remove this after unpriviledged is done debugging
 # if we have admin turn the needed features on automatically
 if [ "$admin" ]; then
-    for feature in PersistentDirectory WelcomeScreen GnuPG; do
+    for feature in PersistentDirectory WelcomeScreen GnuPG Electrum; do
 	printf "$admin" | sudo -S /usr/local/lib/tpscli ensure-is-active $feature	
     done
     # TODO add fields here needed for autostart, .config/Bitcoin and .bitcoin to persistence.conf, then mount them.
@@ -295,9 +303,10 @@ pkill python3	# closes the Persistent Storage window
 unset admin	#TODO remove this after unpriviledged is done testing.
 # install Bails executables, shortcuts and icons.
 if [ "$admin" ]; then
-    echo "$admin" | sudo -S rsync $BAILS_DIR/{bin,lib,share} /usr/local
+    echo "$admin" | sudo -S rsync --recursive $BAILS_DIR/{bin,lib,share} /usr/local
 else
-    rsync $BAILS_DIR/{bin,lib,share} $HOME/.local
+    rsync --recursive $BAILS_DIR/{bin,lib,share} $local_dir
+    link_dotfiles
 fi
 
 # TODO make sure signature files download first.
@@ -317,13 +326,14 @@ assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $HOME/D
 
 # display information about pruning and initial block download while user waits for download
 #prune_MiB=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ( $(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1) ) / 1024 - ( 4 + assumed_chain_state_size ) * 1024 : 1908 ))
+
 available_storage=$(df --output=avail /live/persistence/TailsData_unlocked | tail -1)
 prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1908 ))
 prune_GB=$(( (prune_MiB+1)*2**20/10**9))
 backup_days=$((prune_MiB/309))
 
 # TODO Move to After initial backup creation.
-{ until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$BAILS_DIR/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically. You will not have much to do for the next several hours or days. Keep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core (<b>Ctrl+Q</b>) and <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about Tails read the documentation. Another excellent use of time would be browsing the "security in-a-box" website to improve your physical and digital security.' --extra-button='Tails Documentation' --extra-button='Security Tools & Tactics' --extra-button='Continue' --switch --width=552);
+{ until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically. You will not have much to do for the next several hours or days. Keep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core (<b>Ctrl+Q</b>) and <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about Tails read the documentation. Another excellent use of time would be browsing the "security in-a-box" website to improve your physical and digital security.' --extra-button='Tails Documentation' --extra-button='Security Tools & Tactics' --extra-button='Continue' --switch --width=552);
 	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html &
 	[ "$docs" == 'Security Tools & Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/ & done &
 	zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bitcoin128.png --info --text="<b>Setup</b>
@@ -343,32 +353,30 @@ else
     rm --verbose ./*
     sleep 5
     # launch script again
-    $BAILS_DIR/bin/bails $1 $2 $3
+    $local_dir/bin/bails $1 $2 $3
     exit
 fi
 
-
 # kill Bitcoin Core if it was already running, wait for it to shutdown safely
 printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
-while test -f $HOME/.bitcoin/bitcoind.pid; do
-    kill "$(<$HOME/.bitcoin/bitcoind.pid)"
+while test -f $data_dir/bitcoind.pid; do
+    kill "$(<$data_dir/bitcoind.pid)"
     pkill bitcoin*
     sleep 1
 done
 
 # extract bitcoin*.tar.* to Bails directory
 printf '\033]2;Installing Bitcoin Core...\a'
-mkdir --parents $HOME/Persistent/.bitcoin/{chainstate,wallets,blocks}
+mkdir --parents $data_dir/{chainstate,wallets,blocks}
 if [ "$admin" ]; then
-    echo "$admin" | sudo -S tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=/usr/local
-    ln --symbolic /usr/local/{bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
+    echo "$admin" | sudo -S tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=/usr/local 
 else
     tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$local_dir
-    ln --symbolic $HOME/.local/{bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
 fi
-zenity --info --text="I am in $PWD about to open $HOME/Persistent/README.md"
+ln --symbolic $local_dir/{bitcoin.conf,README.md} $data_dir
+
 # display README.md from extracted Bitcoin archive
-zenity --title=README.md --text-info --filename=/live/persistence/TailsData_unlocked/Persistent/.bitcoin/README.md --width=560 --height=580 &
+zenity --title=README.md --text-info --filename=$data_dir/README.md --width=560 --height=580 &
 
 # merge folders to Bails directory
 rsync -a --exclude='*log*' * $BAILS_DIR		#FIXME after testing use: rsync -a --remove-source-files --exclude='*log*' * $BAILS_DIR
@@ -387,7 +395,7 @@ Comment=Connect to the Bitcoin P2P Network
 Comment[de]=Verbinde mit dem Bitcoin peer-to-peer Netzwerk
 Comment[fr]=Bitcoin, monnaie virtuelle cryptographique pair \u00e0 pair
 Comment[tr]=Bitcoin, e\u015ften e\u015fe kriptografik sanal para birimi
-Exec=/bin/bash -c "'$local_dir'/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/Persistent/.bitcoin | tail -1) + $(du --summarize $HOME/Persistent/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/Persistent/.bitcoin | tail -1) + $(du --summarize $HOME/Persistent/.bitcoin/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))" %u
+Exec=/bin/bash -c "'$local_dir'/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))" %u
 Terminal=false
 Type=Application
 Icon='$local_dir'/share/pixmaps/bitcoin128.png
@@ -402,7 +410,7 @@ mkdir autostart Bitcoin
 echo '[Desktop Entry]
 Type=Application
 Name=Bitcoin
-Exec=/bin/bash -c "'$local_dir'/bin/bitcoin-qt -min -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/Persistent/.bitcoin | tail -1) + $(du --summarize $HOME/Persistent/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/Persistent/.bitcoin | tail -1) + $(du --summarize $HOME/Persistent/.bitcoin/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))"
+Exec=/bin/bash -c "'$local_dir'/bin/bitcoin-qt -min -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))"
 Terminal=false
 Hidden=false' >autostart/bitcoin.desktop
 
@@ -410,7 +418,7 @@ Hidden=false' >autostart/bitcoin.desktop
 echo "[General]
 bPrune=true
 fUseProxy=true
-strDataDir=/home/amnesia/Persistent/.bitcoin
+strDataDir="$data_dir"
 strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >Bitcoin/Bitcoin-Qt.conf
 unset admin	# TODO remove this after non-priviledged install is debugged
 # install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
@@ -420,20 +428,18 @@ if [ "$admin" ]; then
     echo "$admin" | sudo -S mv autostart/bitcoin.desktop /etc/xdg/autostart
     mv Bitcoin $HOME/.config	#TODO this may throw error since .config/Bitcoin will be a mountpoint, may need Bitcoin/Bitcoin-Qt.conf $HOME/.config FIXME can use LINK in persistence.conf here
 else
-    rsync --remove-source-files {bin,include,lib,share} $local_dir
-    rsync --remove-source-files {autostart,Bitcoin} $dotfiles/.config
+    rsync --recursive --remove-source-files {bin,include,lib,share} $local_dir
+    rsync --recursive --remove-source-files {autostart,Bitcoin} $dotfiles/.config
     #ln --symbolic /live/persistence/TailsData_unlocked/Persistent/.bitcoin $dotfiles
-    ln --symbolic /tmp/debug.log $HOME/Persistent/.bitcoin/debug.log # links debug.log to tmp so it won't persist restart
-    ln --symbolic /media/$USER/ $HOME/Persistent/.bitcoin/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+    ln --symbolic /tmp/debug.log $data_dir/debug.log # links debug.log to tmp so it won't persist restart
+    ln --symbolic /media/$USER $data_dir/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
     # symlink the dotfiles to $HOME
     # add $HOME/.local/bin to $PATH
     echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
     # bypass wayland so bitcoin-qt works
     echo 'export QT_QPA_PLATFORM="wayland;xcb"' | tee -a $HOME/.bashrc
     mv $HOME/.bashrc $dotfiles
-    cd $dotfiles
-    for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-    for file in $(find . -type f); do ln --symbolic $PWD${file:1} $HOME${file:1}; done
+    link_dotfiles
     # ln --symbolic ./.bitcoin $HOME/.bitcoin	FIXME symlinks in dotfiles may cause error
 fi
 
