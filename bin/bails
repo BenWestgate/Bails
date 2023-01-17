@@ -364,6 +364,7 @@ else
     tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$HOME/.local
     ln --symbolic $HOME/.local/{bitcoin.conf,README.md} $HOME/Persistent/.bitcoin
 fi
+zenity --info --text="I am in $PWD about to open $HOME/Persistent/README.md"
 # display README.md from extracted Bitcoin archive
 zenity --title=README.md --text-info --filename=$HOME/Persistent/README.md --width=560 --height=580 &
 
