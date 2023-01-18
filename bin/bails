@@ -135,10 +135,12 @@ gfcombine -o- *'
         printf "$text" > share$backups_made
         until [ "$text" == "$response" ]; do
             zenity --title="Write this command to restore a forgotten passphrase ($backups_made/$loc)" --text-info --filename=share$backups_made --width=600 --height=216 --font=monospace
-            response=$(zenity --title="Confirm what you wrote down ($backups_made/$loc)" --text-info --editable --width=500 --height=200 --font=monospace)
+            response=$(zenity --title="Confirm what you wrote down ($backups_made/$loc)" --text-info --editable --width=500 --height=200 --font=monospace --filename=response$backups_made)
             if [ "$text" == "$response" ]; then
                 zenity --info --title=Confirmed --text="Fallback command $backups_made of $loc successfully confirmed\n\nStore this paper share in a secure place near your$backup Tails USB:\neither under lock and key or hidden where only you or heirs will find." --ellipsize
             else
+                # save last entered text to save the user time trying again.
+                printf "$response" >response$backups_made
                 zenity zenity --warning --title="Try again ($backups_made/$loc)" --text="The supplied commands do not match." --ellipsize --timeout=3
             fi
         done
@@ -348,6 +350,7 @@ rm -R $HOME/Downloads/{download,*.tmp}
 # verify download integrity checksum		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification "Bitcoin Core download successfully verified."
+    
 else
     zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize &&
     rm --verbose ./*
@@ -374,6 +377,10 @@ else
     tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$local_dir
 fi
 ln --symbolic $local_dir/{bitcoin.conf,README.md} $data_dir
+
+# move bitcoin*.tar.gz to ~/Persistent
+cd -
+rsync -a --exclude='*log*' $HOME/Downloads $HOME/Persistent/	# TODO add remove source files after testing
 
 # display README.md from extracted Bitcoin archive
 zenity --title=README.md --text-info --filename=$data_dir/README.md --width=560 --height=580 &
@@ -448,7 +455,6 @@ cd $HOME/Persistent
 
 # copy the rest of the project (documentation) to the Persistent Storage
 rsync -a --remove-source-files --exclude='*log*' $BAILS_DIR $HOME/Persistent/
-rsync -a --exclude='*log*' $HOME/Downloads $HOME/Persistent/	# TODO add remove source files after testing
 # export QT_QPA_PLATFORM="wayland;xcb" TODO Remove if launches without it
 gtk-launch bitcoin-qt
 
