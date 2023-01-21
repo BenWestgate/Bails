@@ -8,6 +8,9 @@
 # It is recommended that, apart from autosave and lock files, programs should refrain from creating non dot files or directories in a home directory without user consent.
 # TODO comply with the above.
 
+# environment variable so bitcoin-qt can launch on xcb.
+export QT_QPA_PLATFORM="wayland;xcb"
+
 dotfiles=/live/persistence/TailsData_unlocked/dotfiles
 local_dir=$dotfiles/.local
 data_dir=$HOME/Persistent/.bitcoin
@@ -380,14 +383,17 @@ if [ "$admin" ]; then
 else
     tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$local_dir
 fi
+
+# display README.md from extracted Bitcoin archive
+zenity --title=README.md --text-info --filename=$local_dir/README.md --width=560 --height=580 &
+
 ln --symbolic $local_dir/{bitcoin.conf,README.md} $data_dir
 
 # move bitcoin*.tar.gz to ~/Persistent
 cd -
 rsync -a --exclude='*log*' $HOME/Downloads $HOME/Persistent/	# TODO add remove source files after testing
 
-# display README.md from extracted Bitcoin archive
-zenity --title=README.md --text-info --filename=$data_dir/README.md --width=560 --height=580 &
+
 
 # merge folders to Bails directory
 rsync -a --exclude='*log*' * $BAILS_DIR		#FIXME after testing use: rsync -a --remove-source-files --exclude='*log*' * $BAILS_DIR
