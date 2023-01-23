@@ -291,9 +291,9 @@ rsync --recursive $BAILS_DIR/{bin,lib,share,state} $local_dir; link_dotfiles
 # bring signature download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core signatures...\a'
 ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
-
+#wait -f $sig_dl
 # download checksum & signatures again if missing to fix bug where they don't download sometimes.
-test -f bitcoin-core-*/SHA256SUMS | wget --continue --retry-connrefused --waitretrjobsy=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/
+test -f bitcoin-core-*/SHA256SUMS | wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/
 
 # switch into most recent bitcoin-core directory
 cd "$(ls -dt bitcoin-core* | head -1)"
@@ -303,7 +303,7 @@ printf '\033]2;Verify Bitcoin Core signatures\a'
 check_sigs $3 # TODO refresh signatures if the user is updating bitcoin core.
 
 # Display info about IBD, keeping Tails private and reading material.
-until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically. Keep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\nTo lock the screen for privacy press Ctrl+L\n\nIf you want to learn more about Tails read the documentation.\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
+until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically.\nKeep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\nTo lock the screen for privacy press Super+L (Windows key + L)\n\nIf you want to learn more about Tails read the documentation.\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
 	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
 	[ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
 done &>/dev/null &
