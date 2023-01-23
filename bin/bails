@@ -294,7 +294,7 @@ pkill python3 &>/dev/null
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $local_dir; link_dotfiles
 
 # bring signature download to foreground to display progress and wait for it to complete
-printf '\033]2;Downloading Bitcoin Core signatures...\a'
+printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 #wait -f $sig_dl
 # download checksum & signatures again if missing to fix bug where they don't download sometimes.
@@ -342,7 +342,6 @@ done
 
 printf '\033]2;Installing Bitcoin Core...\a'
 # extract bitcoin*.tar.* to Bails directory
-
 mkdir --parents $data_dir/{chainstate,wallets,blocks}
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$local_dir
 
@@ -429,7 +428,7 @@ cd $HOME/Persistent
 # copy the rest of the project (documentation) to the Persistent Storage
 rsync -a --remove-source-files --exclude='*log*' $BAILS_DIR $HOME/Persistent/
 # export QT_QPA_PLATFORM="wayland;xcb"
-gtk-launch bitcoin-qt
+#gtk-launch bitcoin-qt
 # display information about pruning and initial block download while user waits for download
 available_storage=$(df --output=avail "$SOURCE" | tail -1)
 prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1908 ))
@@ -439,6 +438,7 @@ zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$local_dir
 ---------------------
 Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a few hundred gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552 &
 
+printf "\033]2;Create Bails Backup$plur...\a"
 if ((loc>1)); then
     zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
     zenity --warning --title='Warning: Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails for real money until at least $((loc-1)) backup Tails USB stick$plur $plurtt made.\n\nYou should backup now.\n\nYou will need:\n\t• $((loc-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• $((loc-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you create and fund a wallet and fail to create an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to start backup." --ellipsize
