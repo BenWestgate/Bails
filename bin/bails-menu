@@ -25,21 +25,25 @@
 # Not all have been implemented as of 0.1.0-alpha
 
 #################################################
-LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local/
+
+export LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local/
+export BAILS_DIR=$LOCAL_DIR
 device=$(lsblk --inverse --path --raw --output=NAME /dev/mapper/TailsData_unlocked | sed -n 3p)
 USB=$(lsblk --inverse --path --raw --output=NAME /dev/mapper/TailsData_unlocked | tail -1)
-response=$(zenity --question --window-icon=/usr/local/share/pixmaps/bails128.png --icon-name=media-removable --title='Bitcoin Core on Tails' --text='Clone - Create a fresh Bitcoin Core on Tails node.\n\nBackup - Duplicate your Bitcoin Core on Tails node.' --extra-button='Clone' --extra-button='Backup' --extra-button='Settings' --extra-button='Help' --switch --width=350)
+response=$(zenity --question --window-icon=$LOCAL_DIR/share/pixmaps/bails128.png --icon-name=media-removable --title='Bails Main Menu' --text='Clone - Create a blank Bails node for a friend.\n\nBackup - Duplicate your Bails node.' --extra-button='Clone' --extra-button='Backup' --extra-button='Settings' --extra-button='Help' --switch --width=350)
 [ "$response" == '' ] && exit
-[ "$response" == 'Clone' ] && zenity --info --text='Coming soon' && $LOCAL_DIR/bin/tails-backup
-[ "$response" == 'Backup' ] && $LOCAL_DIR/bin/tails-backup
-[ "$response" == 'Help' ] && help=$(zenity --window-icon=/usr/local/share/pixmaps/bails128.png --question --icon-name=help-faq-symbolic --title='Help Menu' --text='' --extra-button='Online Help' --extra-button='Donate' --extra-button='Report a Bug' --extra-button='About' --switch)
-[ "$help" == 'Donate' ] && xdg-open bitcoin:BC1Q9KYUJH8NRRJ2VWW3MA8TERWCRM9WUA24MH7TU3?label=Donation%20to%20Bitcoin%20Core%20on%20Tails #FIXME change address
-[ "$help" == 'Report a Bug' ] && tor-browser https://github.com/BenWestgate/Bitcoin-Core-on-Tails/issues
-[ "$help" == 'About' ] && zenity --info --window-icon=$LOCAL_DIR/share/pixmaps/bails128.png --title='About Bitcoin Core on Tails' --icon-name=bails128 --text='Bitcoin Core on Tails version v0.1.0\n\nCopyright (C) 2022 Ben Westgate\n\nPlease contribute if you find Bitcoin Core on Tails useful. Visit <a href="https://twitter.com/BenWestgate_">https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href="https://github.com/BenWestgate/Bitcoin-Core-on-Tails">https://github.com/BenWestgate/Bitcoin-Core-on-Tails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href="https://opensource.org/licenses/MIT">https://opensource.org/licenses/MIT</a>' --width=650
+[ "$response" == 'Clone' ] && zenity --info --text='Coming soon'
+[ "$response" == 'Backup' ] && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/tails-backup
+[ "$response" == 'Help' ] && help=$(zenity --window-icon=$LOCAL/share/pixmaps/bails128.png --question --icon-name=help-faq-symbolic --title='Help Menu' --text='' --extra-button='Online Help' --extra-button='Donate' --extra-button='Report a Bug' --extra-button='About' --switch)
+[ "$help" == 'Donate' ] && exit # xdg-open bitcoin:BC1Q9KYUJH8NRRJ2VWW3MA8TERWCRM9WUA24MH7TU3?label=Donation%20to%20Bitcoin%20Core%20on%20Tails #FIXME change address
+[ "$help" == 'Report a Bug' ] && tor-browser https://github.com/BenWestgate/Bails/issues
+[ "$help" == 'About' ] && zenity --info --window-icon=$LOCAL_DIR/share/pixmaps/bails128.png --title='About Bails' --icon-name=bails128.png --text='Bails version v0.2.0\n\nCopyright (C) 2023 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href="https://twitter.com/BenWestgate_">https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href="https://github.com/BenWestgate/Bails">https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href="https://opensource.org/licenses/MIT">https://opensource.org/licenses/MIT</a>' --width=650
 [ "$help" == 'Online Help' ] && xdg-open https://bitcoin-core-on-tails.slack.com/ && xdg-open 
 [ "$response" == 'Settings' ] && setting=$(zenity --window-icon=$LOCAL_DIR/share/pixmaps/bails128.png --question --icon-name=org.gnome.Settings --title=Settings --text='Coming soon\n\nConfigure Bitcoin Core on Tails' --extra-button='Update Bitcoin Core' --extra-button='Passphrase' --extra-button='Sync Faster' --switch --width=300)
-[ "$setting" == 'Update Bitcoin Core' ] && $LOCAL_DIR/bin/bails
-[ "$setting" == 'Passphrase' ] && pass_mgmt=$(zenity --window-icon=/usr/local/share/pixmaps/bails128.png --question --icon-name=dialog-password --title='Passphrase Settings' --text='Coming soon\n\n<b>WARNING:</b> <span foreground="red">The only secure way to change or remove a compromised or weak passphrase is to erase the device AND use physical destruction. The old passwords may still be around, potentially for a very long time and can be used to access your bitcoin data with forensic tools.</span>\n\nIf you only fear a fallback command has been stolen, but without anyone learning the passphrase, you can make a new set and destroy the old.' --extra-button='New fallback' --extra-button='Change passphrase' --switch --width=500)
+[ "$setting" == 'Update Bitcoin Core' ] && /usr/bin/gnome-terminal --title 'Updating Bitcoin Core' --hide-menubar -- $LOCAL_DIR/bin/bails 2 2 2 --refresh-keys
+[ "$setting" == 'Passphrase' ] && pass_mgmt=$(zenity --window-icon=$LOCAL_DIR/share/pixmaps/bails128.png --question --icon-name=dialog-password --title='Passphrase settings' --text='Coming soon\n\n<b>WARNING:</b> <span foreground="red">The most secure way to change or remove a compromised or weak passphrase is to erase the device AND use physical destruction. This includes all backups. The old password may still be around, potentially for a very long time and can be used to access your bitcoin data with forensic tools.</span>\n\nBefore erasing and destroying, you should create a new backup set using a new stronger password, such as one from KeePassXC.\n\nIf you fear fallback commands have been stolen, but not enough to learn your passphrase, you can make a new set and destroy the old.' --extra-button='New Fallback' --extra-button='Change Passphrase' --switch --width=500)
+[ "$pass_mgmt" == 'New Fallback' ] && zenity --info "coming soon"	#TODO add this
+[ "$pass_mgmt" == 'Change Passphrase' ] && { tps-frontend-wrapper & zenity --notification --text='You must click Change Passphrase... to change passphrase'; }
 [ "$setting" == 'Sync Faster' ] && zenity --window-icon=$LOCAL_DIR/share/pixmaps/bails128.png --title='Sync Faster' --list --text='Coming soon - placeholder.' --column='' --column='Method' --checklist FALSE 'Aggressive pruning (Use more RAM on small storage)' FALSE 'RAM Sync (Fastest but unsafe shutdown loses progress)' --width=433 --height=210
 
 # TODO verify that this actually does something, and self-edit this file to have the box "checked" TRUE if it succeeds.
