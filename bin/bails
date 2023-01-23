@@ -232,6 +232,8 @@ wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-d
 git clone https://github.com/BenWestgate/pygfssss $BAILS_DIR/lib/python3/site-packages/pygfssss & gfshare_dl=$!
 
 # download chain parameters in background
+wget --continue --retry-connrefused --waitretry=10 https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/chainparams.cpp & get_size=$!
+
 
 # TODO all of these password commands can be skipped when persistence is already setup and the user is not changing a password in the bails-menu
 # TODO this means the passphrase+tps command set should be it's own file "new-password" that walks user thru password tips and displays strength and starts the memorization trainer.
@@ -437,8 +439,10 @@ zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$local_dir
 ---------------------
 Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a few hundred gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552 &
 
-zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
-zenity --warning --text="It is <b>UNSAFE</b> to use Bails for Real money until at least $((loc-1)) backup Tails USB stick$plur $plurtt made.\n\nYou should backup now.\n\nYou will need:\n\t• $((loc-1)) USB stick$plur of at least 16GB\n\t• Unused and New Devices are more reliable.\n\t• Store your backup Tails USB stick in a cool, safe, discrete, off-site location, to avoid losing Bitcoin data.\n\nWarning: If you create and fund a wallet and fail to create an offsite backup and something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to start backup."
+if ((loc>1)); then
+    zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
+    zenity --warning --title='Warning: Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails for real money until at least $((loc-1)) backup Tails USB stick$plur $plurtt made.\n\nYou should backup now.\n\nYou will need:\n\t• $((loc-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• $((loc-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you create and fund a wallet and fail to create an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to start backup." --ellipsize
+fi
 
 # make backup Tails
 for ((i=1; i<loc;i++)); do
