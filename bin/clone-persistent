@@ -2,7 +2,7 @@
 
 import sys
 import dbus
-from tps import device
+from bps import device
 from tps import __init__
 
 # set block device to output of tails-installer e.g.: /org/freedesktop/UDisks2/block_devices/sdb1

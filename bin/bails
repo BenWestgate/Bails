@@ -16,8 +16,10 @@ local_dir=$dotfiles/.local
 data_dir=$HOME/Persistent/.bitcoin
 word_count=$((9-16/($1+$2)))	# 5 for lo value, 7 for high value
 timeout=5
+SOURCE='/live/persistence/TailsData_unlocked/'
+DEST='/media/amnesia/TailsData/'
 
-choose() {	# TODO I need to actually add this information before shipping a Beta TODO
+choose() {	# FIXME TODO I need to actually add this information before shipping a Beta TODO
 	zenity --warning --text='These are all the ways you can screw up badly choosing your own password.\n\nDo you understand?' --ellipsize
 	until [ "$pass" ] && [ "$pass" == "$confirmed" ]; do 
 		pass=$(zenity --password --title='Enter your proposed passphrase')
@@ -227,20 +229,10 @@ wget --continue --retry-connrefused --waitretry=10 --no-host-directories --cut-d
 git clone https://github.com/BenWestgate/pygfssss $BAILS_DIR/lib/python3/site-packages/pygfssss & gfshare_dl=$!
 
 # download chain parameters in background
-wget --continue --retry-connrefused --waitretry=10 https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/chainparams.cpp & get_size=$!
 
-# ask for admin if user set it up
-mkdir --parents $HOME/.local/bin
-echo '#!/bin/bash
-zenity --notification --text="Enter your administration password"
-zenity --password --title="Administration Password"' >$HOME/.local/bin/askpass
-export SUDO_ASKPASS=$HOME/.local/bin/askpass
-chmod +x $HOME/.local/bin/askpass
-replace-su-with-sudo && until { echo "$admin"; } | sudo -S passwd --delete amnesia &>/dev/null; do
-	[ "$admin" ] && zenity --notification --text='Wrong Administration Password'
-	admin=$($HOME/.local/bin/askpass)
-	local_dir=/usr/local
-done && admin+='\n'
+# TODO all of these password commands can be skipped when persistence is already setup and the user is not changing a password in the bails-menu
+# TODO this means the passphrase+tps command set should be it's own file "new-password" that walks user thru password tips and displays strength and starts the memorization trainer.
+# TODO I should remind user after changing their passphrase that their backups will need to be changed also. And that the most secure passphrase change is sweep funds, then shred the data digitally and physically. As forensic techniques can use old passwords.
 
 # play video about strong passwords
 #totem "$BCOT_DIR"/How_To_Make_A_Super-Secure_Password-Oc6NiSrlvVc.mp4
@@ -251,9 +243,6 @@ done && admin+='\n'
 # ask whether user will choose or be given a password
 #zenity --question --title='Choose passphrase type' --default-cancel --cancel-label='Random Diceware' --ok-label='Choose my own' --text='Choose whether to be given a secure memorable password or provide your own.\n\nRandom Diceware passphrases are highly recommended.' --ellipsize && choose || { diceware; pw_type='dice'; }
 
-# update $admin variable to new passphrase
-#[ "$admin" ] && admin="$pass"
-
 # begin the spaced repetition trainer
 #while true; do
 #    sleep $((timeout *= 2))
@@ -261,7 +250,7 @@ done && admin+='\n'
 #done &
 
 # give password handling tips
-#zenity --info --text="You will be prompted periodically for the password throughout the remainder of this tutorial. If you forget it before a complete backup is created, you will have to start over.\n\nPractice entering this password regularly, daily at first and then at least once a week.\nRepetition will help you commit the password to memory.\n\nYour passphrase should only be used for your Bails USB sticks, and especially should not be used for any online account. If you reuse a passphrase and it ends up being leaked, it can be used to try to access your Bitcoin data or funds." --width=600 --title='Tips for the new passphrase'
+#zenity --info --title='Tips for the new passphrase' --text="You will be prompted periodically for the password throughout the remainder of this tutorial. If you forget it before a complete backup is created, you will have to start over.\n\nPractice entering this password regularly, daily at first and then at least once a week.\nRepetition will help you commit the password to memory.\n\nYour passphrase should only be used for your Bails USB sticks, and especially should not be used for any online account. If you reuse a passphrase and it ends up being leaked, it can be used to try to access your Bitcoin data or funds." --width=600
 
 # setup paper fallback
 fallback $pass $1 $2 $pw_type
@@ -269,58 +258,42 @@ fallback $pass $1 $2 $pw_type
 #shred --remove $tmp_dir/*
 #shred --remove $tmp_dir
 #unset $tmp_dir
+# FIXME must warn that the passphrase entered in tps match exactly what they drill in Bails
 
-# TODO FIXME if persistence is already Unlocked (use command from tails-backup to check) and correct features are enabled, skip over this.
-
-# setup Tails persistent storage
-tps-frontend-wrapper &
-sleep 1
-# loop until TailsData is mounted
-until mount | grep '/live/persistence/TailsData_unlocked'; do
-	# restart tps if closed it without creating persistence.
-	grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must click Continue to create a Persistent Storage';  }
+# loop until persistent storage has mounted
+until [ -d "$SOURCE" ]; do
+    tps-frontend-wrapper &
+    # restart tps if closed without creating persistence.
+    grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must click Continue to create a Persistent Storage'; }
 	sleep 1
 done
-unset admin	#TODO remove this after unpriviledged is done debugging
-# if we have admin turn the needed features on automatically
-if [ "$admin" ]; then
-    for feature in PersistentDirectory WelcomeScreen GnuPG Electrum; do
-	printf "$admin" | sudo -S /usr/local/lib/tpscli ensure-is-active $feature	
-    done
-    # TODO add fields here needed for autostart, .config/Bitcoin and .bitcoin to persistence.conf, then mount them.
-# otherwise loop until needed Persistent features are on
-else
-    until /usr/local/lib/tpscli is-active PersistentDirectory && \
-      /usr/local/lib/tpscli is-active WelcomeScreen && \
-      /usr/local/lib/tpscli is-active GnuPG && \
-      /usr/local/lib/tpscli is-active Dotfiles; do
-	{ /usr/local/lib/tpscli is-active PersistentDirectory || { zenity --notification --text='Persistent Folder must be turned on.' --timeout=6; false; }; } && \
-	{ /usr/local/lib/tpscli is-active WelcomeScreen || { zenity --notification --text='Welcome Screen must be turned on.' --timeout=6; false; }; } && \
-	{ /usr/local/lib/tpscli is-active NetworkConnections || { ((i++ < 3)) && zenity --notification --text='Turn on Network Connections to remember your Wi-Fi' --timeout=5; true; }; } && \
-	{ /usr/local/lib/tpscli is-active GnuPG || { zenity --notification --text='GnuPG must be turned on.' --timeout=6; false; }; } && \
-	{ /usr/local/lib/tpscli is-active Dotfiles || { zenity --notification --text='Dotfiles must be turned on.' --timeout=6; false; }; }
-	# restart tps if closed before configured
-	grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must turn on Persistent features to continue';  }
-    done
-fi
-pkill python3	# closes the Persistent Storage window
 
-unset admin	#TODO remove this after unpriviledged is done testing.
+# loop until needed Persistent features are on
+until /usr/local/lib/tpscli is-active PersistentDirectory && \
+  /usr/local/lib/tpscli is-active WelcomeScreen && \
+  /usr/local/lib/tpscli is-active GnuPG && \
+  /usr/local/lib/tpscli is-active Dotfiles; do
+    { /usr/local/lib/tpscli is-active PersistentDirectory || { zenity --notification --text='Persistent Folder must be turned on.' --timeout=6; false; }; } && \
+    { /usr/local/lib/tpscli is-active WelcomeScreen || { zenity --notification --text='Welcome Screen must be turned on.' --timeout=6; false; }; } && \
+    { /usr/local/lib/tpscli is-active NetworkConnections || { ((i++ < 3)) && zenity --notification --text='Turn on Network Connections to remember your Wi-Fi' --timeout=6; true; }; } && \
+    { /usr/local/lib/tpscli is-active GnuPG || { zenity --notification --text='GnuPG must be turned on.' --timeout=6; false; }; } && \
+    { /usr/local/lib/tpscli is-active Dotfiles || { zenity --notification --text='Dotfiles must be turned on.' --timeout=6; false; }; }
+    # restart tps if closed before configured
+    grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must turn on Persistent features to continue'; }
+done
+
+# closes the Persistent Storage window
+pkill python3 &>/dev/null
+
 # install Bails executables, shortcuts and icons.
-if [ "$admin" ]; then
-    echo "$admin" | sudo -S rsync --recursive $BAILS_DIR/{bin,lib,share} /usr/local
-else
-    rsync --recursive $BAILS_DIR/{bin,lib,share} $local_dir
-    link_dotfiles
-fi
+rsync --recursive $BAILS_DIR/{bin,lib,share,state} $local_dir; link_dotfiles
 
-# TODO make sure signature files download first.
 # bring signature download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core signatures...\a'
 ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 # download checksum & signatures again if missing to fix bug where they don't download sometimes.
-test -f bitcoin-core-*/SHA256SUMS | { wget --continue --retry-connrefused --waitretrjobsy=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ; zenity --info; }
+test -f bitcoin-core-*/SHA256SUMS | wget --continue --retry-connrefused --waitretrjobsy=10 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/
 
 # switch into most recent bitcoin-core directory
 cd "$(ls -dt bitcoin-core* | head -1)"
@@ -329,29 +302,16 @@ cd "$(ls -dt bitcoin-core* | head -1)"
 printf '\033]2;Verify Bitcoin Core signatures\a'
 check_sigs $3 # TODO refresh signatures if the user is updating bitcoin core.
 
-# bring chain params download to foreground then set assumed chainstate size
-ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
-assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $HOME/Downloads/chainparams.cpp | sed 's/[^0-9]*//g')
-
-# display information about pruning and initial block download while user waits for download
-#prune_MiB=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ( $(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1) ) / 1024 - ( 4 + assumed_chain_state_size ) * 1024 : 1908 ))
-
-available_storage=$(df --output=avail /live/persistence/TailsData_unlocked | tail -1)
-prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1908 ))
-prune_GB=$(( (prune_MiB+1)*2**20/10**9))
-backup_days=$((prune_MiB/309))
-
-# TODO Move to After initial backup creation.
-{ until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically. You will not have much to do for the next several hours or days. Keep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core (<b>Ctrl+Q</b>) and <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about Tails read the documentation. Another excellent use of time would be browsing the "security in-a-box" website to improve your physical and digital security.' --extra-button='Tails Documentation' --extra-button='Security Tools & Tactics' --extra-button='Continue' --switch --width=552);
-	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html &
-	[ "$docs" == 'Security Tools & Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/ & done &
-	zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bitcoin128.png --info --text="<b>Setup</b>
----------------------
-Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a few hundred gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552; } &>/dev/null &
+# Display info about IBD, keeping Tails private and reading material.
+until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically. Keep an eye on your PC so no one messes with it.\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\nTo lock the screen for privacy press Ctrl+L\n\nIf you want to learn more about Tails read the documentation.\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
+	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
+	[ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
+done &>/dev/null &
 
 # bring bitcoin core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $dl >/dev/null && fg %$(jobs -l | grep $dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+
 rm -R $HOME/Downloads/{download,*.tmp}
 
 # verify download integrity checksum		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
@@ -375,14 +335,11 @@ while test -f $data_dir/bitcoind.pid; do
     sleep 1
 done
 
-# extract bitcoin*.tar.* to Bails directory
 printf '\033]2;Installing Bitcoin Core...\a'
+# extract bitcoin*.tar.* to Bails directory
+
 mkdir --parents $data_dir/{chainstate,wallets,blocks}
-if [ "$admin" ]; then
-    echo "$admin" | sudo -S tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=/usr/local 
-else
-    tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$local_dir
-fi
+tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$local_dir
 
 # display README.md from extracted Bitcoin archive
 zenity --title=README.md --text-info --filename=$local_dir/README.md --width=560 --height=580 &
@@ -393,8 +350,6 @@ ln --symbolic $local_dir/{bitcoin.conf,README.md} $data_dir
 cd -
 rsync -a --exclude='*log*' $HOME/Downloads $HOME/Persistent/	# TODO add remove source files after testing
 
-
-
 # merge folders to Bails directory
 rsync -a --exclude='*log*' * $BAILS_DIR		#FIXME after testing use: rsync -a --remove-source-files --exclude='*log*' * $BAILS_DIR
 
@@ -402,7 +357,11 @@ rsync -a --exclude='*log*' * $BAILS_DIR		#FIXME after testing use: rsync -a --re
 cd $BAILS_DIR
 
 # create mime association file
-sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >share/applications/mimeinfo.cache
+sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$local_dir/share/applications/mimeinfo.cache
+
+# bring chain params download to foreground then set assumed chainstate size
+ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $HOME/Downloads/chainparams.cpp | sed 's/[^0-9]*//g')
 
 # create application shortcuts
 echo '[Desktop Entry]
@@ -410,18 +369,17 @@ Version=1.0
 Name=Bitcoin Core
 Comment=Connect to the Bitcoin P2P Network
 Comment[de]=Verbinde mit dem Bitcoin peer-to-peer Netzwerk
-Comment[fr]=Bitcoin, monnaie virtuelle cryptographique pair \u00e0 pair
-Comment[tr]=Bitcoin, e\u015ften e\u015fe kriptografik sanal para birimi
 Exec=/bin/bash -c "'$local_dir'/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))" %u
 Terminal=false
 Type=Application
 Icon='$local_dir'/share/pixmaps/bitcoin128.png
 MimeType=x-scheme-handler/bitcoin;
 Categories=Office;Finance;P2P;Network;Qt;F
-StartupWMClass=Bitcoin-qt' >share/applications/bitcoin-qt.desktop
+StartupWMClass=Bitcoin-qt' >$local_dir/share/applications/bitcoin-qt.desktop
 
-# create directories
-mkdir autostart Bitcoin
+# create config directories
+mkdir --parents $dotfiles/.config/{autostart,Bitcoin}
+# create local directories
 
 # create autostart desktop file
 echo '[Desktop Entry]
@@ -429,51 +387,64 @@ Type=Application
 Name=Bitcoin
 Exec=/bin/bash -c "'$local_dir'/bin/bitcoin-qt -min -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$data_dir' | tail -1) + $(du --summarize '$data_dir'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))"
 Terminal=false
-Hidden=false' >autostart/bitcoin.desktop
+Hidden=false' >$dotfiles/.config/autostart/bitcoin.desktop
 
 # create config to persist gui settings
 echo "[General]
 bPrune=true
 fUseProxy=true
 strDataDir="$data_dir"
-strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >Bitcoin/Bitcoin-Qt.conf
-unset admin	# TODO remove this after non-priviledged install is debugged
+strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >$dotfiles/.config/Bitcoin/Bitcoin-Qt.conf
+
 # install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
-if [ "$admin" ]; then
-    echo "$admin" | sudo -S mv --backup {bin,include,lib,share} /usr/local
-    echo "$admin" | sudo -S mv {mimeinfo.cache,bitcoin-qt.desktop} /usr/local/share/applications
-    echo "$admin" | sudo -S mv autostart/bitcoin.desktop /etc/xdg/autostart
-    mv Bitcoin $HOME/.config	#TODO this may throw error since .config/Bitcoin will be a mountpoint, may need Bitcoin/Bitcoin-Qt.conf $HOME/.config FIXME can use LINK in persistence.conf here
-else
-    rsync --recursive --remove-source-files {bin,include,lib,share} $local_dir
-    rsync --recursive --remove-source-files {autostart,Bitcoin} $dotfiles/.config
-    #ln --symbolic /live/persistence/TailsData_unlocked/Persistent/.bitcoin $dotfiles
-    ln --symbolic /tmp/debug.log $data_dir/debug.log # links debug.log to tmp so it won't persist restart
-    ln --symbolic /media/$USER $data_dir/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
-    # symlink the dotfiles to $HOME
-    # add $HOME/.local/bin to $PATH
-    echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
-    # bypass wayland so bitcoin-qt works
-    echo 'export QT_QPA_PLATFORM="wayland;xcb"' | tee -a $HOME/.bashrc
-    mv $HOME/.bashrc $dotfiles
-    link_dotfiles
-    # ln --symbolic ./.bitcoin $HOME/.bitcoin	FIXME symlinks in dotfiles may cause error
-fi
+rsync --recursive --remove-source-files {bin,include,lib,share,state} $local_dir
+rsync --recursive --remove-source-files {autostart,Bitcoin} $dotfiles/.config
+#ln --symbolic /live/persistence/TailsData_unlocked/Persistent/.bitcoin $dotfiles
+ln --symbolic /tmp/debug.log $data_dir/debug.log # links debug.log to tmp so it won't persist restart
+ln --symbolic /media/$USER $data_dir/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+# symlink the dotfiles to $HOME
+
+
+# add $HOME/.local/bin to $PATH	
+#TODO this MAY have to be added to .bashrc higher up in the file to work
+#TODO I used the 4th line in my .bashrc that had working app shortcuts.
+grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc || \
+  echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
+
+# bypass wayland if not already so bitcoin-qt works
+grep --count 'export QT_QPA_PLATFORM="wayland;xcb"' $HOME/.bashrc || \
+  echo 'export QT_QPA_PLATFORM="wayland;xcb"' | tee -a $HOME/.bashrc
+mv $HOME/.bashrc $dotfiles
+link_dotfiles
+# ln --symbolic ./.bitcoin $HOME/.bitcoin	FIXME symlinks in dotfiles may cause error
 
 # return to original directory
 cd $HOME/Persistent
 
 # copy the rest of the project (documentation) to the Persistent Storage
 rsync -a --remove-source-files --exclude='*log*' $BAILS_DIR $HOME/Persistent/
-# export QT_QPA_PLATFORM="wayland;xcb" TODO Remove if launches without it
+# export QT_QPA_PLATFORM="wayland;xcb"
 gtk-launch bitcoin-qt
+# display information about pruning and initial block download while user waits for download
+available_storage=$(df --output=avail "$SOURCE" | tail -1)
+prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1908 ))
+prune_GB=$(( (prune_MiB+1)*2**20/10**9))
+backup_days=$((prune_MiB/309))
+zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$local_dir/share/pixmaps/bitcoin128.png --info --text="<b>Setup</b>
+---------------------
+Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a few hundred gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552 &
+
+zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
+zenity --warning --text="It is <b>UNSAFE</b> to use Bails for Real money until at least $((loc-1)) backup Tails USB stick$plur $plurtt made.\n\nYou should backup now.\n\nYou will need:\n\t• $((loc-1)) USB stick$plur of at least 16GB\n\t• Unused and New Devices are more reliable.\n\t• Store your backup Tails USB stick in a cool, safe, discrete, off-site location, to avoid losing Bitcoin data.\n\nWarning: If you create and fund a wallet and fail to create an offsite backup and something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to start backup."
 
 # make backup Tails
 for ((i=1; i<loc;i++)); do
     zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
-    tails-backup	#TODO check if this goes on $PATH automatically otherwise add it.  # if it doesn't, use ~/bin	# if icons and shortcuts don't work in ~/share use BOTH
+    until $local/bin/tails-backup; do
+        zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
+        zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
+    done
 done
-
 
 # TODO use du -b $HOME/.bitcoin/wallets to detect when new descriptor wallets have been added, force a backup to be made each time it increments by the size of a blank descriptor wallet, consider using gnome3-pinentry to prevent the user from doing anything else without dismissing it.
 # TODO 21012 bytes is the size of a new blank descriptor wallet with a 1 character name, so when the data in wallets grows (min to max since last backup) by more than that a backup will be forced.

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Version=1.0
 Name=₿ails
-Comment=Clone, Backup or Wipe Bails and Configure Settings
-Exec=/usr/local/bin/bails_menu.sh
+Comment=Clone, Backup Bails and Configure Settings
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bails-menu
 Terminal=false
 Type=Application
-Icon=/usr/local/share/pixmaps/bails128.png
+Icon=/live/persistence/TailsData_unlocked/dotfiles/.local/share/pixmaps/bails128.png
 Categories=Office;Finance;P2P;Network;Qt;
 StartupWMClass=bails
