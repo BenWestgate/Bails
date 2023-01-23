@@ -8,6 +8,8 @@
 set -o pipefail
 
 export TEXTDOMAIN='tails'
+export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
 
 # Tails' directories for source and destination
 SOURCE='/live/persistence/TailsData_unlocked/'
@@ -35,7 +37,7 @@ tails_installer_hook() {
     unset temp_log
     if [ "$device" ]; then
         sleep 10
-        /usr/local/lib/clone-persistence "${device//\"/}" "$passphrase"
+        python3 $BIN_DIR/clone-persistent "${device//\"/}" "$passphrase"
     else
         zenity --warning --text='Error: Tails was not installed or upgraded to any USB stick.\n\nPlease restart the backup utility to try again.' --ellipsize --title='Cloning failed'
         exit 1
@@ -78,7 +80,7 @@ if [ -d "$SOURCE" ]; then
     [ "$choice" ] || choice="$(zenity --question --title="Create or Update a backup Tails USB stick" --text="This utility creates or updates a backup Tails USB stick with your persistence.\n\n• To create a new backup Tails USB stick click 'Create'.\n\n• To update your backup Tails USB stick click 'Update'." --icon-name=media-removable --extra-button=Update --extra-button=Create --switch --ellipsize)"
     [ "$choice" ] || exit 1
     if [ "$choice" == 'Create' ]; then
-        zenity --info --title "Create a backup Tails USB stick" --text "This utility creates a backup Tails USB stick.\n\n• We recommend making your backup Tails USB stick\nlook different than your current Tails USB stick\n\n• We recommend using the same passphrase as your\ncurrent Tails so that the passphase is easier to remember." --ellipsize
+        zenity --info --title "Create a backup Tails USB stick" --text "This utility creates a backup Tails USB stick.\n\n• We recommend making your backup Tails USB stick\nlook different than your current Tails USB stick.\n\n• We recommend using the same passphrase as your\ncurrent Tails so that the passphase is easier to remember." --ellipsize
         [ "$passphrase" ] || until [ "$passphrase" == "$confirm" ]; do
             passphrase_reply=$(zenity --forms --add-password='Passphrase:' --add-password='Confirm:' --text='We recommend using the same passphrase\nas your current Tails so that the passphase\nis easier to remember.' --title='Set backup passphrase')
             if [ "$passphrase_reply" ]; then
@@ -88,7 +90,7 @@ if [ -d "$SOURCE" ]; then
                     zenity --warning --text='The passphrases do not match.' --title='Set backup passphrase' --ellipsize
                 fi
             else
-                zenity --warning --text='No passphrase was entered' --title='Set backup passphrase' --ellipsize
+                zenity --warning --text='No passphrase was entered.' --title='Set backup passphrase' --ellipsize
                 exit 1
             fi
         done
