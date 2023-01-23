@@ -439,13 +439,14 @@ zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$local_dir
 Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a few hundred gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552 &
 
 printf "\033]2;Create Bails Backup$plur...\a"
+echo $loc
 if ((loc>1)); then
     zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
     zenity --warning --title='Warning: Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails for real money until at least $((loc-1)) backup Tails USB stick$plur $plurtt made.\n\nYou should backup now.\n\nYou will need:\n\t• $((loc-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• $((loc-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you create and fund a wallet and fail to create an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to start backup." --ellipsize
 fi
 
 # make backup Tails
-for ((i=1; i<loc;i++)); do
+for ((i=1; i<loc; i++)); do
     zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
     until $local/bin/tails-backup; do
         zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
