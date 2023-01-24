@@ -1,5 +1,5 @@
 # Bails
-# ![image](https://github.com/BenWestgate/Bails/raw/master/share/pixmaps/bails128.png)
+# ![image](https://github.com/BenWestgate/Bails/raw/master/share/icons/bails128.png)
 
  All graphical interface to install Bitcoin Core on Tails 5.8+, creates password fallback & backup Tails USBs
  
