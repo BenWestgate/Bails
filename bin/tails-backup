@@ -10,10 +10,14 @@ set -o pipefail
 export TEXTDOMAIN='tails'
 export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
+export LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local
 
 # Tails' directories for source and destination
 SOURCE='/live/persistence/TailsData_unlocked/'
 DEST='/media/amnesia/TailsData/'
+
+ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
+
 
 confirm=' '
 [ "$1" ] && passphrase="$1"
@@ -39,7 +43,7 @@ tails_installer_hook() {
         sleep 10
         python3 $BIN_DIR/clone-persistent "${device//\"/}" "$passphrase"
     else
-        zenity --warning --text='Error: Tails was not installed or upgraded to any USB stick.\n\nPlease restart the backup utility to try again.' --ellipsize --title='Cloning failed'
+        zenity --warning --text='Error: Tails was not installed or upgraded to any USB stick.\n\nPlease restart the backup utility to try again.' --ellipsize --title='Cloning failed' $ICON
         exit 1
     fi
     # remove passphrase from memory
@@ -77,20 +81,20 @@ EOF
 }
 
 if [ -d "$SOURCE" ]; then
-    [ "$choice" ] || choice="$(zenity --question --title="Create or Update a backup Tails USB stick" --text="This utility creates or updates a backup Tails USB stick with your persistence.\n\n• To create a new backup Tails USB stick click 'Create'.\n\n• To update your backup Tails USB stick click 'Update'." --icon-name=media-removable --extra-button=Update --extra-button=Create --switch --ellipsize)"
+    [ "$choice" ] || choice="$(zenity --question --title="Create or Update a backup Tails USB stick" --text="This utility creates or updates a backup Tails USB stick with your persistence.\n\n• To create a new backup Tails USB stick click 'Create'.\n\n• To update your backup Tails USB stick click 'Update'." --icon-name=media-removable --extra-button=Update --extra-button=Create --switch --ellipsize $ICON)"
     [ "$choice" ] || exit 1
     if [ "$choice" == 'Create' ]; then
-        zenity --info --title "Create a backup Tails USB stick" --text "This utility creates a backup Tails USB stick.\n\n• We recommend making your backup Tails USB stick\nlook different than your current Tails USB stick.\n\n• We recommend using the same passphrase as your\ncurrent Tails so that the passphase is easier to remember." --ellipsize
+        zenity --info --title "Create a backup Tails USB stick" --text "This utility creates a backup Tails USB stick.\n\n• We recommend making your backup Tails USB stick\nlook different than your current Tails USB stick.\n\n• We recommend using the same passphrase as your\ncurrent Tails so that the passphase is easier to remember." --ellipsize $ICON
         [ "$passphrase" ] || until [ "$passphrase" == "$confirm" ]; do
-            passphrase_reply=$(zenity --forms --add-password='Passphrase:' --add-password='Confirm:' --text='We recommend using the same passphrase\nas your current Tails so that the passphase\nis easier to remember.' --title='Set backup passphrase')
+            passphrase_reply=$(zenity --forms --add-password='Passphrase:' --add-password='Confirm:' --text='We recommend using the same passphrase\nas your current Tails so that the passphase\nis easier to remember.' --title='Set backup passphrase' $ICON)
             if [ "$passphrase_reply" ]; then
                 passphrase=$(echo -n "$passphrase_reply" | cut -f1 -d'|')
                 confirm=$(echo -n "$passphrase_reply" | cut -f2 -d'|')
                 if [ "$passphrase" != "$confirm" ]; then
-                    zenity --warning --text='The passphrases do not match.' --title='Set backup passphrase' --ellipsize
+                    zenity --warning --text='The passphrases do not match.' --title='Set backup passphrase' --ellipsize $ICON
                 fi
             else
-                zenity --warning --text='No passphrase was entered.' --title='Set backup passphrase' --ellipsize
+                zenity --warning --text='No passphrase was entered.' --title='Set backup passphrase' --ellipsize $ICON
                 exit 1
             fi
         done
@@ -98,7 +102,7 @@ if [ -d "$SOURCE" ]; then
         unset confirm
         tails_installer_hook
     fi
-    [ "$choice" == 'Update' ] && [ "$skip" != 'yes' ] && { zenity --question --title='Upgrade your backup Tails USB stick?' --text="If your backup Tails has an outdated version of Tails,\nwe recommend you upgrade it to your current Tails version.\n\nClick 'Skip' to update only the persistent storage backup." --ellipsize --ok-label='Upgrade' --cancel-label='Skip' || skip='yes'; }
+    [ "$choice" == 'Update' ] && [ "$skip" != 'yes' ] && { zenity --question --title='Upgrade your backup Tails USB stick?' --text="If your backup Tails has an outdated version of Tails,\nwe recommend you upgrade it to your current Tails version.\n\nClick 'Skip' to update only the persistent storage backup." --ellipsize --ok-label='Upgrade' --cancel-label='Skip' $ICON || skip='yes'; }
 fi
 
 title="$(gettext -s 'Update your backup Tails')"
@@ -113,18 +117,18 @@ if [ ! -d "$SOURCE" ] || [ ! -b "$(backup_luks_device)" ]; then
     # Ask to retry if only the backup Tails USB stick is missing
     if [ ! -b "$(backup_luks_device)" ] && [ -d "$SOURCE" ]; then
         while [ ! -b "$(backup_luks_device)" ]; do
-            if ! zenity --question --ellipsize --title "$title" --text "$msg" --ok-label "$(gettext -s 'Retry')" --cancel-label "$(gettext -s 'Cancel')"; then
+            if ! zenity --question --ellipsize --title "$title" --text "$msg" --ok-label "$(gettext -s 'Retry')" --cancel-label "$(gettext -s 'Cancel')" $ICON; then
                 exit 1
             fi
         done
     else
-        zenity --error --ellipsize --title "$title" --text "$msg"
+        zenity --error --ellipsize --title "$title" --text "$msg" $ICON
         exit 1
     fi
 fi
 if [ "$choice" == 'Update' ]; then
     msg="$(gettext -s 'Do you want to update your backup Tails USB stick now?\n\nThis will replace all data in the Persistent Storage of your backup Tails.')"
-    if ! zenity --question --ellipsize --title "$title" --text "$msg" --ok-label "$(gettext -s 'Update')" --cancel-label "$(gettext -s 'Cancel')"; then
+    if ! zenity --question --ellipsize --title "$title" --text "$msg" --ok-label "$(gettext -s 'Update')" --cancel-label "$(gettext -s 'Cancel')" $ICON; then
         exit 1
     fi
     # skips Tails installer and early passphrase entry if updating but not upgrading.
@@ -149,7 +153,7 @@ if [ "$choice" == 'Update' ]; then
                 fi
             done
             if [ ! -d "${DEST}" ]; then
-                zenity --error --ellipsize --title "$title" --text "$(gettext -s 'Incorrect passphrase.\n\nPlease restart the backup utility to try again.')"
+                zenity --error --ellipsize --title "$title" --text "$(gettext -s 'Incorrect passphrase.\n\nPlease restart the backup utility to try again.')" $ICON
                 exit 1
             fi
         fi
@@ -159,7 +163,7 @@ fi
 # Run real backup command. This requires privileges.
 if sudo /usr/local/lib/tails-backup-rsync |
     tee /dev/stderr |
-    zenity --progress --pulsate --auto-close --no-cancel; then
+    zenity --progress --pulsate --auto-close --no-cancel $ICON; then
     # Ensure RAM buffers are written out
     echo "Synchronizing data on USB stick..."
     sync
@@ -176,10 +180,10 @@ if sudo /usr/local/lib/tails-backup-rsync |
     else
         msg="$(gettext -s '<b>Your backup was updated successfully!</b>\n\nYou can now safely unplug your backup Tails USB stick.\n\nIf your backup Tails had an outdated version of Tails, we updated it\nby cloning your current Tails using <i>Tails Installer</i>.\n\nSee <a href="file:///usr/share/doc/tails/website/upgrade/clone.en.html#upgrade">manually upgrade from another Tails</a>.')"
     fi
-    zenity --info --ellipsize --title "$title" --text "$msg"
+    zenity --info --ellipsize --title "$title" --text "$msg" $ICON
 else
     title="$(gettext -s 'Backup failed')"
     msg="$(gettext -s '<b>Updating your backup Tails failed.</b>\n\nYou can:\n\n• Try to update your backup Tails again.\n\n• Make sure that there is enough free space on your backup Tails.\n\n• Analyze the log in the terminal.')"
-    zenity --error --ellipsize --title "$title" --text "$msg"
+    zenity --error --ellipsize --title "$title" --text "$msg" $ICON
     exit 1
 fi
