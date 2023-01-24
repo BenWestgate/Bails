@@ -16,8 +16,8 @@ export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
-thresh=$1
-loc=$2
+threshold=$1
+locations=$2
 
 word_count=$((9-16/($1+$2)))	# 5 for lo value, 7 for high value
 timeout=5
@@ -27,9 +27,9 @@ DEST='/media/amnesia/TailsData/'
 choose() {	# FIXME TODO I need to actually add this information before shipping a Beta TODO
 	zenity --warning --text='These are all the ways you can screw up badly choosing your own password.\n\nDo you understand?' --ellipsize
 	until [ "$pass" ] && [ "$pass" == "$confirmed" ]; do 
-		pass=$(zenity --password --title='Enter your proposed passphrase')
+		pass="$(zenity --password --title='Enter your proposed passphrase')"
 		zenity --info --title='Rough passphrase strength estimate' --text="$(keepassxc-cli estimate <<< "$pass")" --ellipsize && \
-		confirmed=$(zenity --password --title='Confirm your proposed passphrase') && \
+		confirmed="$(zenity --password --title='Confirm your proposed passphrase')" && \
 		passwd <<< "$pass
 $confirmed
 " || zenity --warning --text='The supplied passphrases do not match.' --ellipsize --title='Passphrases do not match'
@@ -49,9 +49,12 @@ $(zenity --password --title='Confirm your passphrase')
 	done
 }
 
-pw_display() {
+# displays the diceware password and its entropy and crack cost.
+# Parameters:	$1 = word count
+		$2 = attempt count 
+pw_display() {	#TODO FIXME I must have some password quality display before version 1, ideally the cracking cost in BTC
 	entropy=$(bc -l <<< "scale=2;(l(6^(5*$1))-l($2))/l(2)")
-	(( $1 != last_wc )) && pass=$(keepassxc-cli diceware --words=$1)
+	(( $1 != last_wc )) && pass="$(keepassxc-cli diceware --words=$1)"
 	last_wc=$1
 	clear -x
 	echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
@@ -67,15 +70,15 @@ and that can remind you of the particular words you chose, in order."
 }
 
 # Splits passphrase to create a fallback if forgotten
-# Parameters:	$1 = password to split
-#		$2 = threshold
-#		$3 = share quantity
-#		$4 = 'dice' for compressed diceware fallbacks
+# Parameters:	$1 = threshold
+#		$2 = share quantity
+#		$3 = password to split
+#		$4 = 'dice' to compress a diceware fallback
 # Output: shamir shares for user to write down
 fallback() {		#TODO try using ` ` syntax for command substitution to save writing
-    thresh=$2
-    loc=$3
-    return	# added for testing to remove passphrase stuff
+    return	# added for testing to remove passphrase stuff TODO remove this!!FIXME
+    threshold=$1
+    locations=$2
     tmp_dir=$(mktemp --directory)
     cd $tmp_dir
     line1='sudo apt update
@@ -113,26 +116,26 @@ gfcombine -o- *'
     fi
     # Explain the passphrase fallback and what conditions will recover Bitcoin data
     # allows tweaking it or skipping it in a 'Change Something' dialog
-    ((loc > 2)) && plur=s || plur=''
-    ((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
-    until $(zenity --question --icon-name=info --title='Passphrase fallback' --text="In case you forget your passphrase we will split it across <b>$loc locations</b>, with <b>any $thresh</b> of those able to restore it by typing the written commands in terminal.\n\nYou will need:\n\t• $loc pieces of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret.\n\nOne piece of paper can stay near this Tails USB and the other$plur will go offsite one to each of your backup locations.\n\n-If <b>$((thresh - 1))</b> piece$plurt of paper $plurtt stolen, nothing is learned about the passphrase\n\n-If <b>$thresh</b> or more are stolen, an attacker learns your passphrase and can decrypt your Tails USB stick or Backup Tails USB stick$plur.\n\n-If you lose <b>$((loc-thresh+1))</b> or more locations, you will <b>NOT</b> be able to recover a forgotten passphrase.\n\n-If you lose all <b>$loc</b> locations you will <b>NOT</b> be able to recover your Bitcoin data.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
+    ((locations > 2)) && plur=s || plur=''
+    ((threshold-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
+    until $(zenity --question --icon-name=info --title='Passphrase fallback' --text="In case you forget your passphrase we will split it across <b>$locations locations</b>, with <b>any $threshold</b> of those able to restore it by typing the written commands in terminal.\n\nYou will need:\n\t• $locations pieces of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret.\n\nOne piece of paper can stay near this Tails USB and the other$plur will go offsite one to each of your backup locations.\n\n-If <b>$((threshold - 1))</b> piece$plurt of paper $plurtt stolen, nothing is learned about the passphrase\n\n-If <b>$threshold</b> or more are stolen, an attacker learns your passphrase and can decrypt your Tails USB stick or Backup Tails USB stick$plur.\n\n-If you lose <b>$((locations-threshold+1))</b> or more locations, you will <b>NOT</b> be able to recover a forgotten passphrase.\n\n-If you lose all <b>$locations</b> locations you will <b>NOT</b> be able to recover your Bitcoin data.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
         choice="$(zenity --title='Change backup parameters' --question --extra-button='Add Location' --extra-button='Increase Threshold' --extra-button='Skip This' --switch --text='Add location makes it harder to lose your passphrase and data.\n\nThreshold is how many locations are needed to steal or recover your passphrase.\n\nWhat would you like to change?' --ellipsize)"
         [ "$choice" == 'Skip This' ] && zenity --warning --text='<big>If you skip the passphrase fallback you will <b>NOT</b> be able to access your Bitcoin data if you forget your passphrase.</big>' --ellipsize && return
-        [ "$choice" == 'Add Location' ] && loc=$(zenity --scale --text='How many total locations do you want to store data at?\n\nMinimum 2 is for low value data.\nUse 4 or more for high value data.' --min-value=$thresh --value=$((loc+=2)) --max-value=$((loc+thresh*2-1)) --title='Data locations')
-        [ "$choice" == 'Increase Threshold' ] && ((thresh<loc)) && thresh=$(zenity --scale --text='How many locations do you want needed to recover or steal your passphrase?\n\nMinimum 2 is for low value data.\nUse 3 or more for high value data.' --min-value=2 --max-value=$loc --value=$(((thresh+loc+1)/2)) --title='Passphrase recovery threshold')
+        [ "$choice" == 'Add Location' ] && locations=$(zenity --scale --text='How many total locations do you want to store data at?\n\nMinimum 2 is for low value data.\nUse 4 or more for high value data.' --min-value=$threshold --value=$((locations+=2)) --max-value=$((locations+threshold*2-1)) --title='Data locations')
+        [ "$choice" == 'Increase Threshold' ] && ((threshold<locations)) && threshold=$(zenity --scale --text='How many locations do you want needed to recover or steal your passphrase?\n\nMinimum 2 is for low value data.\nUse 3 or more for high value data.' --min-value=2 --max-value=$locations --value=$(((threshold+locations+1)/2)) --title='Passphrase recovery threshold')
         # reset the variables to sensible values if exited
-        [ "$loc" ] || loc=$((thresh*2-2))
-        [ "$thresh" ] || thresh=$((loc/2+1))
-        ((loc > 2)) && plur=s || plur=''
-        ((thresh-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
+        [ "$locations" ] || locations=$((threshold*2-2))
+        [ "$threshold" ] || threshold=$((locations/2+1))
+        ((locations > 2)) && plur=s || plur=''
+        ((threshold-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
     done
     # bring pygfssss download to foreground to wait if it's not done
     ps -p $gfshare_dl >/dev/null && fg %$(jobs -l | grep $gfshare_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
     # split the passphrase using shamir secret sharing
-    python3 $BAILS_DIR/lib/python3/site-packages/pygfssss/gfsplit.py -n$thresh -m$loc pw s
+    python3 $BAILS_DIR/lib/python3/site-packages/pygfssss/gfsplit.py -n$threshold -m$locations pw s
     for share in s*; do
         line2="base32 -d<<<$(base32 --wrap=0 $share)>$share"
-        if ((backups_made <= loc - thresh)); then
+        if ((backups_made <= locations - threshold)); then
             text="$line2"
         else
             text="$line1$line2$line3"
@@ -144,14 +147,14 @@ gfcombine -o- *'
         ((x>3)) && backup=" ${x}th Backup"
         printf "$text" > share$backups_made
         until [ "$text" == "$response" ]; do
-            zenity --title="Write this command to restore a forgotten passphrase ($backups_made/$loc)" --text-info --filename=share$backups_made --width=600 --height=216 --font=monospace
-            response=$(zenity --title="Confirm what you wrote down ($backups_made/$loc)" --text-info --editable --width=500 --height=200 --font=monospace --filename=response$backups_made)
+            zenity --title="Write this command to restore a forgotten passphrase ($backups_made/$locations)" --text-info --filename=share$backups_made --width=600 --height=216 --font=monospace
+            response=$(zenity --title="Confirm what you wrote down ($backups_made/$locations)" --text-info --editable --width=500 --height=200 --font=monospace --filename=response$backups_made)
             if [ "$text" == "$response" ]; then
-                zenity --info --title=Confirmed --text="Fallback command $backups_made of $loc successfully confirmed\n\nStore this paper share in a secure place near your$backup Tails USB:\neither under lock and key or hidden where only you or heirs will find." --ellipsize
+                zenity --info --title=Confirmed --text="Fallback command $backups_made of $locations successfully confirmed\n\nStore this paper share in a secure place near your$backup Tails USB:\neither under lock and key or hidden where only you or heirs will find." --ellipsize
             else
                 # save last entered text to save the user time trying again.
                 printf "$response" >response$backups_made
-                zenity zenity --warning --title="Try again ($backups_made/$loc)" --text="The supplied commands do not match." --ellipsize --timeout=3
+                zenity zenity --warning --title="Try again ($backups_made/$locations)" --text="The supplied commands do not match." --ellipsize --timeout=3
             fi
         done
     done
@@ -217,7 +220,7 @@ link_dotfiles() {
 # enables job control so background downloads can be foregrounded to show progress while if user waits
 set -m 
 
-zenity --info --text "$loc" --window-icon=$BAILS_DIR/share/icons/bails128.png
+zenity --info --text "$locations" --window-icon=$BAILS_DIR/share/icons/bails128.png
 
 # set Download directory
 cd $HOME/Downloads
@@ -262,13 +265,13 @@ wget --continue --retry-connrefused --waitretry=10 https://raw.githubusercontent
 #zenity --info --title='Tips for the new passphrase' --text="You will be prompted periodically for the password throughout the remainder of this tutorial. If you forget it before a complete backup is created, you will have to start over.\n\nPractice entering this password regularly, daily at first and then at least once a week.\nRepetition will help you commit the password to memory.\n\nYour passphrase should only be used for your Bails USB sticks, and especially should not be used for any online account. If you reuse a passphrase and it ends up being leaked, it can be used to try to access your Bitcoin data or funds." --width=600
 
 # setup paper fallback
-fallback $pass $1 $2 $pw_type
+fallback $1 $2 "$pass" $pw_type
 #cd -
 #shred --remove $tmp_dir/*
 #shred --remove $tmp_dir
 #unset $tmp_dir
 # FIXME must warn that the passphrase entered in tps match exactly what they drill in Bails
-zenity --warning --title='Use same password' --text='IMPORTANT: Please use the same passphrase in Tails Persistent Storage as you selected earlier or you will not have a fallback and could lose funds.' --window-icon=$BAILS_DIR/share/icons/bails128.png
+zenity --warning --title='Use same password' --text='IMPORTANT: Please use the same passphrase in Tails Persistent Storage as you selected earlier or you will not have a fallback and could lose funds.' --window-icon=$BAILS_DIR/share/icons/bails128.png --ellipsize
 # loop until persistent storage has mounted
 until [ -d "$SOURCE" ]; do
     tps-frontend-wrapper &
@@ -442,17 +445,17 @@ zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$LOCAL_DIR
 Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a few hundred gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552 &
 
 printf "\033]2;Create Bails Backup$plur...\a"
-zenity --info --text "$loc" --window-icon=$LOCAL_DIR/share/icons/bails128.png
-if ((loc>1)); then
+zenity --info --text "$locations" --window-icon=$LOCAL_DIR/share/icons/bails128.png --icon-name=bails128
+if ((locations>1)); then	#TODO to solve this I must rename loc -> locations and see where it's getting unset
     zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
-    zenity --warning --title='Warning: Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails for real money until at least $((loc-1)) backup Tails USB stick$plur $plurtt made.\n\nYou should backup now.\n\nYou will need:\n\t• $((loc-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• $((loc-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you create and fund a wallet and fail to create an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to start backup." --ellipsize
+    zenity --warning --title='Warning: Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails for real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt made.\n\nYou should backup now.\n\nYou will need:\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you create and fund a wallet and fail to create an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to start backup." --ellipsize
 fi
 
 # make backup Tails
-for ((i=1; i<loc; i++)); do
-    zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
+for ((i=1; i<locations; i++)); do
+    zenity --notification --text="Make backup Tails USB stick $i of $((locations-1))."
     until $local/bin/tails-backup; do
-        zenity --notification --text="Make backup Tails USB stick $i of $((loc-1))."
+        zenity --notification --text="Make backup Tails USB stick $i of $((locations-1))."
         zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
     done
 done
