@@ -51,7 +51,7 @@ $(zenity --password --title='Confirm your passphrase')
 
 # displays the diceware password and its entropy and crack cost.
 # Parameters:	$1 = word count
-		$2 = attempt count 
+#		$2 = attempt count 
 pw_display() {	#TODO FIXME I must have some password quality display before version 1, ideally the cracking cost in BTC
 	entropy=$(bc -l <<< "scale=2;(l(6^(5*$1))-l($2))/l(2)")
 	(( $1 != last_wc )) && pass="$(keepassxc-cli diceware --words=$1)"
