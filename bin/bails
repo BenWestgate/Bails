@@ -271,7 +271,7 @@ fallback $1 $2 "$pass" $pw_type
 #shred --remove $tmp_dir
 #unset $tmp_dir
 # FIXME must warn that the passphrase entered in tps match exactly what they drill in Bails
-zenity --warning --title='Use same password' --text='IMPORTANT: Please use the same passphrase in Tails Persistent Storage as you selected earlier or you will not have a fallback and could lose funds.' --window-icon=$BAILS_DIR/share/icons/bails128.png --ellipsize
+zenity --warning --title='Use same password' --text='Important: Use the same passphrase for Persistent Storage encryption\nas you selected earlier or you will not have a fallback and could lose funds.' --window-icon=$BAILS_DIR/share/icons/bails128.png --ellipsize &
 # loop until persistent storage has mounted
 until [ -d "$SOURCE" ]; do
     tps-frontend-wrapper &
@@ -315,7 +315,7 @@ printf '\033]2;Verify Bitcoin Core signatures\a'
 check_sigs $3 # TODO refresh signatures if the user is updating bitcoin core.
 
 # Display info about IBD, keeping Tails private and reading material.
-until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
+until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
 	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
 	[ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
 done &>/dev/null &
