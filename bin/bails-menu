@@ -40,7 +40,7 @@ response=$(zenity --question --window-icon=$LOCAL_DIR/share/icons/bails128.png -
 # TODO random password creating a clone, then the originals are restored and the temporary password
 # TODO is displayed for the clone's owner to photograph or write down. Then restore the originals.
 [ "$response" == 'Clone' ] && zenity --info --text='Coming soon'
-[ "$response" == 'Backup' ] && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/tails-backup
+[ "$response" == 'Backup' ] && /usr/bin/gnome-terminal --wait --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup
 [ "$response" == 'Help' ] && help=$(zenity --window-icon=$LOCAL/share/icons/bails128.png --question --icon-name=help-faq-symbolic --title='Help Menu' --text='' --extra-button='Online Help' --extra-button='Donate' --extra-button='Report a Bug' --extra-button='About' --switch)
 [ "$help" == 'Donate' ] && exit # xdg-open bitcoin:BC1Q9KYUJH8NRRJ2VWW3MA8TERWCRM9WUA24MH7TU3?label=Donation%20to%20Bitcoin%20Core%20on%20Tails #FIXME change address
 [ "$help" == 'Report a Bug' ] && tor-browser https://github.com/BenWestgate/Bails/issues
