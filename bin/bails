@@ -185,7 +185,7 @@ check_sigs() {
             (( good_sig >= $1 )) && { type=info; break; }
         done
     fi
-    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png &
+    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png --timeout=10 &
 
     shred --remove $temp_file
     shred --remove $sig_file
@@ -225,9 +225,7 @@ link_dotfiles() {
 ###################################################################################################
 
 # enables job control so background downloads can be foregrounded to show progress while if user waits
-set -m 
-
-zenity --info --text "$locations" --window-icon=$BAILS_DIR/share/icons/bails128.png
+set -m
 
 # set Download directory
 cd $HOME/Downloads
@@ -286,6 +284,7 @@ until [ -d "$SOURCE" ]; do
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
     sleep 1
 done
+pkill zenity
 
 # loop until needed Persistent features are on
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
@@ -474,6 +473,8 @@ echo 0 > $LOCAL_DIR/state/good_backups
 
 export LOCATIONS=$locations
 export THRESHOLD=$threshold
+#TODO remove after testing
+pass=abc
 export PASS="$pass"
 
 # check every 10 minutes for 100% inital block download and recommend a backup of the blockchain.
@@ -486,7 +487,7 @@ inotifywait -r -e create,moved_to . & wallet_added=$!
 tail -f -s10 $DATA_DIR/debug.log & debuglog=$!
 wait -f $wallet_added
 kill $debuglog
-if [ $LOCAL_DIR/state/ibd-backedup ]; then
+if [ -e $LOCAL_DIR/state/ibd-backedup ]; then
     create_or_update=Update
 else
     create_or_update=Create
@@ -494,15 +495,15 @@ fi
 printf "\033]2;$create_or_update Bails Backup$plur...\a"
 if ((locations>1)); then
     zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
-    until zenity --warning --title='Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt ${create_or_update,,}d.\n\nYou should backup now to protect your bitcoin data.\n\nYou will need:\n\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Tails USB stick$plur look different than your current Tails USB stick.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you fund a wallet then fail to make an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize; do sleep 1; done
+    until zenity --warning --title='Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt ${create_or_update,,}d.\n\nYou should backup now to protect your bitcoin data.\n\nYou will need:\n\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Tails USB stick$plur look different than your current Tails USB stick.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize; do sleep 1; done
 fi
 
 # make backup Tails
 for ((i=1; i<locations; i++)); do
-    zenity --notification --text="Create backup Tails USB stick $i of $((locations-1))."
+    zenity --notification --text="$create_or_update backup Tails USB stick $i of $((locations-1))."
     until echo "$PASS" | $LOCAL_DIR/bin/bails-backup $create_or_update -; do
         zenity --notification --text="WARNING: You must make a backup USB to use Bails safely" --timeout=5
-        zenity --notification --text="Create backup Tails USB stick $i of $((locations-1))."
+        zenity --notification --text="$create_or_update backup Tails USB stick $i of $((locations-1))."
     done
 done
 
