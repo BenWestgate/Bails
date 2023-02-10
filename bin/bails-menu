@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2022 Ben Westgate
+# Copyright (c) 2023 Ben Westgate
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 
 #################################################
 
+export WAYLAND_DISPLAY=""
 export LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local/
 export BAILS_DIR=$LOCAL_DIR
 device=$(lsblk --inverse --path --raw --output=NAME /dev/mapper/TailsData_unlocked | sed -n 3p)

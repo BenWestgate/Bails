@@ -2,7 +2,7 @@
 # tails-backup: Back up Tails' encrypted persistent storage
 # into the backup storage area and create one if doesn't exist.
 # Parameter 1 = (optional) Pre-select 'Create', 'Update' or 'Skip'
-# Parameter 2 = (optional) read passphrase from standard input
+# Parameter 2 = (optional) read passphrase from standard input, otherwise input in GUI.
 # Standard Input = (optional) backup Tails passphrase
 
 set -o pipefail
@@ -11,6 +11,7 @@ export TEXTDOMAIN='tails'
 export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
 export LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local
+export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # Tails' directories for source and destination
 SOURCE='/live/persistence/TailsData_unlocked/'
@@ -163,6 +164,49 @@ if [ "$choice" == 'Update' ]; then
     fi
 fi
 
+# kill Bitcoin Core if it was already running, wait for it to shutdown safely
+printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
+while test -f $DATA_DIR/bitcoind.pid; do
+    kill "$(<$DATA_DIR/bitcoind.pid)"
+    pkill bitcoin*
+    pkill electrum
+    sleep 1
+done
+
+# Log the wallets present at the time of the backup for reminder purposes
+backup_uuid=$(lsblk -no UUID $(df -P ${DEST} | awk 'END{print $1}'))
+if cd $DATA_DIR/wallets; then
+    du --bytes --summarize $DATA_DIR/wallets | cut -f1 > $LOCAL_DIR/state/backups/$backup_uuid/wallet_bytes
+fi
+
+# Log the expiry date of the backup so it stays fresh and avoids bitrot.
+date>$LOCAL_DIR/state/backups/$backup_uuid/last_update
+
+
+# Pick an aging coefficient between 5 and 1.5
+echo $(( RANDOM % 101 + 50 )) >$LOCAL_DIR/state/backups/$backup_uuid/age_rate
+
+# if the backup destination already has wallets, check so we won't delete any new ones accidentally
+if cd ${DEST}/Persistent/.bitcoin/wallets; then
+    find ./* -type d -exec bash -c 'x="{}"; test -d '$DATA_DIR'/wallets/"$x" || { zenity --warning --title="Wallet found on destination USB that is not in source USB." --text="Bails detected wallet <b>$x</b> on your backup Tails USB but it is <b>NOT</b> on the running Tails.\n\nIt has been copied to your wallets folder to avoid overwriting and losing it." '$ICON' & rsync -a $x '$DATA_DIR'/wallets; }' \;
+fi
+
+# TODO Insert Prune commands here.
+
+# for time expiry, it should average of all backups.
+# if over 4 months, it marks the oldest backup expired and repeats the calculation excluding it.
+# the largest amount of backups that average under 4 months is the up-to-date backup value. 
+# Example 2,4,7 would expire the oldest, then average 3 for the remaining 2 up to date backups.
+# if 2 were updated, 0,4,7 averages under 4 and so it would call 3 up-to-date again.
+# Ex: 1 backup reaches 4 months and a transfer is made to update it. During the swap there is 1 USB age 0 mo
+# Ex: if the swapped out USB is updated to on site, he will still be asked to update the off-site one at 4 months.
+# Ex: but if he keeps updating the on-site USB he could get the other to age as much as 8 months. Which is the maximum tolerable, since +50% makes that 1 year the maximum guaranteed time for data preservation. This would require ignoring the warning many times, as it suggests updating your oldest off-site backups first by swapping them out.
+# TODO the user will be warned and made to awknowledge that a backup has expired if under 3 remain.
+# TODO the user will be warned every startup and every 5+/-2.5 minutes, *=2 after when all have expired.
+# TODO the number of up-to-date backups is displayed to the user in bails-menu, whenever one expires, before and after updating/creating a backup and constantly when 0 remain updated.
+# TODO make sure every backup gets marked expired after creating new descriptor wallets or encrypting existing ones.
+# TODO it would be better to check using bitcoin-wallet than the size, all USBs should expire for encryption or new wallets but not for addresses
+
 # Run real backup command. This requires privileges.
 if sudo /usr/local/lib/tails-backup-rsync |
     tee /dev/stderr |
@@ -188,6 +232,8 @@ else
     title="$(gettext -s 'Backup failed')"
     msg="$(gettext -s '<b>Updating your backup Tails failed.</b>\n\nYou can:\n\n• Try to update your backup Tails again.\n\n• Make sure that there is enough free space on your backup Tails.\n\n• Analyze the log in the terminal.')"
     zenity --error --ellipsize --title "$title" --text "$msg" $ICON
+    # Remove any log files that were placed expecting a successful backup.
+    rm -R $LOCAL_DIR/state/backups/$backup_uuid
     exit 1
 fi
 if pgrep tails-installer; then
