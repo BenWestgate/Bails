@@ -175,6 +175,7 @@ done
 
 # Log the wallets present at the time of the backup for reminder purposes
 backup_uuid=$(lsblk -no UUID $(df -P ${DEST} | awk 'END{print $1}'))
+mkdir --parents $LOCAL_DIR/state/backups
 if cd $DATA_DIR/wallets; then
     du --bytes --summarize $DATA_DIR/wallets | cut -f1 > $LOCAL_DIR/state/backups/$backup_uuid/wallet_bytes
 fi
@@ -234,6 +235,8 @@ else
     zenity --error --ellipsize --title "$title" --text "$msg" $ICON
     # Remove any log files that were placed expecting a successful backup.
     rm -R $LOCAL_DIR/state/backups/$backup_uuid
+    # Remove the backup directory if empty
+    rmdir --ignore-fail-on-non-empty $LOCAL_DIR/state/backups
     exit 1
 fi
 if pgrep tails-installer; then

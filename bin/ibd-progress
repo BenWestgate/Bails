@@ -33,8 +33,6 @@ export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
 
 # check for environment variables
 [ "$LOCATIONS" ] || LOCATIONS=2
-((LOCATIONS > 2)) && plur=s || plur=''
-((LOCATIONS-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
 [ "$THRESHOLD" ] || THRESHOLD='a threshold of'
 
 wallets_made=$(ls $DATA_DIR/wallets | wc -l)
@@ -49,28 +47,31 @@ else
     [ "$LOCATIONS" ] || LOCATIONS=2
 fi
 
+((LOCATIONS > 2)) && plur=s || plur=''
+((LOCATIONS > 2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
 
 # Recommend backup at 99.9% progress, otherwise check again in 10 minutes.
 # Exiting the prompt will postpone until next restart.
 if (( $(echo "$progress > 0.999" | bc -l) )); then
-    zenity --warning --title='Backup is strongly recommended' --text="It is recommended to ${create_or_update,,} at least $((LOCATIONS-1)) backup Tails USB stick$plur.\n\nYou should backup now to save your bitcoin blockchain data.\n\nYou will need:\n\n\t• $((LOCATIONS-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Tails USB stick$plur look different than your current Tails USB stick.\n\t• $((LOCATIONS-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you fail to ${create_or_update,,} an offsite backup\nand something happens to this Tails USB, you will have to redo the entire initial block download\!\n\nClick OK to begin backup." --ellipsize $ICON || exit 1
+    zenity --warning --title='Backup is strongly recommended' --text="It is recommended to ${create_or_update,,} at least $((LOCATIONS-1)) backup Bails USB stick$plur.\n\nYou should backup now to save your bitcoin blockchain data.\n\nYou will need:\n\n\t• $((LOCATIONS-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Bails USB stick$plur look different than your current Bails USB stick.\n\t• $((LOCATIONS-1)) cool, safe, discrete, off-site location$plur.\n\nWarning: If you fail to ${create_or_update,,} an offsite backup\nand something happens to this Bails USB, you will have to redo the entire initial block download\!\n\nClick OK to begin backup." --ellipsize $ICON || { sleep 1200; $BIN_DIR/ibd-progress; exit 0 }
 else
     sleep 600
     $BIN_DIR/ibd-progress
+    exit 0
 fi
 
 # Create/Update backup Tails
 [ -e $LOCAL_DIR/state/ibd_backedup ] || for ((i=1; i<LOCATIONS; i++)); do
-    zenity --notification --text="$create_or_update backup Tails USB stick $i of $((LOCATIONS-1))."
+    zenity --notification --text="$create_or_update backup Bails USB stick $i of $((LOCATIONS-1))."
     if [ "$PASS" ]; then
         until echo "$PASS" | $LOCAL_DIR/bin/bails-backup $create_or_update -; do
             zenity --notification --text="You should backup now to avoid a resync" --timeout=5
-            zenity --notification --text="$create_or_update backup Tails USB stick $i of $((LOCATIONS-1))."
+            zenity --notification --text="$create_or_update backup Bails USB stick $i of $((LOCATIONS-1))."
         done
     else
         until $LOCAL_DIR/bin/bails-backup $create_or_update; do
             zenity --notification --text="You should backup now to avoid a resync" --timeout=5
-            zenity --notification --text="$create_or_update backup Tails USB stick $i of $((LOCATIONS-1))."
+            zenity --notification --text="$create_or_update backup Bails USB stick $i of $((LOCATIONS-1))."
         done
     fi
 done
@@ -78,8 +79,8 @@ done
 touch $LOCAL_DIR/state/ibd_backedup
 
 if (( wallets_made )); then
-    zenity --info --title='Distribute your offsite backup USB sticks' --text="It is time to distribute your backup USB sticks and passphrase fallback commands to offsite locations.\n\nThe backup USB sticks should be kept cool to retain data.\nIt is more important they aren't lost than aren't stolen, as they are useless without the passphrase.\n\nA tamper proof bag, safe, locked drawer or cabinent or area under survelliance is better than out in the open if you fear they may get tampered with.\nIf you suspect a backup USB has been tampered with, do <b>NOT</b> boot it, use a different backup or if that is not possible, make a new Tails, start it and then insert the suspect USB to retrieve your data.\n\nEach passphrase fallback command should be stored relatively nearby each backup USB stick for convenience, but since these are paper, heat is less important than avoiding moisture. If desired, they can be hidden better than the USB sticks to make your passphrase safer from theft.\n\nEach offsite backup location should be a few miles from another, if possible, to protect against natural disasters.\n\nFinally for inheritance, your heirs must be able to find $THRESHOLD paper fallback commands and one Bails USB to access your bitcoin data.\n\nIf you do not think they will be able to do so, you should leave them hints on the whereabouts of the passphrase fallbacks so that they can find a threshold and a Bails USB and educate them how to use Bails and the fallback commands.\n\nClick Ok once you understand these instructions." --ellipsize $ICON
-    zenity --question --title='Confirm backups have been secured offsite.' --text="If your backups have been secured to offsite location$plur click 'Yes', if you have not done so, click 'No' and you will be reminded later.\n\ "$ICON && { rm $LOCAL_DIR/share/applications/ibd-progress.desktop; exit 0; } || zenity --warning --title='Risk of Bitcoin data loss' --text='Warning: If you fund a wallet but do not geographically distribute your backup USB sticks and passphrase fallbacks and something happens to your current location, you will <b>LOSE ALL YOUR BITCOINS</b>!\n\nDo you understand and are okay with that risk?' $ICON
+    zenity --info --title='Distribute your offsite backup USB sticks' --text="It is time to distribute your backup USB sticks and passphrase fallback commands to offsite locations.\n\nThe backup USB sticks should be kept cool to retain data.\nIt is more important they aren't lost than aren't stolen, as they are useless without the passphrase.\n\nA tamper proof bag, safe, locked drawer or cabinent or area under survelliance is better than out in the open if you fear they may get tampered with.\nIf you suspect a backup USB has been tampered with, do <b>NOT</b> boot it, use a different backup or if that is not possible, make a new Tails, start it and then insert the suspect USB to retrieve your data.\n\nEach passphrase fallback command should be stored relatively nearby each backup USB stick for convenience, but since these are paper, heat is less important than avoiding moisture. If desired, they can be hidden better than the USB sticks to make your passphrase safer from theft.\n\nEach offsite backup location should be at least a few miles from another, if possible, to protect against natural disasters.\n\nFinally for inheritance, your heirs must be able to find $THRESHOLD paper fallback commands and one Bails USB to access your bitcoin data.\n\nIf you do not think they will be able to do so, you should leave them hints on the whereabouts of the passphrase fallbacks so that they can find a threshold and a Bails USB and educate them how to use Bails and the fallback commands.\n\nClick Ok once you understand these instructions." --ellipsize $ICON
+    zenity --question --title='Confirm backups have been secured offsite.' --text="If your backups have been secured to offsite location$plur click 'Yes', if you have not done so, click 'No' and you will be reminded later." $ICON && { rm $LOCAL_DIR/share/applications/ibd-progress.desktop; exit 0; } || zenity --warning --title='Risk of Bitcoin data loss' --text='Warning: If you fund a wallet but do not geographically distribute your backup USB sticks and passphrase fallbacks and something happens to your current location, you will <b>LOSE ALL YOUR BITCOINS</b>!\n\nDo you understand this risk?' $ICON
     # wait 24 hours
     sleep 86400
 else

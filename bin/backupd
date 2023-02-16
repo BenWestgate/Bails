@@ -17,44 +17,60 @@ LONGEVITY=$((EXPIRY_AGE * 7 * 24 * 3600)) # seconds
 NEW_WALLET_SIZE=20000 # bytes
 
 rescan_time=$1
+in_sync=0
+up_to_date=0
+wallets_space_use=0
 
 # Log the wallets space use to detect new wallets, encryption and metadata
-if cd $DATA_DIR/wallets; then
-    wallets_space_use=$(du --bytes --summarize $DATA_DIR/wallets | cut -f1 > $LOCAL_DIR/state/backups/$backup_uuid/wallet_bytes)
-fi
+[ -d $DATA_DIR/wallets ] && wallets_space_use=$(du --bytes --summarize $DATA_DIR/wallets | cut -f1)
 
-if cd $LOCAL_DIR/state/backups; then
+if [ -d $LOCAL_DIR/state/backups ]; then
+    cd $LOCAL_DIR/state/backups
     for size in */wallet_bytes; do
-        space=$(<size)
+        space=$(<$size)
         (( wallets_space_use < space + 20000 )) && (( in_sync++ ))
     done
     for age in $(for uuid in *; do last_update=$(date -d "$(<$uuid/last_update)" +%s); real_age=$((now - last_update)); rate=$(<$uuid/age_rate); echo $((real_age*100/rate)); done | sort --numeric-sort); do
         ((total+=age))
-        ((total/ ++i < LONGEVITY)) && ((up_to_date++)); then
+        ((total/ ++i < LONGEVITY)) && ((up_to_date++))
     done
 fi
 
 unset age total i space
 
-# Good up-to-date-backups is the minimum of in_sync and up_to_date
+# Find the minimum of in_sync and up_to_date
 synced_and_recent=$(( in_sync > up_to_date ? up_to_date : in_sync ))
-
-last_synched_and_recent=$(<$LOCAL_DIR/state/good_backups)
+echo $synced_and_recent
+echo $wallets_space_use
+last_up_to_date=$(<$LOCAL_DIR/state/good_backups)
 echo $synced_and_recent > $LOCAL_DIR/state/good_backups
-
+(( up_to_date > 1 )) && plur=s || plur=''
+(( in_sync > 1 )) && plur2=s || plur2=''
+(( up_to_date - in_sync > 1 )) && plur3=s || plur3=''
 # Warn about backups expiring due to old age
-if ((synced_and_recent == 0)) && (( walltets_space_use > 0 )); then
+if ((synced_and_recent == 0)) && (( wallets_space_use > 0 )); then
     zenity --notification --text="WARNING: You must make a backup to use Bails safely"
-    until zenity --warning --title='Backup is Mandatory' --text="All of your backup Tails USBs are out-of-date.\n\nYou should backup now to protect your bitcoin data.\n\n\If something happens to this Tails USB and your backups have become old and corrupted, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize $ICON; do sleep 1; done
-    until $LOCAL_DIR/bin/bails-backup; do
-        zenity --notification --text="WARNING\nYou must make a backup to continue to use Bails safely"
-    done
-elif ((synced_and_recent < last_up_to_date)); then
-    zenity --warning --title='A backup USB has expired and should be updated soon.' --text="Backup USBs should be updated regularly by swapping them out with an updated backup Tails USB.\n\nMy personal advice is to keep up-to-date: one backup Tails USB stick (low value data) or three backup Tails USB sticks (high value data). Updating the oldest one in rotating order by swapping out the old backup Tails USB stick out for an updated backup Tails USB stick.\n\n\t<b>You have $up_to_date remaining backup Tails up-to-date.\n\n\nClick 'Ok' to backup now." $ICON && $LOCAL_DIR/bin/bails-backup
+    if (( in_sync == 0 )); then		#TODO trigger this skippably if 0 < in_sync < up_to_date to say N copies are in sync, M copies are missing the new Bitcoin wallet data.
+        zenity --warning --title="Wallets backup$plur not synced!" --text="Your wallets directory grew significantly in size.\n\nBackup is <b>mandatory</b> if you've created or encrypted a wallet.\n\n<b>IMPORTANT: Any previous backups you have made should be replaced with\nnewly generated backups. Previous backups will become useless as soon as\nyou start using a new or newly encrypted wallet.</b>\n\nIf you fund a newly encrypted or newly created wallet before backing up offsite and\nsomething happens to this location, you will <b>LOSE ALL BITCOINS DEPOSITED</b>\!\n\nIf not, it is still recommended to make backups after a significant number of new\ntransactions to maintain the metadata, such as labels.\n\nMy personal advice is to regularly update:\n\t-One backup Bails USB stick (low value data) or\n\t-Three backup Bails USB sticks (high value data).\n\nUpdate your backup Bails USB$plur by replacing each offsite backup USB with a\nnew backup Bails USB stick.\n\nClick OK to begin backup." --ellipsize $ICON && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup && $BIN_DIR/backupd $((2*rescan_time)) || { zenity --question --title='Confirm you wish to skip backup?' --text="If you have created or encrypted any wallets\nsince your last backup$plur, you <b>MUST</b> click <b>No</b>." --width=300 --ellipsize --default-cancel $ICON && (( rescan_time+=86400 )); }
+    elif (( in_sync < up_to_date )); then
+        zenity --warning --title="Wallets backup$plur not all synced!" --text="Your wallets directory grew significantly in size since all backups were last updated\nwith $((up_to_date - in_sync)) backup$plur3 remaining out-of-sync.\n\nIf you've created or encrypted a wallet, backup is <b>mandatory</b>.\n\n<b>IMPORTANT: Any previous backups you have made should be replaced with\nnewly generated backups. Previous backups will become useless as soon as\nyou start using a new or newly encrypted wallet.</b>\n\nIf not, it is still recommended to make backups after a significant number of new\ntransactions to maintain the metadata, such as labels.\n\nMy personal advice is to keep synced:\n\t-<b>One</b> backup Bails USB stick (low value data) or\n\t-<b>Three</b> backup Bails USB sticks (high value data).\n\nUpdate your backup USB$plur3 by replacing each offsite USB with a\nnew backup Bails USB stick.\n\n\t<b>You have $in_sync backup Bails USB$plur synced with your latest wallets</b>.\n\nClick OK to begin backup." --ellipsize $ICON && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup && $BIN_DIR/backupd $((2*rescan_time)) || { zenity --question --title='Confirm you wish to skip backup?' --text="If you have created or encrypted any wallets\nsince your last backup$plur, you <b>MUST</b> click <b>No</b>." --width=300 --ellipsize --default-cancel $ICON && (( rescan_time+=86400 )); }
+    fi
+    if (( up_to_date == 0 )); then
+        until zenity --warning --title='Backup is Mandatory' --text="<b>All of your backup Bails USBs are out-of-date.</b>\n\nYou should backup now to protect your bitcoin data.\n\n\If something happens to this Bails USB and your backups have become\ntoo old and corrupted, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nMost USB sticks do not guarante data retention even for a year.\n\nMy personal advice is to regularly update:\n\t-one backup Bails USB stick (low value data) or\n\t-three backup Bails USB sticks (high value data) in rotating order.\n\nUpdate your oldest backup Bails USB by replacing the offsite backup USB with a\nnew backup Bails USB stick.\n\nClick OK to begin backup." --ellipsize $ICON; do
+            sleep $((++i))
+        done
+        until $LOCAL_DIR/bin/bails-backup; do
+            zenity --notification --text="WARNING: All backups are out-of-date\!\nYou must make a backup to continue using Bails safely" --timeout $((++j))
+        done 
+    fi
+elif (( up_to_date < last_up_to_date)); then
+    (( up_to_date > 1 )) && plur=s || plur=''
+    zenity --warning --title='A backup USB has expired and should be updated soon' --text="Backup USBs should be regularly updated by replacing them with a newly\ngenerated backup Bails USB.\n\nMy personal advice is to keep up-to-date:\n\t-<b>One</b> backup Bails USB stick (low value data) or\n\t-<b>Three</b> backup Bails USB sticks (high value data) in rotating order.\n\nUpdate your oldest backup Bails USB by replacing the offsite backup USB\nwith a new backup Bails USB stick.\n\n\t<b>You have $up_to_date backup Bails USB$plur remaining up-to-date</b>.\n\n\nClick OK to begin a backup now." --ellipsize $ICON && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup
 fi
 
 # wait the polling interval then check again but with delay multiplied by 2.
 sleep $rescan_time
+echo checking again in $rescan_time seconds	#TODO remove this after testing
 $BIN_DIR/backupd $((2*rescan_time))
 
 
