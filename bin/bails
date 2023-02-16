@@ -185,7 +185,7 @@ check_sigs() {
             (( good_sig >= $1 )) && { type=info; break; }
         done
     fi
-    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png --timeout=10 &
+    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png --timeout=10 & next_dialog=$!
 
     shred --remove $temp_file
     shred --remove $sig_file
@@ -278,11 +278,11 @@ fallback $1 $2 "$pass" $pw_type
 
 # loop until persistent storage has mounted
 until [ -d "$SOURCE" ]; do
-    zenity --warning --title='Use same passphrase' --text='Important: Use the exact same passphrase for Persistent Storage encryption\nas selected earlier or you will <b>NOT</b> have a fallback and <i>could</i> lose funds.' --window-icon=$BAILS_DIR/share/icons/bails128.png --ellipsize
-    tps-frontend-wrapper &
+    # warn the same password as confirmed earlier must be used in tps
+    (( i++ < 3 )) && { pgrep zenity || zenity --warning --title='Use same passphrase' --text='Important: Use the exact same passphrase for Persistent Storage encryption\nas selected earlier or you will <b>NOT</b> have a fallback and <i>could</i> lose funds.' --window-icon=$BAILS_DIR/share/icons/bails128.png --ellipsize; }
     # restart tps if closed without creating persistence.
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
-    sleep 1
+    sleep $i
 done
 pkill zenity
 
@@ -332,7 +332,7 @@ backup_days=$((prune_MiB/309))
 
 
 # Display info about IBD, keeping Tails private and reading material.
-{ until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
+{ wait -f $next_dialog; until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
 	[ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
 	[ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
 done; zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bitcoin128.png --info --text="<b>Setup</b>
@@ -410,14 +410,14 @@ mkdir --parents $DOTFILES/.config/{autostart,Bitcoin}
 echo '[Desktop Entry]
 Type=Application
 Name=Bitcoin
-Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-qt -min -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))"
+Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-qt -min -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907)) -startupnotify='$LOCAL_DIR'/bin/chainstate-preload"
 Terminal=false
 Hidden=false' >$DOTFILES/.config/autostart/bitcoin.desktop
 
 # create ibd monitor autostart desktop file
 echo '[Desktop Entry]
 Type=Application
-Name=Bitcoin
+Name=Initial Block Download monitor daemon
 Exec='$LOCAL_DIR'/bin/ibd-progress
 Terminal=false
 Hidden=false' >$DOTFILES/.config/autostart/ibd-progress.desktop
@@ -425,7 +425,7 @@ Hidden=false' >$DOTFILES/.config/autostart/ibd-progress.desktop
 # create backup daemon autostart desktop file
 echo '[Desktop Entry]
 Type=Application
-Name=Bitcoin
+Name=Bails backup reminder service 
 Exec='$LOCAL_DIR'/bin/backupd 300
 Terminal=false
 Hidden=false' >$DOTFILES/.config/autostart/backupd.desktop
@@ -466,7 +466,7 @@ gtk-launch bitcoin-qt
 
 cd $HOME/Persistent/.bitcoin/wallets
 
-mkdir --parents $LOCAL_DIR/state/backups/
+mkdir $LOCAL_DIR/state/
 
 # set the good backup quanity to zero
 echo 0 > $LOCAL_DIR/state/good_backups
@@ -483,9 +483,8 @@ $LOCAL_DIR/bin/ibd-progress &
 cd $HOME/Persistent/.bitcoin/wallets
 # wait for a wallet to be created.
 printf "\033]2;Running bitcoin\a"
-inotifywait -r -e create,moved_to . & wallet_added=$!
 tail -f -s10 $DATA_DIR/debug.log & debuglog=$!
-wait -f $wallet_added
+inotifywait -r -e create,moved_to .
 kill $debuglog
 if [ -e $LOCAL_DIR/state/ibd-backedup ]; then
     create_or_update=Update
@@ -495,7 +494,7 @@ fi
 printf "\033]2;$create_or_update Bails Backup$plur...\a"
 if ((locations>1)); then
     zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
-    until zenity --warning --title='Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt ${create_or_update,,}d.\n\nYou should backup now to protect your bitcoin data.\n\nYou will need:\n\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Tails USB stick$plur look different than your current Tails USB stick.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize; do sleep 1; done
+    until zenity --warning --title='Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt ${create_or_update,,}d.\n\nYou should backup now to protect your bitcoin data.\n\nYou will need:\n\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Bails USB stick$plur look different than your current Bails USB stick.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize; do sleep 1; done
 fi
 
 # make backup Tails
