@@ -41,7 +41,7 @@ tails_installer_hook() {
     done
     device=$(grep 'DEBUG: Unmounting' $temp_log | awk '{print $7}')
     # remove temporary log
-    shred --remove $temp_log-hook
+    shred --remove $temp_log
     unset temp_log
     if [ "$device" ]; then
         sleep 10
