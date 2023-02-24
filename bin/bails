@@ -487,10 +487,11 @@ if [ -e $LOCAL_DIR/state/ibd-backedup ]; then
 else
     create_or_update=Create
 fi
+((locations>2)) && plurtt=are
 printf "\033]2;$create_or_update Bails Backup$plur...\a"
 if ((locations>1)); then
     zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
-    until zenity --warning --title='Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt ${create_or_update,,}d.\n\nYou should backup now to protect your bitcoin data.\n\nYou will need:\n\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Bails USB stick$plur look different than your current Bails USB stick.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize; do sleep 1; done
+    until zenity --warning --title='Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt ${create_or_update,,}d.\n\nYou should backup now to protect your bitcoin data.\n\nYou will need:\n\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Bails USB stick$plur look different than your current Bails USB stick.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize; do sleep $((z++)); done
 fi
 
 # make backup Tails
