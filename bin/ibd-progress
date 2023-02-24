@@ -41,7 +41,7 @@ progress=$(tail $DATA_DIR/debug.log | grep -m1 'progress=' | awk '{print $10}' |
 backups_created=$(<$LOCAL_DIR/state/good_backups)
 if (( backups_created )); then
     create_or_update=Update
-    [ "$LOCATIONS" ] || LOCATIONS=(( backups_created + 1 ))
+    [ "$LOCATIONS" ] || LOCATIONS=$(( backups_created + 1 ))
 else
     create_or_update=Create
     [ "$LOCATIONS" ] || LOCATIONS=2
