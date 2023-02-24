@@ -173,6 +173,7 @@ while test -f $DATA_DIR/bitcoind.pid; do
     sleep 1
 done
 
+printf '\033]2;Log of Persistent Storage Backup\a'
 # Log the wallets present at the time of the backup for reminder purposes
 backup_uuid=$(lsblk -no UUID $(df -P ${DEST} | awk 'END{print $1}'))
 mkdir --parents $LOCAL_DIR/state/backups
@@ -239,8 +240,7 @@ else
     rmdir --ignore-fail-on-non-empty $LOCAL_DIR/state/backups
     exit 1
 fi
-if pgrep tails-installer; then
-    pkill tails-installer
+pgrep tails-installer >/dev/null && pkill tails-installer
 else
     exit 0
 fi
