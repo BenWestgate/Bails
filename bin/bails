@@ -479,9 +479,7 @@ $LOCAL_DIR/bin/ibd-progress &
 cd $HOME/Persistent/.bitcoin/wallets
 # wait for a wallet to be created.
 printf "\033]2;Running bitcoin\a"
-tail -f -s10 $DATA_DIR/debug.log & debuglog=$!
 inotifywait -r -e create,moved_to .
-kill $debuglog
 if [ -e $LOCAL_DIR/state/ibd-backedup ]; then
     create_or_update=Update
 else
