@@ -21,8 +21,11 @@ in_sync=0
 up_to_date=0
 wallets_space_use=0
 
+# symlink datadir into home for convenience, familiarity and safety on command line.
+[ -e $HOME/.bitcoin ] || ln --symbolic $DATA_DIR $HOME
+
 # Log the wallets space use to detect new wallets, encryption and metadata
-[ -d $DATA_DIR/wallets ] && wallets_space_use=$(du --bytes --summarize $DATA_DIR/wallets | cut -f1)
+wallets_space_use=$(du --bytes --summarize $DATA_DIR/wallets | cut -f1)
 
 if [ -d $LOCAL_DIR/state/backups ]; then
     cd $LOCAL_DIR/state/backups
@@ -37,25 +40,23 @@ if [ -d $LOCAL_DIR/state/backups ]; then
 fi
 
 unset age total i space
-
+# TODO remove "my personal advice from the prompts to shorten them to the necessary info at the time to pursuade a backup, display it after backup completes. FIXME
 # Find the minimum of in_sync and up_to_date
 synced_and_recent=$(( in_sync > up_to_date ? up_to_date : in_sync ))
-echo $synced_and_recent
-echo $wallets_space_use
 last_up_to_date=$(<$LOCAL_DIR/state/good_backups)
 echo $synced_and_recent > $LOCAL_DIR/state/good_backups
 (( up_to_date > 1 )) && plur=s || plur=''
 (( in_sync > 1 )) && plur2=s || plur2=''
 (( up_to_date - in_sync > 1 )) && plur3=s || plur3=''
 # Warn about backups expiring due to old age
-if ((synced_and_recent == 0)) && (( wallets_space_use > 0 )); then
+if ((synced_and_recent == 0)) && (( wallets_space_use > 8192 )); then
     zenity --notification --text="WARNING: You must make a backup to use Bails safely"
     if (( in_sync == 0 )); then		#TODO trigger this skippably if 0 < in_sync < up_to_date to say N copies are in sync, M copies are missing the new Bitcoin wallet data.
-        zenity --warning --title="Wallets backup$plur not synced!" --text="Your wallets directory grew significantly in size.\n\nBackup is <b>mandatory</b> if you've created or encrypted a wallet.\n\n<b>IMPORTANT: Any previous backups you have made should be replaced with\nnewly generated backups. Previous backups will become useless as soon as\nyou start using a new or newly encrypted wallet.</b>\n\nIf you fund a newly encrypted or newly created wallet before backing up offsite and\nsomething happens to this location, you will <b>LOSE ALL BITCOINS DEPOSITED</b>\!\n\nIf not, it is still recommended to make backups after a significant number of new\ntransactions to maintain the metadata, such as labels.\n\nMy personal advice is to regularly update:\n\t-One backup Bails USB stick (low value data) or\n\t-Three backup Bails USB sticks (high value data).\n\nUpdate your backup Bails USB$plur by replacing each offsite backup USB with a\nnew backup Bails USB stick.\n\nClick OK to begin backup." --ellipsize $ICON && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup && $BIN_DIR/backupd $((2*rescan_time)) || { zenity --question --title='Confirm you wish to skip backup?' --text="If you have created or encrypted any wallets\nsince your last backup$plur, you <b>MUST</b> click <b>No</b>." --width=300 --ellipsize --default-cancel $ICON && (( rescan_time+=86400 )); }
+        zenity --warning --title="Wallets backup$plur not synced!" --text="Your wallets directory grew significantly in size.\n\nBackup is <b>mandatory</b> if you've created or encrypted a wallet.\n\n<b>IMPORTANT: Any previous backups you have made should be replaced with\nnewly generated backups. Previous backups will become useless as soon as\nyou start using a new or newly encrypted wallet.</b>\n\nIf you fund a newly encrypted or newly created wallet before backing up offsite and\nsomething happens to this location, you will <b>LOSE ALL BITCOINS DEPOSITED</b>\!\n\nIf not, it is still recommended to make backups after a significant number of new\ntransactions to maintain the metadata, such as labels.\n\nClick OK to begin backup." --ellipsize $ICON && /usr/bin/gnome-terminal --wait --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup && $BIN_DIR/backupd $((2*rescan_time)) || { zenity --question --title='Confirm you wish to skip backup?' --text="If you have created or encrypted any wallets\nsince your last backup$plur, you <b>MUST</b> click <b>No</b>." --width=300 --ellipsize --default-cancel $ICON && (( rescan_time+=86400 )); }
     elif (( in_sync < up_to_date )); then
-        zenity --warning --title="Wallets backup$plur not all synced!" --text="Your wallets directory grew significantly in size since all backups were last updated\nwith $((up_to_date - in_sync)) backup$plur3 remaining out-of-sync.\n\nIf you've created or encrypted a wallet, backup is <b>mandatory</b>.\n\n<b>IMPORTANT: Any previous backups you have made should be replaced with\nnewly generated backups. Previous backups will become useless as soon as\nyou start using a new or newly encrypted wallet.</b>\n\nIf not, it is still recommended to make backups after a significant number of new\ntransactions to maintain the metadata, such as labels.\n\nMy personal advice is to keep synced:\n\t-<b>One</b> backup Bails USB stick (low value data) or\n\t-<b>Three</b> backup Bails USB sticks (high value data).\n\nUpdate your backup USB$plur3 by replacing each offsite USB with a\nnew backup Bails USB stick.\n\n\t<b>You have $in_sync backup Bails USB$plur synced with your latest wallets</b>.\n\nClick OK to begin backup." --ellipsize $ICON && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup && $BIN_DIR/backupd $((2*rescan_time)) || { zenity --question --title='Confirm you wish to skip backup?' --text="If you have created or encrypted any wallets\nsince your last backup$plur, you <b>MUST</b> click <b>No</b>." --width=300 --ellipsize --default-cancel $ICON && (( rescan_time+=86400 )); }
+        zenity --warning --title="Wallets backups not all synced!" --text="Your wallets directory grew significantly in size since all backups were last updated\nwith $((up_to_date - in_sync)) backup$plur3 remaining out-of-sync.\n\nIf you've created or encrypted a wallet, backup is <b>mandatory</b>.\n\n<b>IMPORTANT: Any previous backups you have made should be replaced with\nnewly generated backups. Previous backups will become useless as soon as\nyou start using a new or newly encrypted wallet.</b>\n\nIf not, it is still recommended to make backups after a significant number of new\ntransactions to maintain the metadata, such as labels.\n\nMy personal advice is to keep synced:\n\t-<b>One</b> backup Bails USB stick (low value data) or\n\t-<b>Three</b> backup Bails USB sticks (high value data).\n\nUpdate your backup USB$plur3 by replacing each offsite USB with a\nnew backup Bails USB stick.\n\n\t<b>You have $in_sync backup Bails USB$plur2 synced with your latest wallets</b>.\n\nClick OK to begin backup." --ellipsize $ICON && /usr/bin/gnome-terminal --wait --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup && $BIN_DIR/backupd $((2*rescan_time)) || { zenity --question --title='Confirm you wish to skip backup?' --text="If you have created or encrypted any wallets\nsince your last backup$plur, you <b>MUST</b> click <b>No</b>." --width=300 --ellipsize --default-cancel $ICON && (( rescan_time+=86400 )); }
     fi
-    if (( up_to_date == 0 )); then
+    if (( up_to_date == 0 )) && [ -d $LOCAL_DIR/state/backups ]; then
         until zenity --warning --title='Backup is Mandatory' --text="<b>All of your backup Bails USBs are out-of-date.</b>\n\nYou should backup now to protect your bitcoin data.\n\n\If something happens to this Bails USB and your backups have become\ntoo old and corrupted, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nMost USB sticks do not guarante data retention even for a year.\n\nMy personal advice is to regularly update:\n\t-one backup Bails USB stick (low value data) or\n\t-three backup Bails USB sticks (high value data) in rotating order.\n\nUpdate your oldest backup Bails USB by replacing the offsite backup USB with a\nnew backup Bails USB stick.\n\nClick OK to begin backup." --ellipsize $ICON; do
             sleep $((++i))
         done
@@ -65,7 +66,7 @@ if ((synced_and_recent == 0)) && (( wallets_space_use > 0 )); then
     fi
 elif (( up_to_date < last_up_to_date)); then
     (( up_to_date > 1 )) && plur=s || plur=''
-    zenity --warning --title='A backup USB has expired and should be updated soon' --text="Backup USBs should be regularly updated by replacing them with a newly\ngenerated backup Bails USB.\n\nMy personal advice is to keep up-to-date:\n\t-<b>One</b> backup Bails USB stick (low value data) or\n\t-<b>Three</b> backup Bails USB sticks (high value data) in rotating order.\n\nUpdate your oldest backup Bails USB by replacing the offsite backup USB\nwith a new backup Bails USB stick.\n\n\t<b>You have $up_to_date backup Bails USB$plur remaining up-to-date</b>.\n\n\nClick OK to begin a backup now." --ellipsize $ICON && /usr/bin/gnome-terminal --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup
+    zenity --warning --title='A backup USB has expired and should be updated soon' --text="Backup USBs should be regularly updated by replacing them with a newly\ngenerated backup Bails USB.\n\nMy personal advice is to keep up-to-date:\n\t-<b>One</b> backup Bails USB stick (low value data) or\n\t-<b>Three</b> backup Bails USB sticks (high value data) in rotating order.\n\nUpdate your oldest backup Bails USB by replacing the offsite backup USB\nwith a new backup Bails USB stick.\n\n\t<b>You have $up_to_date backup Bails USB$plur remaining up-to-date</b>.\n\n\nClick OK to begin a backup now." --ellipsize $ICON && /usr/bin/gnome-terminal --wait --title 'Log of Persistent Storage Backup' --hide-menubar -- $LOCAL_DIR/bin/bails-backup
 fi
 
 # wait the polling interval then check again but with delay multiplied by 2.

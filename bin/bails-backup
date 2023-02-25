@@ -221,18 +221,19 @@ if sudo /usr/local/lib/tails-backup-rsync |
     sleep 1
     echo "Done!"
     gio mount --eject "${DEST}"
+    gtk-launch bitcoin-qt
     title="$(gettext -s 'Backup successful')"
     if [ "$choice" == 'Create' ]; then
-        msg="$(gettext -s '<b>Your backup was created successfully!</b>\n\nYou can now safely unplug your backup Tails USB stick.')"
+        msg="$(gettext -s '<b>Your backup was created successfully!</b>\n\nYou can now safely unplug your backup Bails USB stick.\n\nPlease test your backup by starting Bails from it before storing it in a cool, safe, discrete, off-site location.')"
     elif [ "$skip" == 'yes' ]; then
-        msg="$(gettext -s '<b>Your backup was updated successfully!</b>\n\nYou can now safely unplug your backup Tails USB stick.\n\nIf your backup Tails has an outdated version of Tails, we recommend you\nupdate it by cloning your current Tails using <i>Tails Installer</i>.\n\nSee <a href="file:///usr/share/doc/tails/website/upgrade/clone.en.html#upgrade">manually upgrade from another Tails</a>.')"
+        msg="$(gettext -s '<b>Your backup was updated successfully!</b>\n\nYou can now safely unplug your backup Bails USB stick.\n\nIf your backup Bails has an outdated version of Tails, we recommend you\nupdate it by cloning your current Bails using <i>Tails Installer</i>.\n\nSee <a href="file:///usr/share/doc/tails/website/upgrade/clone.en.html#upgrade">manually upgrade from another Tails</a>.\n\nPlease test your backup before storing it in a cool, safe, discrete, off-site location.')"
     else
-        msg="$(gettext -s '<b>Your backup was updated successfully!</b>\n\nYou can now safely unplug your backup Tails USB stick.\n\nIf your backup Tails had an outdated version of Tails, we updated it\nby cloning your current Tails using <i>Tails Installer</i>.\n\nSee <a href="file:///usr/share/doc/tails/website/upgrade/clone.en.html#upgrade">manually upgrade from another Tails</a>.')"
+        msg="$(gettext -s '<b>Your backup was updated successfully!</b>\n\nYou can now safely unplug your backup Bails USB stick.\n\nIf your backup Tails had an outdated version of Tails, we updated it\nby cloning your current Tails using <i>Tails Installer</i>.\n\nSee <a href="file:///usr/share/doc/tails/website/upgrade/clone.en.html#upgrade">manually upgrade from another Tails</a>.\n\nPlease test your backup before storing it in a cool, safe, discrete, off-site location.')"
     fi
     zenity --info --ellipsize --title "$title" --text "$msg" $ICON
 else
     title="$(gettext -s 'Backup failed')"
-    msg="$(gettext -s '<b>Updating your backup Tails failed.</b>\n\nYou can:\n\n• Try to update your backup Tails again.\n\n• Make sure that there is enough free space on your backup Tails.\n\n• Analyze the log in the terminal.')"
+    msg="$(gettext -s '<b>Updating your backup Bails failed.</b>\n\nYou can:\n\n• Try to update your backup Bails again.\n\n• Make sure that there is enough free space on your backup Bails.\n\n• Analyze the log in the terminal.')"
     zenity --error --ellipsize --title "$title" --text "$msg" $ICON
     # Remove any log files that were placed expecting a successful backup.
     rm -R $LOCAL_DIR/state/backups/$backup_uuid
@@ -241,7 +242,4 @@ else
     exit 1
 fi
 pgrep tails-installer >/dev/null && pkill tails-installer
-else
-    exit 0
-fi
-
+exit 0
