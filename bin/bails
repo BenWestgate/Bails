@@ -284,6 +284,7 @@ until [ -d "$SOURCE" ]; do
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
     sleep $i
 done
+sleep 1
 pkill zenity
 
 # loop until needed Persistent features are on
@@ -331,7 +332,7 @@ prune_GB=$(( (prune_MiB+1)*2**20/10**9))
 backup_days=$((prune_MiB/309))
 
 # Display info about IBD, keeping Tails private and reading material.
-{ while pidof zenity; do sleep 1; done; until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\n\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
+{ while pidof zenity; do sleep 1; done; until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\n\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
     [ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
     [ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
 done; zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bitcoin128.png --info --text="<b>Setup</b>
@@ -368,6 +369,7 @@ done
 printf '\033]2;Installing Bitcoin Core...\a'
 # extract bitcoin*.tar.* to Bails directory
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
+ln --symbolic $DATA_DIR $HOME
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 
 ln --symbolic $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
@@ -460,8 +462,6 @@ cd $HOME/Persistent
 rsync -a --remove-source-files --exclude='*log*' $BAILS_DIR $HOME/Persistent/
 gtk-launch bitcoin-qt
 
-cd $HOME/Persistent/.bitcoin/wallets
-
 mkdir $LOCAL_DIR/state/
 
 # set the good backup quanity to zero
@@ -500,6 +500,6 @@ for ((i=1; i<locations; i++)); do
         zenity --notification --text="$create_or_update backup Tails USB stick $i of $((locations-1))."
     done
 done
-
+zenity --info --title='Wallet backup complete' --text="It is recommended to test your backup$plur by starting Bails from them before storing in a cool, safe, discrete, off-site location$plur. After your backup Bails USB$plur $plurtt distributed Bails is safe to be used with significant funds.\n\nIt is recommended to wait until the blockchain is finished synchronizing." $ICON
 # TODO use du -b $HOME/.bitcoin/wallets to detect when new descriptor wallets have been added, force a backup to be made each time it increments by the size of a blank descriptor wallet, consider using gnome3-pinentry to prevent the user from doing anything else without dismissing it.
 # TODO 21012 bytes is the size of a new blank descriptor wallet with a 1 character name, so when the data in wallets grows (min to max since last backup) by more than that a backup will be forced.
