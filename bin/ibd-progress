@@ -65,7 +65,7 @@ else
 fi
 
 # Create backup Tails USBs
-[ -e $LOCAL_DIR/state/ibd_backedup ] || for ((i=1; i<LOCATIONS; i++)); do
+[ -e $LOCAL_DIR/state/ibd_backedup ] || { for ((i=1; i<LOCATIONS; i++)); do
     zenity --notification --text="Create backup Bails USB stick $i of $((LOCATIONS-1))."
     if [ "$PASS" ]; then
         until echo "$PASS" | $LOCAL_DIR/bin/bails-backup Create -; do
@@ -78,11 +78,10 @@ fi
             zenity --notification --text="Create backup Bails USB stick $i of $((LOCATIONS-1))."
         done
     fi
-done
 # creates a file to avoid backing up again if postponed due to not distributing backups yet.
-touch $LOCAL_DIR/state/ibd_backedup
+done; touch $LOCAL_DIR/state/ibd_backedup; }
 
-zenity --info --title="Backup Bails USB$plur created" --text="It is recommended to test your backup$plur by starting Bails from them before storing them in a cool, safe, discrete location. After your backup Bails USB$plur $plurtt geographically distributed Bails is safe to be used with significant funds." $ICON --timeout=15
+[ -e $LOCAL_DIR/state/ibd_backedup ] && zenity --info --title="Backup Bails USB$plur created" --text="It is recommended to test your backup$plur by starting Bails from them before storing them in a cool, safe, discrete location. After your backup Bails USB$plur $plurtt geographically distributed, Bails is safe to be used with significant funds." $ICON --timeout=15
 
 # Instruct User to distribute their backups offsite
 if (( wallets_made )); then

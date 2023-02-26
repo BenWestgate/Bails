@@ -489,8 +489,8 @@ $LOCAL_DIR/bin/ibd-progress &
 
 # watch wallet folder for additions to warn user to not deposit until after IBD and a full backup are complete.
 $LOCAL_DIR/bin/wallet-watch &
-inotifywait -r -e create $DATADIR/bitcoind.pid
-while [ -e $DATADIR/bitcoind.pid ]; do
+
+while pgrep bitcoin-qt >/dev/null; do
     tail $DATA_DIR/debug.log
     sleep $((++z))
 done
