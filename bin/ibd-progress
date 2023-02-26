@@ -24,6 +24,7 @@
 
 set -o pipefail
 
+export WAYLAND_DISPLAY=""
 export TEXTDOMAIN='tails'
 export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
