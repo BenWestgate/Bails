@@ -394,7 +394,7 @@ Version=1.0
 Name=Bitcoin Core
 Comment=Connect to the Bitcoin P2P Network
 Comment[de]=Verbinde mit dem Bitcoin peer-to-peer Netzwerk
-Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907))" %u
+Exec='$LOCAL_DIR'/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907)) %u
 Terminal=false
 Type=Application
 Icon='$LOCAL_DIR'/share/icons/bitcoin128.png
