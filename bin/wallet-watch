@@ -33,11 +33,11 @@ export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
 [ "$THRESHOLD" ] || THRESHOLD='a threshold of'
 
 ((LOCATIONS > 2)) && { plur=s ;plurtt=are; } || { plur=''; plurtt=is; }
-
-wallets_made=$(ls $DATA_DIR/wallets | wc -l)
-if [ "$wallets_made" ]; then
+cd $DATA_DIR/wallets
+wallets_made=$(ls -l | grep ^d | wc -l)
+if (( wallets_made )); then
     zenity --notification --text="WARNING: Do not deposit funds until you've backed up!"
-    until zenity --warning --title='Critical Wallet Backup information.' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((LOCATIONS-1)) backup Bails USB stick$plur $plurtt created.\n\n<b>Do not deposit bitcoins</b> to any wallets in Bails until the initial synchronisation completes at\nwhich point you'll be prompted to create a full backup.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Bails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nDo you understand this?" --ellipsize $ICON; do
+    until zenity --warning --title='Critical wallet backup information' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((LOCATIONS-1)) backup Bails USB stick$plur $plurtt created.\n\n<b>Do not deposit bitcoins</b> to any wallets in Bails until the initial synchronisation completes at\nwhich point you'll be prompted to create a full backup.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Bails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nDo you understand?" --ellipsize $ICON; do
         sleep $((z++));
         zenity --notification --text="WARNING: Do not deposit funds until you've backed up!";
     done
