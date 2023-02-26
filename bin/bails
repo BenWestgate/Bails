@@ -420,6 +420,14 @@ Exec='$LOCAL_DIR'/bin/ibd-progress
 Terminal=false
 Hidden=false' >$DOTFILES/.config/autostart/ibd-progress.desktop
 
+# create wallet watch autostart desktop file
+echo '[Desktop Entry]
+Type=Application
+Name=Wallet folder monitor daemon
+Exec='$LOCAL_DIR'/bin/wallet-watch
+Terminal=false
+Hidden=false' >$DOTFILES/.config/autostart/wallet-watch.desktop
+
 # create backup daemon autostart desktop file
 echo '[Desktop Entry]
 Type=Application
@@ -460,6 +468,8 @@ cd $HOME/Persistent
 
 # copy the rest of the project (documentation) to the Persistent Storage
 rsync -a --remove-source-files --exclude='*log*' $BAILS_DIR $HOME/Persistent/
+
+printf "\033]2;Running bitcoin\a"
 gtk-launch bitcoin-qt
 
 mkdir $LOCAL_DIR/state/
@@ -476,30 +486,13 @@ export PASS="$pass"
 # check every 10 minutes for 100% inital block download and recommend a backup of the blockchain.
 $LOCAL_DIR/bin/ibd-progress &
 
-cd $HOME/Persistent/.bitcoin/wallets
-# wait for a wallet to be created.
-printf "\033]2;Running bitcoin\a"
-inotifywait -r -e create,moved_to .
-if [ -e $LOCAL_DIR/state/ibd-backedup ]; then
-    create_or_update=Update
-else
-    create_or_update=Create
-fi
-((locations>2)) && plurtt=are
-printf "\033]2;$create_or_update Bails Backup$plur...\a"
-if ((locations>1)); then
-    zenity --notification --text="WARNING: You must make a backup USB to use Bails safely"
-    until zenity --warning --title='Backup is Mandatory' --text="It is <b>UNSAFE</b> to use Bails with real money until at least $((locations-1)) backup Tails USB stick$plur $plurtt ${create_or_update,,}d.\n\nYou should backup now to protect your bitcoin data.\n\nYou will need:\n\n\t• $((locations-1)) USB stick$plur of at least 16GB. Unused devices are more reliable.\n\t• We recommend making your backup Bails USB stick$plur look different than your current Bails USB stick.\n\t• $((locations-1)) cool, safe, discrete, off-site location$plur.\n\n<b>Warning</b>: If you fund a wallet then fail to make an offsite backup\nand something happens to this Tails USB, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nClick OK to begin backup." --ellipsize; do sleep $((z++)); done
-fi
+# watch wallet folder for additions to warn user to not deposit until after IBD and a full backup are complete.
+$LOCAL_DIR/bin/wallet-watch &
 
-# make backup Tails
-for ((i=1; i<locations; i++)); do
-    zenity --notification --text="$create_or_update backup Tails USB stick $i of $((locations-1))."
-    until echo "$PASS" | $LOCAL_DIR/bin/bails-backup $create_or_update -; do
-        zenity --notification --text="WARNING: You must make a backup USB to use Bails safely" --timeout=5
-        zenity --notification --text="$create_or_update backup Tails USB stick $i of $((locations-1))."
-    done
+while [ -e $DATADIR/bitcoind.pid ]; do
+    tail $DATA_DIR/debug.log
+    sleep $((++z))
 done
-zenity --info --title='Wallet backup complete' --text="It is recommended to test your backup$plur by starting Bails from them before storing in a cool, safe, discrete, off-site location$plur. After your backup Bails USB$plur $plurtt distributed Bails is safe to be used with significant funds.\n\nIt is recommended to wait until the blockchain is finished synchronizing." $ICON
+
 # TODO use du -b $HOME/.bitcoin/wallets to detect when new descriptor wallets have been added, force a backup to be made each time it increments by the size of a blank descriptor wallet, consider using gnome3-pinentry to prevent the user from doing anything else without dismissing it.
 # TODO 21012 bytes is the size of a new blank descriptor wallet with a 1 character name, so when the data in wallets grows (min to max since last backup) by more than that a backup will be forced.
