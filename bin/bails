@@ -227,6 +227,7 @@ link_dotfiles() {
 # enables job control so background downloads can be foregrounded to show progress while if user waits
 set -m
 
+printf '\033]2;Starting Bitcoin Core download...\a'
 # set Download directory
 cd $HOME/Downloads
 
@@ -488,11 +489,11 @@ $LOCAL_DIR/bin/ibd-progress &
 
 # watch wallet folder for additions to warn user to not deposit until after IBD and a full backup are complete.
 $LOCAL_DIR/bin/wallet-watch &
-
+inotifywait -r -e create $DATADIR/bitcoind.pid
 while [ -e $DATADIR/bitcoind.pid ]; do
     tail $DATA_DIR/debug.log
     sleep $((++z))
 done
-
+exit 0
 # TODO use du -b $HOME/.bitcoin/wallets to detect when new descriptor wallets have been added, force a backup to be made each time it increments by the size of a blank descriptor wallet, consider using gnome3-pinentry to prevent the user from doing anything else without dismissing it.
 # TODO 21012 bytes is the size of a new blank descriptor wallet with a 1 character name, so when the data in wallets grows (min to max since last backup) by more than that a backup will be forced.
