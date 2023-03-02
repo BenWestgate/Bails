@@ -157,7 +157,7 @@ gfcombine -o- *'
             zenity --title="Write this command to restore a forgotten passphrase ($backups_made/$locations)" --text-info --filename=share$backups_made --width=600 --height=216 --font=monospace
             response=$(zenity --title="Confirm what you wrote down ($backups_made/$locations)" --text-info --editable --width=500 --height=200 --font=monospace --filename=response$backups_made)
             if [ "$text" == "$response" ]; then
-                zenity --info --title=Confirmed --text="Fallback command $backups_made of $locations successfully confirmed\n\nStore this paper share in a secure place near your$backup Tails USB:\neither under lock and key or hidden where only you or heirs will find." --ellipsize
+                zenity --info --title=Confirmed --text="Fallback command $backups_made of $locations successfully confirmed\n\nStore this paper share in a secure place near your$backup Bails USB:\neither under lock and key or hidden where only you or heirs will find." --ellipsize
             else
                 # save last entered text to save the user time trying again.
                 printf "$response" >response$backups_made
