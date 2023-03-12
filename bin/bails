@@ -495,5 +495,18 @@ while pgrep bitcoin-qt >/dev/null; do
     sleep $((++z))
 done
 exit 0
+# rather than 7 keys from the shares which makes the shares a privacy leak, can do 7 account keys from the master seed, this preserves privacy and allows share replacement without affecting the multisig!!
+# the checking needs its own account.
 # TODO use du -b $HOME/.bitcoin/wallets to detect when new descriptor wallets have been added, force a backup to be made each time it increments by the size of a blank descriptor wallet, consider using gnome3-pinentry to prevent the user from doing anything else without dismissing it.
 # TODO 21012 bytes is the size of a new blank descriptor wallet with a 1 character name, so when the data in wallets grows (min to max since last backup) by more than that a backup will be forced.
+# SSS & multisig Each should be required to verify that the
+# others are not operating under compulsion before giving assent.
+# use steganography by making it possible for there to be or not be wallets in the multisig.
+#  that all communications
+# data should be encrypted. Using security services only for
+# sensitive traffic will immediately arouse suspicion in the
+# data, its sender and recipient, and provide unnecessary information to an attacker performing traffic analysis.
+# Make sure that at least one copy of the data is stored offline, i.e. not connected to the system under threat in any way. Ransomware and other destructive attacks may also attack any connected backup systems.
+
+
+

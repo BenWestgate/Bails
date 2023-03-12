@@ -1,0 +1,115 @@
+#!/bin/bash
+# Installs Bitcoin core to Tails, creates a passphrase fallback and backup Tails USB sticks
+# Parameters:
+#		$1 = Locations needed to restore a forgotten passphrase
+#		$2 = Total locations to store data at
+#		$3 = Good signatures to verify the Bitcoin download
+#		$4 = --refresh-keys, optional, used if updating Bitcoin Core
+# For security reviewing this use: https://explainshell.com/ for commands that are unclear.
+# It is recommended that, apart from autosave and lock files, programs should refrain from creating non dot files or directories in a home directory without user consent.
+# TODO comply with the above.
+
+# unset environment variable so bitcoin-qt can launch without wayland.
+unset QT_QPA_PLATFORM
+
+# Needed for zenity dialogs to have window icons 
+export WAYLAND_DISPLAY=""
+
+export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
+export LOCAL_DIR=$DOTFILES/.local
+export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
+export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
+export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
+export CLI="$BIN_DIR/bitcoin-cli --rpc_port=17600"
+# set PATH environment variable to include ~/.local/bin
+export PATH="${PATH}:${HOME}/.local/bin"
+
+###################
+# Creates generator wallet, gets address, dumps its WIF key, leaves no traces behind
+# Note: bitcoind must already be running or 'Enable RPC Server' checked in GUI options and restart.
+###################
+get_strong_rand_bytes() {
+    temp=$(mktemp)		# temporary filename
+    shred --remove $temp	# delete file to make room for wallet
+    key=$(head -c64 /dev/urandom | base64 --wrap=0)	# 64 byte wallet encryption key to crypto-shred the wallet
+    $BIN_DIR/bitcoin-cli createwallet $temp false false "$key" false false
+    $BIN_DIR/bitcoin-cli -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
+    wif=$($BIN_DIR/bitcoin-cli -rpcwallet=$temp dumpprivkey "$($1 -rpcwallet=$temp getnewaddress)")
+$BIN_DIR -rpcwallet=$temp walletlock
+$BIN_DIR -rpcwallet=$temp unloadwallet
+shred --remove $temp	# shreds the temporary wallet in memory by overwriting randomness
+unset $key $temp # deletes encryption key from memory
+}
+
+encrypt_wallet() {
+    until [ "$passphrase" == "$confirm" ] && [ "$passphrase" ]; do
+        passphrase_reply=$(zenity --title='Encrypt wallet' --forms --text='Enter the new passphrase for the wallet.\nPlease use a passphrase of <b>ten or more random characters</b>, or <b>eight or more words</b>.' --add-password='New passphrase' --add-password='Repeat new passphrase' $ICON) 
+        if (( ${#passphrase_reply} == 1 )); then
+            zenity --warning --text='No passphrase was entered.' --title='Wallet encryption failed' --ellipsize $ICON
+        else
+            zenity --title="Confirm wallet encryption" --width=500 --question --cancel-label='Cancel' --ok-label='Yes' --default-cancel --text="Warning: If you encrypt your wallet and lose your passphrase and seed you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nAre you sure you wish to encrypt your wallet?"
+            passphrase=$(echo -n "$passphrase_reply" | cut -f1 -d'|')
+            confirm=$(echo -n "$passphrase_reply" | cut -f2 -d'|')
+            if [ "$passphrase" != "$confirm" ]; then
+                zenity --error --text='The supplied passphrases do not match.' --title='Wallet encryption failed' --ellipsize $ICON
+            fi
+        fi
+    done
+    zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." 
+}
+
+flips () {
+    python3 -c "print(round($1/$2+.5))"
+}
+scrypt() {
+    python3 -c "import hashlib
+hashlib.scrypt(password=b'""', salt=b'"$wif"', n=1048576, r=8, p=1, maxmem=1025*1024*1024)
+"
+}
+
+new_seed () {
+zenity --question --width=500 --title="Further randomize your new seed." --default-cancel --cancel-label='Skip' --ok-label='Add Randomness' --text="• Your seed is the secret piece of data that allows you to spend the bitcoin as long as you have access to it.\n\n• We used Bitcoin Core to generate this random value $wif, but it is good to provide some additional randomness if paranoid.\n\n• This is not necessary. If you're concerned that Bitcoin Core is not random enough additional randomness could be added without hassle.\n\n• This can only help the randomness of your seed no matter what data you provide." && user_rand=$(zenity --entry --title='Add Randomness' --text="Provide additional entropy and click 'OK'.\n\nA good way to create randomness is by mashing keyboard a while and/or flipping a coin $(flips 128 1)+ times,\nor rolling a dice: 6 sides $(flips 128 2.584962501) rolls, 4 sides $(flips 128 2), 8 sides $(flips 128 3), 10 sides $(flips 128 3.321928095), 12 sides $(flips 128 3.584962501), 20 sides $(flips 128 4.321928095).")
+
+
+
+
+wallet_name=$(zenity --title='Create wallet' --entry --text='Wallet Name' --entry-text='Wallet' $ICON)
+choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --column "Menu Item" \
+  --text='Do you want to make a new seed, or use an existing seed?' TRUE "Create a new seed" FALSE \
+  "I already have a seed" FALSE "Import descriptors")
+if [ "$choice" == "Create a new seed" ]; then
+
+elif [ "$choice" == "I already have a seed" ]; then
+    zenity #TODO 
+elif [ "$choice" == "Import descriptors" ]; then
+else
+    exit 1
+fi
+# the above loads the seed or descriptor into memory
+# the wallet can either be made in /tmp or wait to be made encrypted in persistent storage.
+# earlier in ram may be better if the wallet creation step is slow
+
+if [ "$wallet_contains_privkeys" ]; then
+    encrypt_wallet
+fi
+
+# the hot wallet must not reveal the seed or the master xprv that the multisig keys derive from.
+# rather they should all derive from the master seed & xprv but not dump the root node in listdescriptors "true"
+# it is good if the default derivation when sethdseed or importdescriptors <master_xprv>/<default_paths> is used is the hot wallet however. This makes fund recovery easy.
+# the multisig keys should be the predominant multisig derivation standard, with incrementing account numbers 0 to N-1
+# the WIF + user_entropy will go thru Argon2i and the output determines master seed, independent shares, all N share indexes deterministically.  So one WIF + user_entropy + threshold + N always makes the same wallet AND the same share backup.
+# shares, seed, share indexes must all be independent and deterministically generated from app entropy and user inputs
+# seed + share quantity determine the shares. Implementations may figure out how many locations the original wallet used by searching.
+
+# add the wallet name to user_entropy since both steps are mandatory add their passphrase as well since it may have been user selected.
+# import descriptors should give a text entry, file select or QR scanner option.
+# it should accept .bsms files
+# the multisig wallets by default, must not have their public keys visible with just the memorized passphrase
+# it is superior to use 10-20 characters of any share as the "watch passphrase", although adding a memorized passphrase should be an option.
+
+
+# Min security: Can sign multisig transactions online. Uses persistent storage to pass the PSBT.
+# Medium security: Bails restarts with networking off to generate the seeds. The script to open multisig private keys does not work when networked. Uses persistent storage to pass the PSBT
+# Max security: separate offline only Bails USB and dedicated offline PC that never goes back online after creating seed backup or is even destroyed. Uses QRs to pass the PSBT.
+# PSBT should never be stored in plaintext in the persistent storage but should have the same privacy level as the watch only wallet. They should be carried in the same encrypted loop-back file.
