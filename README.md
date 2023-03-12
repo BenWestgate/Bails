@@ -8,3 +8,6 @@
  Check back soon or checkout the code if dying of curiousity.
  
  -Ben
+
+Compliant with Auditable Bitcoin Wallets Standard
+https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md
