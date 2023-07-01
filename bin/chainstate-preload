@@ -38,5 +38,3 @@ until grep 'progress=0.999' $DATA_DIR/debug.log; do
     # exit if cat command finishes and can't be killed. Means entire chainstate is preloaded.
     kill $full_speed || { zenity --notification --text='Bitcoin chainstate fully preloaded to RAM'; exit 0; }
 done
-
-

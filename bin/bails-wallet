@@ -9,12 +9,21 @@
 # It is recommended that, apart from autosave and lock files, programs should refrain from creating non dot files or directories in a home directory without user consent.
 # TODO comply with the above.
 
+# TODO provide an option for persistent "hot" restore and offline restore "cold". The offline keeps
+# the private wallet in RAM and requires restoring from seed each time it signs transactions.
+# Creates a watch-only. persistent saves the public or private key wallets to persistent storage.
+
+# TODO get it back to the state of just restoring the wallet, with or without the passphrase.
+# TODO Then after restoring, ask if the user has forgotten their passphrase, if they suspect (check OWASP passwords cheatsheet)
+# TODO has been stolen or if any share has been lost or suspected stolen.
+# TODO stolen will advise to destroy the old backup's shares AFTER the new ones are in place. It will also increment the threshold.
+# TODO lost will increment the locations only, or decrement if the threshold was >3
+
 # unset environment variable so bitcoin-qt can launch without wayland.
 unset QT_QPA_PLATFORM
 
 # Needed for zenity dialogs to have window icons 
 export WAYLAND_DISPLAY=""
-
 export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,6 +34,15 @@ export CLI="$BIN_DIR/bitcoin-cli --rpc_port=17600"
 # set PATH environment variable to include ~/.local/bin
 export PATH="${PATH}:${HOME}/.local/bin"
 
+[ "$LOCATIONS" ] && locations=$LOCATIONS || locations=2
+[ "$THRESHOLD" ] && threshold=$THRESHOLD || threshold=2
+
+hrp=ms1
+string=string
+secret_or=' secret or'
+ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
+
+
 ###################
 # Creates generator wallet, gets address, dumps its WIF key, leaves no traces behind
 # Note: bitcoind must already be running or 'Enable RPC Server' checked in GUI options and restart.
@@ -33,66 +51,397 @@ get_strong_rand_bytes() {
     temp=$(mktemp)		# temporary filename
     shred --remove $temp	# delete file to make room for wallet
     key=$(head -c64 /dev/urandom | base64 --wrap=0)	# 64 byte wallet encryption key to crypto-shred the wallet
-    $BIN_DIR/bitcoin-cli createwallet $temp false false "$key" false false
-    $BIN_DIR/bitcoin-cli -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
-    wif=$($BIN_DIR/bitcoin-cli -rpcwallet=$temp dumpprivkey "$($1 -rpcwallet=$temp getnewaddress)")
-$BIN_DIR -rpcwallet=$temp walletlock
-$BIN_DIR -rpcwallet=$temp unloadwallet
-shred --remove $temp	# shreds the temporary wallet in memory by overwriting randomness
-unset $key $temp # deletes encryption key from memory
+    $CLI createwallet $temp false false "$key" false false
+    $CLI -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
+    wif=$($CLI -rpcwallet=$temp dumpprivkey "$($CLI -rpcwallet=$temp getnewaddress)")
+    $CLI -rpcwallet=$temp walletlock
+    $CLI -rpcwallet=$temp unloadwallet
+    shred --remove $temp	# shreds the temporary wallet in memory by overwriting randomness
+    unset $key $temp # deletes encryption key from memory
 }
 
-encrypt_wallet() {
-    until [ "$passphrase" == "$confirm" ] && [ "$passphrase" ]; do
-        passphrase_reply=$(zenity --title='Encrypt wallet' --forms --text='Enter the new passphrase for the wallet.\nPlease use a passphrase of <b>ten or more random characters</b>, or <b>eight or more words</b>.' --add-password='New passphrase' --add-password='Repeat new passphrase' $ICON) 
-        if (( ${#passphrase_reply} == 1 )); then
-            zenity --warning --text='No passphrase was entered.' --title='Wallet encryption failed' --ellipsize $ICON
-        else
-            zenity --title="Confirm wallet encryption" --width=500 --question --cancel-label='Cancel' --ok-label='Yes' --default-cancel --text="Warning: If you encrypt your wallet and lose your passphrase and seed you will <b>LOSE ALL OF YOUR BITCOINS</b>\!\n\nAre you sure you wish to encrypt your wallet?"
-            passphrase=$(echo -n "$passphrase_reply" | cut -f1 -d'|')
-            confirm=$(echo -n "$passphrase_reply" | cut -f2 -d'|')
+user_randomness () {
+    until zenity --info --icon-name=die2 --width=500 --title="Further randomize new seed" --ok-label='Add Randomness' --text="• Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\n• Bitcoin Core will generate a random seed, but it is good to provide extra randomness if paranoid.\n\n• This is unnecessary but it will protect against backdoored random number generators.\n\n• You can not hurt your seed randomness no matter what data you provide, it can only help."; do : ; done
+    until zenity --entry --title='Add Randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-side dice 50+ times or\nflip a coin 128+ times.  A fast way is mashing the keyboard."; do : ; done
+}
+
+
+###################
+# Sets global variables for dialog grammar
+###################
+tn_grammar() {
+    ((locations > 2)) && plur=s || plur=''
+    ((threshold-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
+    ((locations-threshold)) && plurl='s' || plurl=''
+    ((threshold > 1 )) && { string='share'; password_derived="\nIn addition, <b>1</b> share is derived by your <b>passphrase</b>." ; password_steal=", OR <b>$((threshold-1))</b> share$plurt and your passphrase" ; password_loss=", OR <b>$((locations-threshold+1))</b> location$plurl and your passphrase"; plurts=are; plurtss='s'; } || { plurts=is; string='secret' ; unset plurtss password_derived password_steal password_loss; }
+    ((locations < 2)) && plurs='' || plurs='s'
+}
+
+
+ask_t_and_n () {
+    # Explain the seed backup and what conditions will recover the seed
+    # allows tweaking it or skipping it in a 'Change Something' dialog
+    tn_grammar
+    until $(zenity --question --icon-name=info --title="$threshold-of-$locations codex32 seed backup" --text="In case all Bails USBs fail or you lose your passphrase, we will split your seed into <b>$locations</b> codex32 $string$plurs across <b>$locations location$plurs</b>,\nwith <b>any $threshold</b> of those ${string}s able to restore your seed by typing them into a codex32-compliant wallet such as Bails.$password_derived\n\nYou will need:\n\t• $locations piece$plurs of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret\n\nOne $string can stay hidden near this Bails USB and the others will go offsite, one to each of your backup locations.\n\n-If <b>$threshold</b> $string$plurtss $plurts stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n\n-If <b>$((locations-threshold+2 > locations ? locations : locations-threshold+2))</b> location$plurs are lost$password_loss, you will <b>NOT</b> be able to recover your seed.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
+        backup_choice="$(zenity --title='Change backup parameters' --question --extra-button='Location Quantity' --extra-button='Threshold' --switch --text='Location quantity is how many places you will store a seed share.\n\nThreshold is how many shares are needed to steal or recover your seed.\n\nWhat would you like to change?' --ellipsize)"
+        [ "$backup_choice" == 'Location Quantity' ] && locations=$(zenity --scale --text="How many total locations do you want to store shares at?\n\nMinimum $threshold is for low value data.\nUse $((threshold+2)) or more for high value data." --min-value=$threshold --value=$locations --max-value=$((locations+threshold*3-1 < 30 ? locations+threshold*3-1 : 30)) --title='Location quantity' $ICON)
+        [ "$backup_choice" == 'Threshold' ] && threshold=$(zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data.\nUse 3 for high value data.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value=$((locations == 5 ? threshold : $(( locations < 5 ? 2 : 3)))) --title='Recovery threshold' $ICON)
+        (( threshold < 2 )) && { zenity --question --icon-name=warning --title='Security warning' --text='Caution: Setting the threshold to 1 means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel || threshold=2; }
+        (( threshold > 3 )) && { zenity --question --icon-name=warning --title='Safety warning' --text="<b>Caution</b>: Higher threshold values than 3, in our view, are a bad trade-off\nbetween usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel || threshold=3; }
+        # reset the variables to sensible values if exited
+        tn_grammar
+    done
+}
+
+input_share() {
+if [ "$choice" == "Create a new seed" ]; then
+    title="Create Bails Wallet: Enter your codex32 $string $progress"
+    unset entry
+    action='Create'
+    
+else
+    title="Restore Bails Wallet: Enter a codex32$secret_or share $progress"
+    entry=$hrp$threshold$identifier
+    action='Restore'
+fi
+unset corr
+[ "$share" ] && { entry="$share"; title="$action Bails Wallet: Re-enter your codex32 $string"; corr=' corrected'; }
+share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650)"
+[ "$share" ] || return 1
+hrp_in="${share:0:3}"
+data="${share:3}"
+if [[ "$share" == *'b'* ]]; then
+    data="${data//b/6}"
+    zenity --notification --text='Detected non-bech32 character "b"'
+fi
+if [[ "$share" == *'i'* ]]; then
+    data="${data//i/l}"
+    zenity --notification --text='Detected non-bech32 character "i"'
+fi
+if [[ "$share" == *'o'* ]]; then
+    data="${data//o/0}"
+    zenity --notification --text='Detected non-bech32 character "o"'
+fi
+if [[ "$share" == *'B'* ]]; then
+    data="${data//B/8}"
+    zenity --notification --text='Detected non-bech32 character "B"'
+fi
+if [[ "$share" == *'I'* ]]; then
+    data="${data//I/L}"
+    zenity --notification --text='Detected non-bech32 character "I"'
+fi
+if [[ "$share" == *'O'* ]]; then
+    data="${data//O/0}"
+    zenity --notification --text='Detected non-bech32 character "O"'
+fi
+
+share="$hrp_in""$data"
+threshold="${share:3:1}"
+identifier="${share:4:4}"
+index="${share:8:1}"
+if [[ $index ]] && [[ ${index,,} != 's' ]]; then
+    string=share
+elif [[ ${index,,} = 's' ]] || [[ $threshold = 0 ]]; then
+    string=secret
+else
+    string=string
+fi
+if [[ "$share" = "${share^^}" ]]; then
+    hrp=${hrp^^}
+    identifier="${identifier^^}"
+elif [[ "$share" != "${share,,}" ]]; then
+    zenity --title='Mixed case is not allowed' --error --text="A codex32 $string MUST be entirely uppercase or entirely lowercase."
+    return 1
+else
+    hrp="${hrp,,}"
+    identifier="${identifier,,}"
+fi
+
+if [[ "$data" == *'1'* ]]; then
+    data="${data//1/l}"
+    zenity --notification --text='Detected non-bech32 character "1" in data portion'
+fi
+
+if [[ "$share" =~ [^a-zA-Z0-9] ]]; then
+    zenity --title='Found non-alphanumeric character in '$string --error --text="Codex32 ${string}s contain only letters and numbers."
+    return 1
+fi
+
+if [[ "$hrp_in" != $hrp ]] ; then
+    zenity --title='Wrong human-readable prefix' --error --text='Codex32 '$string's start with "'$hrp'".\n\nYou typed "'$hrp_in'".'
+    return 1
+fi
+if [[ $threshold = 0 ]]; then
+    if [[ ${index,,} != 's' ]]; then
+        zenity --title='Bad share index' --error --text='Share index (9th character) must be "'${hrp:1:1}'" when threshold is "0".\n\nYou typed "'$index'".'
+        return 1
+    fi
+elif (( threshold < 2 || threshold > 9 )) ; then
+    zenity --title='Bad threshold' --error --text='Threshold parameter (4th character) MUST be a single digit between "2" and "9", or the digit "0".\n\nYou typed "'$threshold'".'
+    unset threshold
+    return 1
+fi
+if (( ${#share} < 48 )); then
+    zenity --title='Entry too short' --error --text="Codex32 ${string}s are at least 48 characters.\n\nYou typed ${#share} characters."
+    return 1
+elif (( ${#share} > 93 && ${#share} < 96 )); then
+    zenity --title="Illegal codex32 ${string} length" --error --text="Codex32 ${string}s are 48 to 102 characters or 105 to 127 characters.\n\nYou typed ${#share} characters."
+    return 1
+elif (( ${#share} != 74 && ${#share} != 48 && ${#share} != 127 )); then
+    zenity --title='Unusual length' --warning --text="Codex32 ${string}s are usually 48, 74 or 127 characters long.\n\nYou typed ${#share} characters."
+fi
+
+# call checksum verification function here
+return $(python3 -c 'import codex32
+codex32.verify_checksum("'$share'")')
+}
+
+get_share() {
+    threshold="${share:3:1}"
+    unset share
+    until input_share; do
+        zenity --notification --text="Invalid checksum. Please correct all errors and try again."
+    done
+    if [[ " ${share_list[*]} " =~ " ${share,,} " ]]; then
+        zenity --notification --text="You have input the same share twice.\nPlease input a unique share."
+        get_share
+    fi
+    share_list+=(${share,,})
+}
+
+get_passphrase() {
+    unset new_kdf_share share_list[1]
+    if zenity --title='Restore Bails Wallet: Seed backup passphrase' --question --text="Do you remember your seed backup's passphrase?"; then
+        until [ "$passphrase" ]; do
+            passphrase="$(zenity --title='Enter your Bails backup passphrase' --password)"
+        done
+        share_list[1]=$(python3 -c 'import codex32
+k, identifier, share_index, decoded = codex32.decode("ms", "'$share'")
+codex32_kdf_share, salt , indices_free = codex32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
+print(codex32_kdf_share)')
+    else
+        unset share_list[1] 
+        set_passphrase 'Restore Bails Wallet: Reset passphrase'
+        new_kdf_share=$(python3 -c 'import codex32
+k, identifier, share_index, decoded = codex32.decode("ms", "'$share'")
+codex32_kdf_share, salt , indices_free = codex32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
+print(codex32_kdf_share)')
+    fi
+}
+
+recover_seed() {
+    py_share_list="${share_list[*]}"
+    py_share_list=${py_share_list// /"','"}
+    printf "$(python3 -c "import codex32
+print(codex32.recover_master_seed(['"$py_share_list"']))
+")"
+}
+
+get_codex32_secret() {
+    [ "$threshold" ] || get_share
+    [ "$passphrase" ] || get_passphrase
+    echo ${#share_list[*]} $threshold
+    ((${#share_list[*]} < threshold)) && get_share
+    if [[ ${index,,} = 's' ]]; then
+        codex32_secret="$share"
+        reset='your codex32 secret'
+        threshold=1
+        return 0
+    fi
+    unset secret_or
+    reset="$threshold shares"
+    while ((${#share_list[*]} < threshold)); do
+        progress="($((1+${#share_list[*]})) of $threshold)"
+        get_share
+    done
+    codex32_secret="$(recover_seed)"
+    if ! [ "$confirm" ]; then
+        ((${#share_list[*]} > 2)) && plur='s'
+        while (( $(python3 -c 'import codex32
+codex32.identifier_verify_checksum("'$codex32_secret'")') )); do
+            zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your password and try again."
+            unset passphrase
+            get_codex32_secret
+            return 1
+        done
+        zenity --notification --text="Passphrase verified.\nThe Bails backup passphrase you entered matches your share$plur."
+#    else
+#        if (( $(python3 -c 'import codex32
+#codex32.identifier_verify_checksum("'$codex32_secret'")') == 0)); then
+#            share_list[1]=$new_kdf_share
+#            new_codex32_secret="$(recover_seed)"
+#            if [ "$new_codex32_secret" != "$codex32_secret" ]; then
+#                zenity --warning --title='Create new codex32 backup now' --text='Passphrase was changed.\n\n<b>A new backup needs to be created immediately.\n\nIMPORTANT: Any previous backups you have made of your seed should be replaced with a newly generated set of codex32 shares. Previous backups of your seed will be useless to restore your wallet using the new passphrase.</b>' $ICON
+#                threshold=${codex32_secret:3:1}
+#                locations=$((threshold*2-1))	# adds an extra location because user is forgetful.
+#                ask_t_and_n                
+#                zenity --notification --text="Generating your codex32 backup..."
+#                codex32_array=($(python3 -c 'import codex32
+#codex32.rotate_shares("'$codex32_secret'","'$threshold'",'$locations',"'"$passphrase"'")'))
+#                unset share_list new_codex32_secret
+#                display_confirm ${codex32_array[*]}
+#            fi
+#        fi
+    fi
+    return 0
+}
+
+restore_wallet() {
+    echo $codex32_secret	#TODO remove after testing
+    xprv=$(python3 -c 'import codex32
+from electrum import bip32
+y = bip32.BIP32Node
+print(y.from_rootseed(bytes(codex32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
+    zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in your wallet for a few days, and destroy it once you know it well.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine."
+    zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!"
+    zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer."
+    name="$wallet_name $identifier"
+    # TODO replace $3 with 'now' for new wallets and '0' for wallet restores.
+    $CLI -rpcport=17600 createwallet "$name" false true "$passphrase"
+    for change in 0 1; do
+        ((change)) && internal=true || internal=false
+        path="'/0'/0'/$change/*)"
+        for desc in "pkh($xprv/44$path" "sh(wpkh($xprv/49$path)" "wpkh($xprv/84$path" "tr($xprv/86$path"; do
+            checksum=$($CLI getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
+            # unlocks wallet 1 minute
+            $CLI -rpcwallet="$name" walletpassphrase "$passphrase" 60
+            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc#${checksum:1:8}'", "active": true, "timestamp": '$3', "internal": '$internal' }]'
+            $CLI -rpcwallet="$name" walletlock
+        done
+    done
+	# TODO uncomment these if the taproot addresses are missing.
+	#$2 -rpcwallet="$secret$name$kyc" unloadwallet	# bech32m taproot addresses don't show in GUI until after a reload
+	#$2 loadwallet "$secret$name$kyc" "$load_on_start"
+    return 0
+}
+###################
+# Asks user if backup compromised or lost
+# Parameters: $1 = dialog title
+###################	#TODO check the titles fit the dialogs in Tails
+rotate_backup() {
+    if zenity --question --title='Compromised share or passphrase?' --text="Do you know (or suspect) this backup\'s passphrase or any of its shares have been lost or compromised?" --default-cancel; then
+        zenity --warning --title='Backup is vulnerable to theft' --text="Backup security is compromised.\n\n<b>A new codex32 backup needs to be created immediately and old backups destroyed.\n\nIMPORTANT: Any previous backups you have made of your seed should be replaced with a newly generated set of codex32 shares then <b>destroy the previous backups</b>. Previous backups are vulnerable to being restored using your compromised data.\n\nIf you cannot destroy ALL remaining old shares to this backup, or you know (or suspect) $threshold shares OR $((threshold-1)) share(s) and your passphrase are compromised you should Create a new wallet using a new passphrase and sweep all funds immediately using the most urgent transaction fee.</b>" $ICON
+    elif zenity --question --title='Lost share or passphrase?' --text="Do you know (or suspect) this backup\'s passphrase or any of its shares have been lost?" --default-cancel; then
+        zenity --warning --title='Backup is vulnerable to loss' --text='Backup safety is compromised.\n\n<b>A new codex32 backup needs to be created immediately.\n\nIMPORTANT: Any previous backups you have made of your seed should be replaced with a newly generated set of codex32 shares. Previous backups of your seed will be useless to restore your wallet using a new passphrase or share.</b>' $ICON
+    fi
+}
+
+###################
+# Sets or Resets passphrase with confirmation
+# Parameters: $1 = dialog title
+###################	#TODO check the titles fit the dialogs in Tails
+# TODO passphrase strength meter must be provided.  Can use zenity --Progress to make it graphical
+# Do NOT permit default, weak, or well-known passwords, such as "Password1" or "admin/admin".
+
+set_passphrase() {
+    until [ "$passphrase" ] && [ "$passphrase" = "$confirm" ]; do
+        passphrase_reply="$(zenity --forms --add-password='Passphrase:' --add-password='Confirm:' --text='We recommend using the same passphrase as your current\nTails so that the passphase is easier to remember.' --title="$1" $ICON)"
+        if [ "$passphrase_reply" != '|' ]; then
+            passphrase="$(echo -n "$passphrase_reply" | cut -f1 -d'|')"
+            confirm="$(echo -n "$passphrase_reply" | cut -f2 -d'|')"
             if [ "$passphrase" != "$confirm" ]; then
-                zenity --error --text='The supplied passphrases do not match.' --title='Wallet encryption failed' --ellipsize $ICON
+                zenity --warning --text='The passphrases do not match.' --title="$1" --ellipsize $ICON
             fi
+            if (( ${#passphrase} < 2 )); then	#TODO FIXME change this to 12 after testing
+                zenity --warning --text='A random passphrase of at least 12 characters MUST be used.' --title="$1" --ellipsize $ICON
+                unset passphrase
+            fi
+        else
+            zenity --warning --text='No passphrase was entered.\n\nA passphrase is required to send bitcoin.' --title="$1" --ellipsize $ICON
         fi
     done
-    zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." 
+    # remove passphrase from memory
+    unset passphrase_reply
+}
+###################
+# Displays shares for user to write and confirms they were written then restores
+# Parameters: $* an array of the shares
+###################
+display_confirm() {
+    #TODO display and confirm all n shares.
+    echo $*	# TODO remove after testing
+    for codex32_string in ${codex32_array[*]}; do
+        displayed=$(echo "$codex32_string" | sed 's/.\{4\}/& /g')	# adds space every 4 chars
+        x=$((backups_made++))
+        ((x==1)) && backup=' Backup'
+        ((x==2)) && backup=' second Backup'
+        ((x==3)) && backup=' third Backup'
+        ((x>3)) && backup=" ${x}th Backup"
+        progress="($backups_made of $locations)"
+        unset share
+        until [ "$codex32_string" == "$share" ]; do
+            zenity --title="Create Bails Wallet: Seed backup $progress" --text="Write this $string legibly:\n\n<big><big>$displayed</big></big>" --info --width=600
+            choice="Create a new seed"
+            input_share
+            if [ "$codex32_string" == "$share" ]; then
+                zenity --info --title="Confirmed $string" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." --ellipsize
+            else
+                # save last entered text to save the user time trying again.
+                zenity zenity --warning --title="Try again" --text="The supplied $string does not match $string ${progress:1: -1}." --ellipsize --timeout=3
+            fi
+        done
+    done
+    progress="(1 of $threshold)"
+    unset passphrase threshold identifier backups_made share_list choice backup
+    zenity --info --title='Create Bails Wallet: Seed backup complete' --text='Seed backup is complete. You will now restore your seed with it before your wallet is created.' $ICON
+}
+###################
+# Modifies a just restored backup to add security or safety
+###################
+modify_backup() {
+    ((threshold-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
+    selection=$(zenity --question --title='Modify backup?' --text="Do you know (or suspect) this backup's passphrase or a share is compromised or lost?\n\n-If no, then select 'No'.\n\n-If compromised or to raise threshold you should select 'Add Security'.\n\n-If lost anything or to create extra shares you should select 'Add Safety'." --switch --extra-button='No' --extra-button='Add Security' --extra-button='Add Safety')
+    if [ "$selection" = 'Add Security' ]; then
+        zenity --question --window-icon=warning-dialog --title='Add Security' --text="Backup security is reduced or compromised if a share or passphrase has been compromised.\n\n<b>A new codex32 backup needs to be created immediately and old backups destroyed, if possible.\n\nIMPORTANT: Any previous backups you have made of your seed should be replaced with a newly generated set of codex32 shares and then destroy previous backups, if possible. Previous backups are vulnerable to being restored using compromised data.</b>\n\n-If you know (or suspect) a share or passphrase are compromised AND/OR you know (or suspect) you can not destroy ALL previous shares, select '<b>Create New Seed</b>'. Then immediately sweep all funds to the new wallet using the most urgent transaction fee.\n\n-Otherwise select '<b>Increase Threshold</b>' which improves security but preserves your wallet." --ok-label='Increase Threshold' --default-cancel --cancel-label='Create New Seed' $ICON	#TODO make sure it rejects the previously used passphrase
+        #TODO add functionality to these buttons
+    elif [ "$selection" = 'Add Safety' ]; then
+        zenity --question --title='Add Safety' --text="Backup safety is reduced if you lose a share or passphrase.\n\n<b>A new codex32 backup needs to be created immediately if you forgot your passphrase.\n\nIMPORTANT: Any previous backups you have made of your seed should be replaced with this newly generated codex32 backup. Previous backups of your seed will be useless for recovery with your new passphrase.</b>\n\n-If the passphrase is lost or to reduce threshold select '<b>New Backup</b>'.\n\n-If you know (or suspect) any shares are lost or to increase safety select '<b>Generate Extra Shares</b>'." --default-cancel --cancel-label='Rotate Shares' --ok-label='Generate Extra Shares'
+        #TODO add functionality to these buttons
+    fi
 }
 
-flips () {
-    python3 -c "print(round($1/$2+.5))"
-}
-scrypt() {
-    python3 -c "import hashlib
-hashlib.scrypt(password=b'""', salt=b'"$wif"', n=1048576, r=8, p=1, maxmem=1025*1024*1024)
-"
-}
+### Begins Execution Here ###
 
-new_seed () {
-zenity --question --width=500 --title="Further randomize your new seed." --default-cancel --cancel-label='Skip' --ok-label='Add Randomness' --text="• Your seed is the secret piece of data that allows you to spend the bitcoin as long as you have access to it.\n\n• We used Bitcoin Core to generate this random value $wif, but it is good to provide some additional randomness if paranoid.\n\n• This is not necessary. If you're concerned that Bitcoin Core is not random enough additional randomness could be added without hassle.\n\n• This can only help the randomness of your seed no matter what data you provide." && user_rand=$(zenity --entry --title='Add Randomness' --text="Provide additional entropy and click 'OK'.\n\nA good way to create randomness is by mashing keyboard a while and/or flipping a coin $(flips 128 1)+ times,\nor rolling a dice: 6 sides $(flips 128 2.584962501) rolls, 4 sides $(flips 128 2), 8 sides $(flips 128 3), 10 sides $(flips 128 3.321928095), 12 sides $(flips 128 3.584962501), 20 sides $(flips 128 4.321928095).")
-
-
-
-
-wallet_name=$(zenity --title='Create wallet' --entry --text='Wallet Name' --entry-text='Wallet' $ICON)
-choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --column "Menu Item" \
+wallet_name=$(zenity --title='Create Bails Wallet' --entry --text='Wallet Name:' --entry-text='Wallet' $ICON)
+[ "$wallet_name" ] || wallet_name='Wallet'
+choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Select" --column "Menu Item" \
   --text='Do you want to make a new seed, or use an existing seed?' TRUE "Create a new seed" FALSE \
   "I already have a seed" FALSE "Import descriptors")
 if [ "$choice" == "Create a new seed" ]; then
-
+    set_passphrase 'Create Bails Wallet: Set passphrase'
+    user_entropy="$passphrase"
+    user_entropy+="$wallet_name$(user_randomness)"
+    ask_t_and_n
+    user_entropy+="$threshold$locations"
+    zenity --notification --text="Generating your codex32 backup..."
+    #get_strong_rand_bytes
+    wif=L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6
+    echo "App Entropy: $wif"
+    codex32_array=($(python3 -c 'import codex32
+master_seed = codex32.fresh_master_seed(16,"'"$user_entropy"'","'"$wif"'")
+id = codex32.seed_identifier(master_seed)
+if "'$threshold'" == "1":
+    codex32_secret = codex32.encode("ms", 16, "0", id, "s", list(master_seed))
+    for i in range('$locations'):
+        print(codex32_secret)
+else:
+    codex32.existing_master_seed(master_seed,"'$threshold'",id,'$locations',"'"$passphrase"'")'))
+    (display_confirm ${codex32_array[*]})
+    unset choice passphrase confirm user_entropy threshold locations wif codex32_array
+    get_codex32_secret
+    restore_wallet
 elif [ "$choice" == "I already have a seed" ]; then
-    zenity #TODO 
+    get_codex32_secret
+    restore_wallet
 elif [ "$choice" == "Import descriptors" ]; then
+    echo 'Not yet implemented.'
+    exit 1
 else
     exit 1
 fi
 # the above loads the seed or descriptor into memory
 # the wallet can either be made in /tmp or wait to be made encrypted in persistent storage.
 # earlier in ram may be better if the wallet creation step is slow
-
-if [ "$wallet_contains_privkeys" ]; then
-    encrypt_wallet
-fi
 
 # the hot wallet must not reveal the seed or the master xprv that the multisig keys derive from.
 # rather they should all derive from the master seed & xprv but not dump the root node in listdescriptors "true"
@@ -113,3 +462,14 @@ fi
 # Medium security: Bails restarts with networking off to generate the seeds. The script to open multisig private keys does not work when networked. Uses persistent storage to pass the PSBT
 # Max security: separate offline only Bails USB and dedicated offline PC that never goes back online after creating seed backup or is even destroyed. Uses QRs to pass the PSBT.
 # PSBT should never be stored in plaintext in the persistent storage but should have the same privacy level as the watch only wallet. They should be carried in the same encrypted loop-back file.
+
+
+# create 32 encrypted loopback files with the private keys to the multisig each named after the first 9 characters of the corresponding share
+# seed is account 0, first share is account 1 and so forth
+# the watch-only is a loopback file encrypted by hash160||identifier of the master seed.
+# max privacy = 2 shares are required to open the watch-only
+# this means each loopback file has a shamir share of the hash160||identifier split at threshold 2
+# normal privacy = 1 share
+# this hash+identifier is stored in the 32 loopback files and automatically unlocks the watch only 
+# low privacy = passphrase
+# user can optionally create a 33rd encrypted loopback file containing the watch only password
