@@ -1,8 +1,8 @@
 #!/bin/bash
 # Installs Bitcoin core to Tails, creates a passphrase fallback and backup Tails USB sticks
 # Parameters:
-#		$1 = Locations needed to restore a forgotten passphrase
-#		$2 = Total locations to store data at
+#		$1 = Secrets needed to restore a wallet
+#		$2 = Total locations to store secrets at
 #		$3 = Good signatures to verify the Bitcoin download
 #		$4 = --refresh-keys, optional, used if updating Bitcoin Core
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
@@ -15,10 +15,6 @@ unset QT_QPA_PLATFORM
 # Needed for zenity dialogs to have window icons 
 export WAYLAND_DISPLAY=""
 
-export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
-export LOCAL_DIR=$DOTFILES/.local
-export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
-
 # set PATH environment variable to include ~/.local/bin
 export PATH="${PATH}:${HOME}/.local/bin"
 
@@ -28,10 +24,13 @@ locations=$2
 ((locations > 2)) && plur=s || plur=''
 ((threshold-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
 
-word_count=$((9-16/($1+$2)))	# 5 for lo value, 7 for high value
 timeout=5
 SOURCE='/live/persistence/TailsData_unlocked/'
 DEST='/media/amnesia/TailsData/'
+
+export DOTFILES=$SOURCE/dotfiles
+export LOCAL_DIR=$DOTFILES/.local
+export DATA_DIR=$SOURCE/Persistent/.bitcoin
 
 choose() {	# FIXME TODO I need to actually add this information before shipping a Beta TODO
 	zenity --warning --text='These are all the ways you can screw up badly choosing your own password.\n\nDo you understand?' --ellipsize
@@ -85,6 +84,8 @@ and that can remind you of the particular words you chose, in order."
 fallback() {		#TODO try using ` ` syntax for command substitution to save writing
     
     return	# added for testing to remove passphrase stuff TODO remove this!!FIXME
+    #TODO graph recovery characters vs passphrase length for 2-of-2 openssl method
+    
     threshold=$1
     locations=$2
     tmp_dir=$(mktemp --directory)
@@ -96,7 +97,7 @@ sudo apt install libgfshare-bin
         line3='
 gfcombine *
 for w in $(bc<<<"ibase=16;obase=6^5;$(xxd -u -p s)")
-do awk NR==$w+1 /*/*/*/*/eff_large.wordlist
+do awk NR==$w+1 /*/*/*/*/eff_large*
 done'
         total=0
         padding=$((word_count > 6 ? 30 : 20 ))	# 6 or less words is padded to 80-bit, more 120-bit
@@ -124,7 +125,7 @@ gfcombine -o- *'
     fi
     # Explain the passphrase fallback and what conditions will recover Bitcoin data
     # allows tweaking it or skipping it in a 'Change Something' dialog
-    until $(zenity --question --icon-name=info --title='Passphrase fallback' --text="In case you forget your passphrase we will split it across <b>$locations locations</b>, with <b>any $threshold</b> of those able to restore it by typing the written commands in terminal.\n\nYou will need:\n\t• $locations pieces of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret.\n\nOne piece of paper can stay near this Tails USB and the other$plur will go offsite one to each of your backup locations.\n\n-If <b>$((threshold - 1))</b> piece$plurt of paper $plurtt stolen, nothing is learned about the passphrase\n\n-If <b>$threshold</b> or more are stolen, an attacker learns your passphrase and can decrypt your Tails USB stick or Backup Tails USB stick$plur.\n\n-If you lose <b>$((locations-threshold+1))</b> or more locations, you will <b>NOT</b> be able to recover a forgotten passphrase.\n\n-If you lose all <b>$locations</b> locations you will <b>NOT</b> be able to recover your Bitcoin data.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
+    until $(zenity --question --icon-name=info --title='Passphrase fallback' --text="In case you forget your passphrase we will split it across <b>$locations locations</b>, with <b>any $threshold</b> of those able to restore it by typing the written commands in terminal.\n\nYou will need:\n\t• $locations pieces of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret.\n\nOne piece of paper can stay hidden near this Bails USB and the other$plur will go offsite one to each of your backup locations.\n\n-If <b>$((threshold - 1))</b> piece$plurt of paper $plurtt stolen, nothing is learned about the passphrase\n\n-If <b>$threshold</b> or more are stolen, an attacker learns your passphrase and can decrypt your Bails USB stick or Backup Bails USB stick$plur.\n\n-If you lose <b>$((locations-threshold+1))</b> or more locations, you will <b>NOT</b> be able to recover a forgotten passphrase.\n\n-If you lose all <b>$locations</b> locations you will <b>NOT</b> be able to recover your Bitcoin data.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
         choice="$(zenity --title='Change backup parameters' --question --extra-button='Add Location' --extra-button='Increase Threshold' --extra-button='Skip Fallback' --switch --text='Add location makes it harder to lose your passphrase and data.\n\nThreshold is how many locations are needed to steal or recover your passphrase.\n\nWhat would you like to change?' --ellipsize)"
         [ "$choice" == 'Skip Fallback' ] && zenity --warning --text='<big>If you skip the passphrase fallback you will <b>NOT</b> be able to access your Bitcoin data if you forget your passphrase.</big>' --ellipsize && return
         [ "$choice" == 'Add Location' ] && locations=$(zenity --scale --text='How many total locations do you want to store data at?\n\nMinimum 2 is for low value data.\nUse 4 or more for high value data.' --min-value=$threshold --value=$((locations+=2)) --max-value=$((locations+threshold*2-1)) --title='Data locations')
@@ -394,7 +395,7 @@ Version=1.0
 Name=Bitcoin Core
 Comment=Connect to the Bitcoin P2P Network
 Comment[de]=Verbinde mit dem Bitcoin peer-to-peer Netzwerk
-Exec='$LOCAL_DIR'/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907)) %u
+Exec='$LOCAL_DIR'/bin/bitcoin-qt -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907)) -startupnotify='$LOCAL_DIR'/bin/chainstate-preload %u
 Terminal=false
 Type=Application
 Icon='$LOCAL_DIR'/share/icons/bitcoin128.png
@@ -409,7 +410,7 @@ mkdir --parents $DOTFILES/.config/{autostart,Bitcoin}
 echo '[Desktop Entry]
 Type=Application
 Name=Bitcoin
-Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-qt -min -chain=main -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail '$DATA_DIR' | tail -1) + $(du --summarize '$DATA_DIR'/blocks | cut -f1))/1024 - (4+'$assumed_chain_state_size')*1024 : 1907)) -startupnotify='$LOCAL_DIR'/bin/chainstate-preload"
+Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-autostart"
 Terminal=false
 Hidden=false' >$DOTFILES/.config/autostart/bitcoin.desktop
 
