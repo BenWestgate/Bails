@@ -21,8 +21,7 @@ Creates a standard derivation path wallet from codex32 seed encrypted by memoriz
 
 Create backups of the Bails USB for recovery without rescanning blockchain. 
 
-Create clones of the Bails USB with all private data encrypted to give to friends & family
-	decentralize distribution, bypass download wait, User gets private data redundancy
+Create clones of the Bails USB with all private data encrypted to give to friends & family to decentralize distribution, bypass download wait, User gets private data redundancy
 	
 Rotate shares to reset Forgotten passphrases w/o sweeping funds
 
@@ -43,22 +42,29 @@ Display a QR code of the public descriptor for making a watch only across an air
 
 Scan a QR code of a descriptor (or paste) and import the wallet to bitcoin core (yeti cold, airgap)
 
-use BIP85 to allow one seed backup to create multiple wallets
-	ie a hot wallet, and a savings account with its private keys offline from one seed
-	 or a normal wallet and no-KYC wallet with one seed. Or secret wallets you can deny exist until your seed gets restored. [no code written, unclear feature]
 
 Display & Scan PSBT QRs for crossing the airgap when signing a transaction.
 
 DVD backups of the Bails USB data (more durable)??
 
+use BIP85 to allow one seed backup to create multiple wallets.
+
+BIP85 could allow restoring a hot wallet and offline savings account or a normal and no-KYC wallet from one seed backup. Or make secret wallets you can deny exist until your seed is restored. [unclear feature]
+
+
 ***Bails L3 Scope:*** [no code written for any of the following, unclear scope and value-proposition of features ]
 
 Coordinate 2-of-2 multi-sig between a Bails/hi checking+savings account and an always offline PC
-	Bails/hi would gain an additional location and be the 1st key
-	Offline would be a 3-of-3 shares w/ a share derived from the hash of Bails/hi seed and another derived from the passphrase
-	Minimum 7 locations needed, only 1 would store 2 shares giving away the 2-of-2, Bails/hi would NOT need to be rotated just an extra share generated
-	Descriptors do NOT need to be stored, but might be for deposit convenience at expense of privacy.
-		Recommended to heavily encrypt by seed of Bails/hi or Bails/Offline. (as knowing the seed would allow finding pubkey (taproot) addresses on blockchain)
+
+Bails/hi would gain an additional location and become the 1st key in multi sig
+
+Bails/Offline would be key2 and backed up with a 3-of-3 shares w/ a share derived from the hash of Bails/hi seed and another derived from passphrase
+
+Minimum 7 locations needed, only 1 would store 2 shares giving away the 2-of-2, Bails/hi would NOT need to be rotated just an extra share generated & stored
+
+Descriptors do NOT need to be stored in 2-of-2 multi sig, but could be for deposit convenience at expense of privacy.
+
+If a watch only wallet is stored, Recommend to heavily encrypt by seed of Bails/hi or Bails/Offline. (as knowing either seed would allow finding taproot and spent addresses on blockchain)
 
 
 ***Bails L4 Scope:*** [no code written for any of the following, unclear value proposition and/or scope of features ]
