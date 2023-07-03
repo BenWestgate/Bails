@@ -58,6 +58,10 @@ get_strong_rand_bytes() {
     $CLI -rpcwallet=$temp unloadwallet
     shred --remove $temp	# shreds the temporary wallet in memory by overwriting randomness
     unset $key $temp # deletes encryption key from memory
+    if [ ${wif:1:1} != 'L' ] && [ ${wif:1:1} != 'K' ]; then
+        zenity --warning --title='Failed to get Bitcoin Core entropy' --text='Bitcoin core may not be running or the RPC server got disabled.' & 
+        exit 1
+    fi
 }
 
 user_randomness () {
