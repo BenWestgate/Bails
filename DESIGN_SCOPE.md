@@ -1,4 +1,4 @@
-Bails MVP Scope:
+***Bails MVP Scope:***
 
 Downloads Bitcoin and Signatures
 
@@ -17,7 +17,7 @@ Restores a codex32 seed backup
 Creates a standard derivation path wallet from codex32 seed encrypted by memorized passphrase
 
 
-Bails L1 Scope:
+***Bails L1 Scope:***
 
 Create backups of the Bails USB for recovery without rescanning blockchain. 
 
@@ -33,7 +33,7 @@ Generate extra shares w/o rotating or replacing existing shares [function not ye
 Give periodic reminders to create new USB backups to replace the old ones before they die.
 
 
-Bails L2 Scope:		[no code written for any of the following and unclear scope or value-proposition of features ]
+***Bails L2 Scope:***		[no code written for any of the following and unclear scope or value-proposition of features ]
 
 Restores codex32 seed backups either creating the encrypted wallet persistently or offline and in RAM (for cold storage)
 
@@ -51,7 +51,7 @@ Display & Scan PSBT QRs for crossing the airgap when signing a transaction.
 
 DVD backups of the Bails USB data (more durable)??
 
-Bails L3 Scope: [no code written for any of the following, unclear scope and value-proposition of features ]
+***Bails L3 Scope:*** [no code written for any of the following, unclear scope and value-proposition of features ]
 
 Coordinate 2-of-2 multi-sig between a Bails/hi checking+savings account and an always offline PC
 	Bails/hi would gain an additional location and be the 1st key
@@ -61,7 +61,7 @@ Coordinate 2-of-2 multi-sig between a Bails/hi checking+savings account and an a
 		Recommended to heavily encrypt by seed of Bails/hi or Bails/Offline. (as knowing the seed would allow finding pubkey (taproot) addresses on blockchain)
 
 
-Bails L4 Scope: [no code written for any of the following, unclear value proposition and/or scope of features ]
+***Bails L4 Scope:*** [no code written for any of the following, unclear value proposition and/or scope of features ]
 
 Coordinate multi-party multi-sigs between multiple Bails/2-of-2 users for inheritance. Threshold must require at least 1 offline signature
 
