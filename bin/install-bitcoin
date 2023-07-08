@@ -81,7 +81,7 @@ mkdir -p "$destination_dir"
 { wget -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || wget -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; } & sig_dl=$!
 
 # Download Bitcoin Core in background to the destination directory
-gnome-terminal --title='Downloading Bitcoin Core' -- { wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; } & core_download=$!
+gnome-terminal --title='Downloading Bitcoin Core' -- "wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/" & core_download=$!
 
 # Download chain parameters in background
 wget -P "$destination_dir" https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/chainparams.cpp & get_size=$!
