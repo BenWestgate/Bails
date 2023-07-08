@@ -71,6 +71,9 @@ search_key() {
     fi
 }
 
+# enables job control so background downloads can be foregrounded to show progress while user waits
+set -m
+
 # Set the destination directory for the download
 destination_dir="$BAILS_DIR/share/bitcoin-core"
 
@@ -96,7 +99,7 @@ link_dotfiles
 # Switch into most recent bitcoin-core directory
 cd "$(ls -dt "$destination_dir"/bitcoin-core* | head -1)"
 
-zenity --question --title='Verify your download' --text='Download verification is optional but highly recommended.\nThe time required is around 5 to 10 minutes\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' && { \
+zenity --question --title='Verify your download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=600 && { \
     # verify signatures in GUI
     printf '\033]2;Getting Bitcoin Core signatures...\a'
     ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
