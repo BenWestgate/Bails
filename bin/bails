@@ -307,7 +307,8 @@ done
 pkill python3 &>/dev/null
 
 # install Bails executables, shortcuts and icons.
-rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR; link_dotfiles
+rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
+link_dotfiles
 
 # bring signature download to foreground to display progress and wait for it to complete
 printf '\033]2;Getting Bitcoin Core signatures...\a'

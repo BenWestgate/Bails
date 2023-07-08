@@ -1,0 +1,163 @@
+#!/bin/bash
+
+# TODO use an until sha256sums --check SHA256SUMS; do wget *tar.gz,SHA256SUMS; done*
+
+# Needed for zenity dialogs to have window icons 
+export WAYLAND_DISPLAY=""
+
+# set PATH environment variable to include ~/.local/bin
+export PATH="${PATH}:${HOME}/.local/bin"
+
+threshold=2
+locations=2
+
+timeout=5
+SOURCE='/live/persistence/TailsData_unlocked/'
+
+export DOTFILES=$SOURCE/dotfiles
+export LOCAL_DIR=$DOTFILES/.local
+export DATA_DIR=$SOURCE/Persistent/.bitcoin
+
+link_dotfiles() {
+    cd $DOTFILES
+    for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
+    for file in $(find . -type f); do ln --symbolic $PWD${file:1} $HOME${file:1}; done
+    cd -
+}
+
+# Looks for good signatures
+# Parameter 1 = Good Signatures required
+# Parameter 2 = (optional) if specified run gpg --refresh-keys
+check_sigs() {
+    [ "$2" ] && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked
+    temp_file=$(mktemp)
+    sig_file=$(mktemp)
+    type=info
+    gpg --verify SHA256SUMS.asc SHA256SUMS &>$sig_file
+    good_sig=$(grep --count 'Good signature' $sig_file)
+    if (( good_sig < $1 )); then
+        type=warning
+        keys="$(grep 'using' $sig_file | awk '{print $NF}' | shuf)"
+        for key in $keys; do
+            search_key
+            (( good_sig >= $1 )) && { type=info; break; }
+        done
+    fi
+    zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png --timeout=10 & next_dialog=$!
+
+    shred --remove $temp_file
+    shred --remove $sig_file
+    unset sig_file temp_file
+    (( good_sig < $1 )) && check_sigs $1 $4
+}
+
+# searches and displays key info
+# Parameter 1 = (optional) fall back keyserver
+search_key() {
+    echo ''>$temp_file
+    { gpg --search-keys $1 $2 $key >$temp_file; } & PID=$!
+    [ "$1" ] || echo -e "\nSearching $key on openpgp.org keyserver..."
+    until grep 'key' $temp_file >/dev/null; do
+        sleep 1; printf '.'
+        pidof gpg >/dev/null || break
+    done
+    pkill gpg &>/dev/null
+    if grep '@' $temp_file >/dev/null; then 
+        sed -i 's/(1)/   /' $temp_file
+        zenity --question --title='Do you find this individual trustworthy?' --no-markup --text="$(<$temp_file)" --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png && gpg $1 $2 --recv-key $key && ((++good_sig))
+    else
+        echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
+        search_key '--keyserver' 'keyserver.ubuntu.com'
+    fi
+}
+
+# Set the destination directory for the download
+destination_dir="$BAIL_DIR/share/bitcoin-core"
+
+# Create the destination directory if it doesn't exist
+mkdir -p "$destination_dir"
+
+# Download Bitcoin core checksums and signatures in background
+wget -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & sig_dl=$!
+
+# Download Bitcoin Core in background to the destination directory
+gnome-terminal --title='Downloading Bitcoin Core' --wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ & core_download=$!
+
+# Download chain parameters in background
+wget -P "$destination_dir" https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/chainparams.cpp & get_size=$!
+
+# Setup Persistent Storage if it is not already
+[ -b '/dev/mapper/TailsData_unlocked' ] || $BAILS_DIR/bin/persistent-setup
+# install Bails executables, shortcuts and icons.
+
+rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
+link_dotfiles
+
+# Switch into most recent bitcoin-core directory
+cd "$(ls -dt "$destination_dir"/bitcoin-core* | head -1)"
+
+zenity --question --title='Verify your download' --text='Download verification is optional but highly recommended.\nThe time required is around 5 to 10 minutes\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' && { \
+    # verify signatures in GUI
+    printf '\033]2;Getting Bitcoin Core signatures...\a'
+    ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+    printf '\033]2;Verify Bitcoin Core signatures\a'
+    check_sigs 2 $1
+}
+
+# Bring chainparams.cpp download to foreground then set assumed chainstate & blockchain size
+ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $HOME/Downloads/chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $HOME/Downloads/chainparams.cpp | sed 's/[^0-9]*//g')	
+
+# Display information about pruning and initial block download while user waits for download
+available_storage=$(df --output=avail "$SOURCE" | tail -1)
+prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1908 ))
+prune_GB=$(( (prune_MiB+1)*2**20/10**9))
+backup_days=$((prune_MiB/309))
+
+# Display info about IBD, keeping Tails private and reading material.
+{ while pidof zenity; do sleep 1; done; until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\n\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
+    [ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
+    [ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
+done; zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bitcoin128.png --info --text="<b>Setup</b>
+---------------------
+Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a $assumed_blockchain_size gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552; } &>/dev/null &
+
+# bring bitcoin core download to foreground to display progress and wait for it to complete
+printf '\033]2;Downloading Bitcoin Core...\a'
+wait -f $core_download
+rm -R $HOME/Downloads/{download,*.tmp}
+
+# Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
+if sha256sum --ignore-missing --check SHA256SUMS; then
+    zenity --notification "Bitcoin Core download successfully verified."
+    
+else
+    zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize &&
+    rm --verbose ./*
+    sleep 5
+    # launch script again
+    $LOCAL_DIR/bin/bails $1 $2 $3
+    exit
+fi
+
+# kill Bitcoin Core if it was already running, wait for it to shutdown safely
+printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
+while test -f $DATA_DIR/bitcoind.pid; do
+    kill "$(<$DATA_DIR/bitcoind.pid)"
+    pkill bitcoin*
+    sleep 1
+done
+
+printf '\033]2;Installing Bitcoin Core...\a'
+# extract bitcoin*.tar.* to Bails directory
+mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
+ln --symbolic $DATA_DIR $DOTFILES
+tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
+ln --symbolic $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+link_dotfiles
+
+# Cleanup
+cd -
+echo "Bitcoin Core installation complete."
+exit 0
