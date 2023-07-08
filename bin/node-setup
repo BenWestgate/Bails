@@ -26,6 +26,7 @@ until [ -b '/dev/mapper/TailsData_unlocked' ]; do
         { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
     sleep 7
 done
+pkill notify-send
 
 # Memorization help
 zenity --info --title='Mnemonic suggestion' \
