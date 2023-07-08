@@ -72,7 +72,7 @@ search_key() {
 }
 
 # Set the destination directory for the download
-destination_dir="$BAIL_DIR/share/bitcoin-core"
+destination_dir="$BAILS_DIR/share/bitcoin-core"
 
 # Create the destination directory if it doesn't exist
 mkdir -p "$destination_dir"
