@@ -1,6 +1,6 @@
 #!/bin/bash
 # For low value Bitcoin data, will create 1 backup location with
-# 2 locations needed to restore a forgotten passphrase
+# 2 locations needed to restore
 # and 2 Good signatures to verify the download.
 export BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 $BAILS_DIR/bin/bails 2 2 2
