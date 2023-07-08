@@ -1,0 +1,54 @@
+#!/bin/bash
+########################################
+# Installs Bails Persistently and helps memorize passphrase
+########################################
+
+timeout=5
+
+zenity --title='Welcome to Bails' --info --text="Your Bitcoin data will be encrypted with a passphrase for privacy and security.\n\n<b>Notes on Passphrases</b>\nSelect a passphrase as strong as you feel comfortable with.\nTails will recommend a long passphrase made of <b>five</b> to <b>seven random words</b>.\nIt is impossible to recover your passphrase if you forget it!
+
+<b>What if you forget it?</b>  
+You will make a codex32 paper seed backup as a fallback to restore your wallet if your brain refuses to cooperate." --ok-label='Continue' --width=640
+
+# loop until persistent storage has mounted
+until [ -d "$SOURCE" ]; do
+    # warn the same password as confirmed earlier must be used in tps
+    pgrep zenity || zenity --warning --title='Choose a strong passphrase' --text='Important: Use a suggested passphrase from the Persistent Storage dialog.\n\nTo help you remember your passphrase, you can:\n\nWrite it on a piece of paper, store it in a sealed evelope in your wallet for a few days, and destroy it once\nyou know it well before storing funds. Write on a hard surface to avoid leaving an imprint of the secret.\n
+Create a mental image or mnemonic using the words, in order. It might be a story, scenario, or sentence\nthat you will be able to remember and that can remind you of the particular words you chose, in order.' --ok-label='I Will Use Suggested Passphrase'--ellipsize --window-icon=$BAILS_DIR/share/icons/bails128.png &
+    # restart tps if closed without creating persistence.
+    grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
+done
+pkill zenity
+
+# loop until a screen lock password is set
+until { zenity --info --title='Spaced repetition trainer' --text='Important: Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize $ICON;
+    tails-screen-locker; }; do    
+        zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" --ok-label='Try Again' --ellipsize $ICON
+done
+
+# spaced repetition training loop
+while true; do
+    sleep $((timeout *= 2))
+    tails-screen-locker &>/dev/null
+done &
+zenity --info --title='Tips for the new passphrase' --text="You will be prompted periodically for the password throughout the remainder of this tutorial. If you forget it before a complete backup is created, you will have to start over.\n\nPractice entering this password regularly, daily at first and then at least once a week.\nRepetition will help you commit the password to memory.\n\nMake sure you keep your passphrase safe. Your passphrase should only be used for Bails, and especially should not be used for any online account. If you reuse a passphrase and it ends up being leaked, it can be used to try to access your Bitcoin data or funds.\n\nIf you made a paper copy of the passphrase it should be destroyed once you know it well." --ok-label='Continue' --width=600 $ICON
+
+# loop until needed Persistent features are on
+until /usr/local/lib/tpscli is-active PersistentDirectory && \
+  /usr/local/lib/tpscli is-active WelcomeScreen && \
+  /usr/local/lib/tpscli is-active GnuPG && \
+  /usr/local/lib/tpscli is-active Dotfiles; do
+    { /usr/local/lib/tpscli is-active PersistentDirectory || { zenity --notification --text='Persistent Folder must be turned on.' --timeout=6; false; }; } && \
+    { /usr/local/lib/tpscli is-active WelcomeScreen || { zenity --notification --text='Welcome Screen must be turned on.' --timeout=6; false; }; } && \
+    { /usr/local/lib/tpscli is-active NetworkConnections || { ((i++ < 3)) && zenity --notification --text='Turn on Network Connections to remember your Wi-Fi' --timeout=6; true; }; } && \
+    { /usr/local/lib/tpscli is-active GnuPG || { zenity --notification --text='GnuPG must be turned on.' --timeout=6; false; }; } && \
+    { /usr/local/lib/tpscli is-active Dotfiles || { zenity --notification --text='Dotfiles must be turned on.' --timeout=6; false; }; }
+    # restart tps if closed before configured
+    grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null || { tps-frontend-wrapper & zenity --notification --text='You must turn on Persistent features to continue'; }
+done
+
+# closes the Persistent Storage window
+pkill python3 &>/dev/null
+
+# install Bails executables, shortcuts and icons.
+rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR; link_dotfiles

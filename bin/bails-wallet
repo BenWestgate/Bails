@@ -224,7 +224,8 @@ k, identifier, share_index, decoded = codex32.decode("ms", "'$share'")
 codex32_kdf_share, salt , indices_free = codex32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
 print(codex32_kdf_share)')
     else
-        unset share_list[1] 
+        unset share_list[1]
+        #TODO for offline restores do not reset if forgotten, no passphrase is needed
         set_passphrase 'Restore Bails Wallet: Reset passphrase'
         new_kdf_share=$(python3 -c 'import codex32
 k, identifier, share_index, decoded = codex32.decode("ms", "'$share'")
@@ -296,6 +297,7 @@ restore_wallet() {
 from electrum import bip32
 y = bip32.BIP32Node
 print(y.from_rootseed(bytes(codex32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
+    # TODO for L2 offline restores do not encrypt or persist signing wallet
     zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in your wallet for a few days, and destroy it once you know it well.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine."
     zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!"
     zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer."
@@ -412,6 +414,7 @@ choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Selec
   --text='Do you want to make a new seed, or use an existing seed?' TRUE "Create a new seed" FALSE \
   "I already have a seed" FALSE "Import descriptors")
 if [ "$choice" == "Create a new seed" ]; then
+    until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I understand'; zenity --notification --text='You must understand these risks.'; done
     set_passphrase 'Create Bails Wallet: Set passphrase'
     user_entropy="$passphrase"
     user_entropy+="$wallet_name$(user_randomness)"
