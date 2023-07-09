@@ -20,6 +20,7 @@ export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
+export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
 
 link_dotfiles() {
     cd $DOTFILES
@@ -97,6 +98,8 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
 link_dotfiles &>/dev/null
 
+versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
+
 zenity --question --title='Verify your download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=600 && { \
     # verify signatures in GUI
     printf '\033]2;Getting Bitcoin Core signatures...\a'
@@ -104,7 +107,6 @@ zenity --question --title='Verify your download' --text='Download verification i
     # Switch into latest bitcoin-core directory
     cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)"
     printf '\033]2;Verify Bitcoin Core signatures\a'
-    versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
     (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
     check_sigs 2
 }
@@ -116,12 +118,13 @@ assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $destinat
 
 # Display information about pruning and initial block download while user waits for download
 available_storage=$(df --output=avail "$SOURCE" | tail -1)
-prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1908 ))
+prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1907 ))
 prune_GB=$(( (prune_MiB+1)*2**20/10**9))
 backup_days=$((prune_MiB/309))
 
 # Display info about IBD, keeping Tails private and reading material.
-{ while pidof zenity; do sleep 1; done; until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\n\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
+while pidof zenity; do sleep 1; done
+((versions)) || until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\n\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
     [ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
     [ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
 done; zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bitcoin128.png --info --text="<b>Setup</b>
@@ -169,6 +172,8 @@ link_dotfiles &>/dev/null
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR/share/applications/mimeinfo.cache
 
 # create application shortcuts
+
+#TODO for L1
 
 # create .config directories
 mkdir --parents $DOTFILES/.config/{autostart,Bitcoin}
