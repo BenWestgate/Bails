@@ -27,9 +27,7 @@ link_dotfiles() {
 
 # Looks for good signatures
 # Parameter 1 = Good Signatures required
-# Parameter 2 = (optional) if specified run gpg --refresh-keys
 check_sigs() {
-    [ "$2" ] && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked
     temp_file=$(mktemp)
     sig_file=$(mktemp)
     type=info
@@ -48,7 +46,7 @@ check_sigs() {
     shred --remove $temp_file
     shred --remove $sig_file
     unset sig_file temp_file
-    (( good_sig < $1 )) && check_sigs $1
+    (( good_sig < $1 )) && { sleep 1; check_sigs $1; }
 }
 
 # searches and displays key info
@@ -104,10 +102,12 @@ zenity --question --title='Verify your download' --text='Download verification i
     # verify signatures in GUI
     printf '\033]2;Getting Bitcoin Core signatures...\a'
     ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+    read -p $destination_dir
     printf '\033]2;Verify Bitcoin Core signatures\a'
     versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
-    (( versions > 1 )) && refresh=--refresh-keys
-    check_sigs 2 $refresh
+    read -p $versions
+    (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
+    check_sigs 2
 }
 
 # Bring chainparams.cpp download to foreground then set assumed chainstate & blockchain size
