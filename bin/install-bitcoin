@@ -75,10 +75,9 @@ search_key() {
 set -m
 
 # Set the destination directory for the download
-destination_dir="$BAILS_DIR/share/bitcoin-core"
+destination_dir="$HOME/.local/share/bitcoin-core"
 
-rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
-link_dotfiles &>/dev/null
+rsync --recursive $BAILS_DIR/{bin,lib,share,state} $HOME/.local/
 
 # Create the destination directory if it doesn't exist
 mkdir -p "$destination_dir"
@@ -94,6 +93,9 @@ wget -P "$destination_dir" https://raw.githubusercontent.com/bitcoin/bitcoin/mas
 
 # Setup Persistent Storage if it is not already
 [ -b '/dev/mapper/TailsData_unlocked' ] || $BAILS_DIR/bin/persistent-setup
+
+rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
+link_dotfiles &>/dev/null
 
 # Switch into latest bitcoin-core directory
 cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)"
