@@ -45,7 +45,6 @@ check_sigs() {
         done
     fi
     zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png --timeout=10 & next_dialog=$!	#TODO use this to prevent multiple dialogs showing if unintended install
-
     shred --remove $temp_file
     shred --remove $sig_file
     unset sig_file temp_file
@@ -182,12 +181,17 @@ Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-autostart"
 Terminal=false
 Hidden=false' >$DOTFILES/.config/autostart/bitcoin.desktop
 
-# create config to persist gui settings	#TODO uncomment if needed
-#echo "[General]
-#bPrune=true
-#fUseProxy=true
-#strDataDir="$DATA_DIR"
-#strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >$DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf
+# Create config to persist gui settings
+[ -f $DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf ] || echo "[General]
+mask_values=true
+strDataDir="$DATA_DIR"
+strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >$DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf
+
+# Enable proxies for Tor
+[ -f $DATA_DIR/settings.json ] || echo '{
+    "onion": "127.0.0.1:9050",
+    "proxy": "127.0.0.1:9050",
+}' > $DATA_DIR/settings.json
 
 # install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
 rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
@@ -216,6 +220,7 @@ cd -
 printf '\033]2;Create Bails Wallet\a'
 # launches bitcoin accepting RPC commands then launches bails-wallet
 bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -min -splash -startupnotify=bails-wallet
+
 # Final Message
 zenity --info --title='Setup Complete' \
     --text="Congratulations! You have completed the initial setup process for Bails. You are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided documentation or visit our support resources.\n\nEnjoy using Bails!" \
