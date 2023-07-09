@@ -9,32 +9,33 @@ timeout=5
 # Display welcome message
 zenity --title='Welcome to Bails' --info \
     --text="Thank you for choosing Bails, a self-custodial Bitcoin Core wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps to ensure a smooth experience. Let's get started!" \
-    --width=640 --ok-label=Continue
+    --width=640 --ok-label=Continue $ICON
 
 # Choose passphrase
 zenity --warning --title='Choose a strong passphrase' \
     --text='It is important to select a strong passphrase to protect your Bitcoin data. We recommend using a suggested passphrase from the Persistent Storage dialog.\n\nIt is impossible to recover your passphrase if you forget it!\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in a sealed evelope in your wallet for a few days, and destroy it once you know it well. Write on a hard surface to avoid leaving an imprint of the secret.' \
-    --ok-label='I Will Use A Suggested Passphrase' --width=700
+    --ok-label='I Will Use A Suggested Passphrase' --width=700 $ICON
 
 # Persistent storage creation
 until [ -b '/dev/mapper/TailsData_unlocked' ]; do
-    {
+    pgrep notify-send || {
         sleep 5
         notify-send 'Important: Use a suggested passphrase. To help remember:' 'Create a mental image or mnemonic using the words, in order.\n\nIt might be a story, scenario, or sentence that you will be able to remember and that can remind you of the particular words you chose, in order.'
     } &
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
         { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
-    sleep 6
+    sleep 1
 done
 
-# Hide notification
-pkill notify-send
+# Clear notifications
+dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
+
 
 # Memorization help
 until {
     zenity --info --title='Spaced repetition trainer' \
         --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
-        --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize
+        --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize $ICON
     tails-screen-locker
 }; do
     zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
@@ -49,7 +50,7 @@ done &
 
 zenity --info --title='Tips for the new passphrase' \
     --text="You will be prompted periodically to enter your passphrase for spaced repetition training. Practice entering the passphrase regularly to commit it to memory, daily at first and then at least once a week.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you have memorized it." \
-    --ok-label='Continue' --width=600
+    --ok-label='Continue' --width=600 $ICON
 
 # Checking persistent features
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
@@ -78,5 +79,7 @@ done
 # Closes the Persistent Storage window
 pkill python3 &>/dev/null
 
+# Clear notifications
+dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 # Cleanup and exit
 exit 0

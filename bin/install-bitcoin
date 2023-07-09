@@ -19,6 +19,7 @@ SOURCE='/live/persistence/TailsData_unlocked'
 export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 export DATA_DIR=$SOURCE/Persistent/.bitcoin
+export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 
 link_dotfiles() {
     cd $DOTFILES
