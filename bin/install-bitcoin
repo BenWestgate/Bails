@@ -2,6 +2,8 @@
 
 # TODO use an until sha256sums --check SHA256SUMS; do wget *tar.gz,SHA256SUMS; done*
 
+# Optional TODO clear notifications https://superuser.com/questions/1592674/how-to-clear-notification-sent-by-shell-script
+
 # Needed for zenity dialogs to have window icons 
 export WAYLAND_DISPLAY=""
 
@@ -187,8 +189,8 @@ Hidden=false' >$DOTFILES/.config/autostart/bitcoin.desktop
 #strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >$DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf
 
 # install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
-rsync --recursive --remove-source-files {bin,lib,share,state} $LOCAL_DIR
-#ln --symbolic --force /live/persistence/TailsData_unlocked/Persistent/.bitcoin $DOTFILES
+rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
+ln --symbolic --force /live/persistence/TailsData_unlocked/Persistent/.bitcoin $DOTFILES
 ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so it won't persist restart
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 
@@ -201,13 +203,16 @@ grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || \
   echo 'unset QT_QPA_PLATFORM' | tee -a $HOME/.bashrc
 mv $HOME/.bashrc $DOTFILES
 
-ln --symbolic $DATA_DIR $DOTFILES/.bitcoin
+ln --symbolic --force $DATA_DIR $DOTFILES/.bitcoin
+ln --symbolic --force $DOTFILES/.bitcoin $HOME/.bitcoin
+
 # symlink the dotfiles to $HOME
 link_dotfiles
 
 # Cleanup
 rm -R $destination_dir/{download,*.tmp}
 cd -
+
 # launches bitcoin accepting RPC commands then launches bails-wallet
 bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) --rpc_port=17600 -server -startupnotify=bails-wallet
 # Final Message
