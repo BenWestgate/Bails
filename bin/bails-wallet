@@ -6,18 +6,16 @@
 #		$3 = Good signatures to verify the Bitcoin download
 #		$4 = --refresh-keys, optional, used if updating Bitcoin Core
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
-# It is recommended that, apart from autosave and lock files, programs should refrain from creating non dot files or directories in a home directory without user consent.
-# TODO comply with the above.
 
-# TODO provide an option for persistent "hot" restore and offline restore "cold". The offline keeps
+# TODO FOR L2 provide an option for persistent "hot" restore and offline restore "cold". The offline keeps
 # the private wallet in RAM and requires restoring from seed each time it signs transactions.
 # Creates a watch-only. persistent saves the public or private key wallets to persistent storage.
 
-# TODO get it back to the state of just restoring the wallet, with or without the passphrase.
-# TODO Then after restoring, ask if the user has forgotten their passphrase, if they suspect (check OWASP passwords cheatsheet)
-# TODO has been stolen or if any share has been lost or suspected stolen.
-# TODO stolen will advise to destroy the old backup's shares AFTER the new ones are in place. It will also increment the threshold.
-# TODO lost will increment the locations only, or decrement if the threshold was >3
+# TODO FOR L1. After restoring, ask if the user has forgotten their passphrase, if they suspect
+# it has been compromised or if any share has been lost or suspected compromised.
+# Stolen will advise to create a new wallet and sweep funds. It will also increment the threshold.
+# Lost will add shares only (without rotating the backup), or decrement the threshold if no new
+# backup locations are available.
 
 # unset environment variable so bitcoin-qt can launch without wayland.
 unset QT_QPA_PLATFORM
@@ -43,28 +41,29 @@ ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
 
 
 ###################
-# Creates generator wallet, gets address, dumps its WIF key, leaves no traces behind
+# Creates generator wallet, gets address, gets its extended private masterkey, leaves no traces behind
 # Note: bitcoind must already be running or 'Enable RPC Server' checked in GUI options and restart.
 ###################
 get_strong_rand_bytes() {
     temp=$(mktemp)		# temporary filename
     shred --remove $temp	# delete file to make room for wallet
-    key=$(head -c64 /dev/urandom | base64 --wrap=0)	# 64 byte wallet encryption key to crypto-shred the wallet
-    $CLI createwallet $temp false false "$key" false false
+    key="$(head -c64 /dev/urandom | base64 --wrap=0)"	# 64 byte wallet encryption key to crypto-shred the wallet
+    $CLI createwallet $temp false false "$key"
     $CLI -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
-    wif=$($CLI -rpcwallet=$temp dumpprivkey "$($CLI -rpcwallet=$temp getnewaddress)")
+    extended_private_masterkey="$($CLI -rpcwallet=$temp listdescriptors "true" | grep --max-count=1 -oP '(?<=tr\().*?(?=/)')"
     $CLI -rpcwallet=$temp walletlock
     $CLI -rpcwallet=$temp unloadwallet
+    read -p "waiting to shred $temp"
     shred --remove $temp	# shreds the temporary wallet in memory by overwriting randomness
     unset $key $temp # deletes encryption key from memory
-    if [ ${wif:1:1} != 'L' ] && [ ${wif:1:1} != 'K' ]; then
+    if [ ${extended_private_masterkey:0:4} != 'xprv' ]; then
         zenity --warning --title='Failed to get Bitcoin Core entropy' --text='Bitcoin core may not be running or the RPC server got disabled.' & 
         exit 1
     fi
 }
 
 user_randomness () {
-    until zenity --info --icon-name=die2 --width=500 --title="Further randomize new seed" --ok-label='Add Randomness' --text="• Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\n• Bitcoin Core will generate a random seed, but it is good to provide extra randomness if paranoid.\n\n• This is unnecessary but it will protect against backdoored random number generators.\n\n• You can not hurt your seed randomness no matter what data you provide, it can only help."; do : ; done
+    until zenity --info --icon-name=die2 --width=400 --title="Further randomize new seed" --ok-label='Add Randomness' --text="• Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\n• Bitcoin Core will generate a random seed, but it is good to provide extra randomness if paranoid.\n\n• This is unnecessary but it will protect against a backdoored random number generator.\n\n• You can not hurt your seed randomness no matter what data you provide, it can only help."; do : ; done
     until zenity --entry --title='Add Randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-side dice 50+ times or\nflip a coin 128+ times.  A fast way is mashing the keyboard."; do : ; done
 }
 
@@ -76,8 +75,8 @@ tn_grammar() {
     ((locations > 2)) && plur=s || plur=''
     ((threshold-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
     ((locations-threshold)) && plurl='s' || plurl=''
-    ((threshold > 1 )) && { string='share'; password_derived="\nIn addition, <b>1</b> share is derived by your <b>passphrase</b>." ; password_steal=", OR <b>$((threshold-1))</b> share$plurt and your passphrase" ; password_loss=", OR <b>$((locations-threshold+1))</b> location$plurl and your passphrase"; plurts=are; plurtss='s'; } || { plurts=is; string='secret' ; unset plurtss password_derived password_steal password_loss; }
-    ((locations < 2)) && plurs='' || plurs='s'
+    ((threshold > 1 )) && { string='share'; password_derived="\nAn additional <b>1</b> share is formed by your <b>passphrase</b>." ; password_steal=", OR <b>$((threshold-1))</b> share$plurt and your passphrase" ; password_loss=", OR <b>$((locations-threshold+1))</b> location$plurl and your passphrase"; plurts=are; plurtss='s'; } || { plurts=is; string='secret' ; unset plurtss password_derived password_steal password_loss; }
+    ((locations < 2)) && { plurs=''; pronoun='it'; } || { plurs='s'; pronoun='them'; }
 }
 
 
@@ -85,12 +84,12 @@ ask_t_and_n () {
     # Explain the seed backup and what conditions will recover the seed
     # allows tweaking it or skipping it in a 'Change Something' dialog
     tn_grammar
-    until $(zenity --question --icon-name=info --title="$threshold-of-$locations codex32 seed backup" --text="In case all Bails USBs fail or you lose your passphrase, we will split your seed into <b>$locations</b> codex32 $string$plurs across <b>$locations location$plurs</b>,\nwith <b>any $threshold</b> of those ${string}s able to restore your seed by typing them into a codex32-compliant wallet such as Bails.$password_derived\n\nYou will need:\n\t• $locations piece$plurs of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret\n\nOne $string can stay hidden near this Bails USB and the others will go offsite, one to each of your backup locations.\n\n-If <b>$threshold</b> $string$plurtss $plurts stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n\n-If <b>$((locations-threshold+2 > locations ? locations : locations-threshold+2))</b> location$plurs are lost$password_loss, you will <b>NOT</b> be able to recover your seed.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
+    until $(zenity --question --icon-name=info --title="$threshold-of-$locations codex32 seed backup" --text="In case all Bails USBs fail or you lose your passphrase, we will split your seed into <b>$locations</b> codex32 $string$plurs across <b>$locations location$plurs</b>, with <b>any $threshold</b> of those ${string}s able to restore your seed by typing $pronoun into a codex32-enabled wallet such as Bails.$password_derived\n\nYou will need:\n\t• $locations piece$plurs of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret\n\nOne $string can stay hidden near this Bails USB and the others will go offsite, one to each of your backup locations.\n\n-If <b>$threshold</b> $string$plurtss $plurts stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n\n-If <b>$((locations-threshold+2 > locations ? locations : locations-threshold+2))</b> location$plurs are lost$password_loss, you will <b>NOT</b> be able to recover your seed.\n\nDo you understand?" --cancel-label='Change Something' --width=500); do
         backup_choice="$(zenity --title='Change backup parameters' --question --extra-button='Location Quantity' --extra-button='Threshold' --switch --text="Location quantity is how many places you will store a codex32 $string.\n\nThreshold is how many shares are needed to steal or recover your seed.\n\nWhat would you like to change?" --ellipsize)"
         [ "$backup_choice" == 'Location Quantity' ] && locations=$(zenity --scale --text="How many total locations do you want to store ${string}s at?\n\nMinimum $threshold is for low value data.\nUse $((threshold+2)) or more for high value data." --min-value=$threshold --value=$locations --max-value=$((locations+threshold*3-1 < 30 ? locations+threshold*3-1 : 30)) --title='Location quantity' $ICON)
         [ "$backup_choice" == 'Threshold' ] && threshold=$(zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data.\nUse 3 for high value data.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value=$((locations == 5 ? threshold : $(( locations < 5 ? 2 : 3)))) --title='Recovery threshold' $ICON)
-        (( threshold < 2 )) && { zenity --question --icon-name=warning --title='Security warning' --text='Caution: Setting the threshold to 1 means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel || threshold=2; }
-        (( threshold > 3 )) && { zenity --question --icon-name=warning --title='Safety warning' --text="<b>Caution</b>: Higher threshold values than 3, in our view, are a bad trade-off\nbetween usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel || threshold=3; }
+        (( threshold < 2 )) && { zenity --question --icon-name=warning --title='Security warning' --text='<b>Caution</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel --width=400 || threshold=2; }
+        (( threshold > 3 )) && { zenity --question --icon-name=warning --title='Safety warning' --text="<b>Caution</b>: Higher threshold values than <b>3</b>, in our view, are a bad trade-off between usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel --width=440 || threshold=3; }
         # reset the variables to sensible values if exited
         tn_grammar
     done
@@ -413,7 +412,7 @@ choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Selec
   --text='Do you want to make a new seed, or use an existing seed?' TRUE "Create a new seed" FALSE \
   "I already have a seed" FALSE "Import descriptors")
 if [ "$choice" == "Create a new seed" ]; then
-    until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I understand'; do zenity --notification --text='You must understand this info.'; done
+    until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I understand' --width=400; do zenity --notification --text='You must understand this info.'; done
     set_passphrase 'Create Bails Wallet: Set passphrase'
     user_entropy="$passphrase"
     user_entropy+="$wallet_name$(user_randomness)"
@@ -421,9 +420,9 @@ if [ "$choice" == "Create a new seed" ]; then
     user_entropy+="$threshold$locations"
     zenity --notification --text="Generating your codex32 backup..."
     get_strong_rand_bytes
-    echo "App Entropy: $wif"
+    echo "App Entropy: $extended_private_masterkey"
     codex32_array=($(python3 -c 'import codex32
-master_seed = codex32.fresh_master_seed(16,"'"$user_entropy"'","'"$wif"'")
+master_seed = codex32.fresh_master_seed(16,"'"$user_entropy"'","'"$extended_private_masterkey"'")
 id = codex32.seed_identifier(master_seed)
 if "'$threshold'" == "1":
     codex32_secret = codex32.encode("ms", 16, "0", id, "s", list(master_seed))
@@ -432,7 +431,7 @@ if "'$threshold'" == "1":
 else:
     codex32.existing_master_seed(master_seed,"'$threshold'",id,'$locations',"'"$passphrase"'")'))
     (display_confirm ${codex32_array[*]})
-    unset choice passphrase confirm user_entropy threshold locations wif codex32_array
+    unset choice passphrase confirm user_entropy threshold locations extended_private_masterkey codex32_array
     get_codex32_secret
     restore_wallet
 elif [ "$choice" == "I already have a seed" ]; then
@@ -452,7 +451,7 @@ fi
 # rather they should all derive from the master seed & xprv but not dump the root node in listdescriptors "true"
 # it is good if the default derivation when sethdseed or importdescriptors <master_xprv>/<default_paths> is used is the hot wallet however. This makes fund recovery easy.
 # the multisig keys should be the predominant multisig derivation standard, with incrementing account numbers 0 to N-1
-# the WIF + user_entropy will go thru Argon2i and the output determines master seed, independent shares, all N share indexes deterministically.  So one WIF + user_entropy + threshold + N always makes the same wallet AND the same share backup.
+# the extended_private_masterkey + user_entropy will go thru Argon2i and the output determines master seed, independent shares, all N share indexes deterministically.  So one extended_private_masterkey + user_entropy + threshold + N always makes the same wallet AND the same share backup.
 # shares, seed, share indexes must all be independent and deterministically generated from app entropy and user inputs
 # seed + share quantity determine the shares. Implementations may figure out how many locations the original wallet used by searching.
 
