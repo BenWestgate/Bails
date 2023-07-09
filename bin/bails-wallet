@@ -420,8 +420,7 @@ if [ "$choice" == "Create a new seed" ]; then
     ask_t_and_n
     user_entropy+="$threshold$locations"
     zenity --notification --text="Generating your codex32 backup..."
-    #get_strong_rand_bytes
-    wif=L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6
+    get_strong_rand_bytes
     echo "App Entropy: $wif"
     codex32_array=($(python3 -c 'import codex32
 master_seed = codex32.fresh_master_seed(16,"'"$user_entropy"'","'"$wif"'")
