@@ -126,7 +126,7 @@ backup_days=$((prune_MiB/309))
     [ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
 done; zenity --title='Bitcoin Core info' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bitcoin128.png --info --text="<b>Setup</b>
 ---------------------
-Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently a $assumed_blockchain_size gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552; } &>/dev/null &
+Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently $assumed_blockchain_size gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552; } &>/dev/null &
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
@@ -156,9 +156,9 @@ done
 printf '\033]2;Installing Bitcoin Core...\a'
 # extract bitcoin*.tar.* to Bails directory
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
-ln --symbolic $DATA_DIR $DOTFILES
+ln --symbolic --force $DATA_DIR $DOTFILES
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
-ln --symbolic $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+ln --symbolic --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
 link_dotfiles &>/dev/null
 
 # Install Bails executables, shortcuts and icons.
@@ -214,7 +214,7 @@ rm -R $destination_dir/{download,*.tmp}
 cd -
 printf '\033]2;Create Bails Wallet\a'
 # launches bitcoin accepting RPC commands then launches bails-wallet
-bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -startupnotify=bails-wallet
+bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -min -splash -startupnotify=bails-wallet
 # Final Message
 zenity --info --title='Setup Complete' \
     --text="Congratulations! You have completed the initial setup process for Bails. You are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided documentation or visit our support resources.\n\nEnjoy using Bails!" \
