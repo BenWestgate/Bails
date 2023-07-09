@@ -29,7 +29,7 @@ export LOCAL_DIR=$DOTFILES/.local
 export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
-export CLI="bitcoin-cli --rpc_port=17600"
+export CLI="bitcoin-cli --rpcport=17600"
 # set PATH environment variable to include ~/.local/bin
 export PATH="${PATH}:${HOME}/.local/bin"
 

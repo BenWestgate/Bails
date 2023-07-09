@@ -214,7 +214,7 @@ rm -R $destination_dir/{download,*.tmp}
 cd -
 
 # launches bitcoin accepting RPC commands then launches bails-wallet
-bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpc_port=17600 -server -startupnotify=bails-wallet
+bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -startupnotify=bails-wallet
 # Final Message
 zenity --info --title='Setup Complete' \
     --text="Congratulations! You have completed the initial setup process for Bails. You are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided documentation or visit our support resources.\n\nEnjoy using Bails!" \
