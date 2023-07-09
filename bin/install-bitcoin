@@ -191,6 +191,7 @@ strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.oni
 [ -f $DATA_DIR/settings.json ] || echo '{
     "onion": "127.0.0.1:9050",
     "proxy": "127.0.0.1:9050",
+    "prune": "'$prune_MiB'"
 }' > $DATA_DIR/settings.json
 
 # install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
