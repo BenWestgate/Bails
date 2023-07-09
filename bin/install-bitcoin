@@ -95,17 +95,14 @@ wget -P "$destination_dir" https://raw.githubusercontent.com/bitcoin/bitcoin/mas
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
 link_dotfiles &>/dev/null
 
-# Switch into latest bitcoin-core directory
-cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)"
-
 zenity --question --title='Verify your download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=600 && { \
     # verify signatures in GUI
     printf '\033]2;Getting Bitcoin Core signatures...\a'
     ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
-    read -p $destination_dir
+    # Switch into latest bitcoin-core directory
+    cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)"
     printf '\033]2;Verify Bitcoin Core signatures\a'
     versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
-    read -p $versions
     (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
     check_sigs 2
 }
@@ -134,6 +131,7 @@ printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $core_download >/dev/null && fg %$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
+cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)"
 if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification --text="Bitcoin Core download successfully verified."
 else
