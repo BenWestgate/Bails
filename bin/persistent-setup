@@ -26,14 +26,11 @@ until [ -b '/dev/mapper/TailsData_unlocked' ]; do
         { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
     sleep 6
 done
+
 # Hide notification
 pkill notify-send
 
 # Memorization help
-zenity --info --title='Mnemonic suggestion' \
-    --text='To help you remember your passphrase, create a mental image or mnemonic using the words, in order. It might be a story, scenario, or sentence that you will be able to remember and that can remind you of the particular words you chose, in order.' \
-    --ok-label='I Have A Mnemonic In Mind' --width=600
-
 until {
     zenity --info --title='Spaced repetition trainer' \
         --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
