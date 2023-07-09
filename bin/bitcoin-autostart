@@ -25,7 +25,7 @@ if ! (( RANDOM % 20 )); then
         # 1 out of 20 start-ups show donation message
     if (( RANDOM % 2 )); then
         # In half of the cases, display a message with benevolent incentive
-        text="Bails donations to keep everybody using Bitcoin free and safe.\n
+        text="Bails needs donations to keep everybody using Bitcoin free and safe.\n\n
 Every bit helps in our fight against surveillance, censorship and seizure!"
         bitcoin_address=$BITCOIN_ADDRESS_BENEVOLENT
     else

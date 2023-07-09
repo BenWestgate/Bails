@@ -26,11 +26,10 @@ unset QT_QPA_PLATFORM
 export WAYLAND_DISPLAY=""
 export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
-export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
-export CLI="$BIN_DIR/bitcoin-cli --rpc_port=17600"
+export CLI="bitcoin-cli --rpc_port=17600"
 # set PATH environment variable to include ~/.local/bin
 export PATH="${PATH}:${HOME}/.local/bin"
 
@@ -414,7 +413,7 @@ choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Selec
   --text='Do you want to make a new seed, or use an existing seed?' TRUE "Create a new seed" FALSE \
   "I already have a seed" FALSE "Import descriptors")
 if [ "$choice" == "Create a new seed" ]; then
-    until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I understand'; zenity --notification --text='You must understand these risks.'; done
+    until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I understand'; zenity --notification --text='You must understand this info.'; done
     set_passphrase 'Create Bails Wallet: Set passphrase'
     user_entropy="$passphrase"
     user_entropy+="$wallet_name$(user_randomness)"

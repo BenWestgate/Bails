@@ -21,7 +21,7 @@ export DATA_DIR=$SOURCE/Persistent/.bitcoin
 link_dotfiles() {
     cd $DOTFILES
     for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-    for file in $(find . -type f); do ln --symbolic $PWD${file:1} $HOME${file:1}; done
+    for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
     cd -
 }
 
@@ -77,6 +77,9 @@ set -m
 # Set the destination directory for the download
 destination_dir="$BAILS_DIR/share/bitcoin-core"
 
+rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
+link_dotfiles &>/dev/null
+
 # Create the destination directory if it doesn't exist
 mkdir -p "$destination_dir"
 
@@ -92,7 +95,7 @@ wget -P "$destination_dir" https://raw.githubusercontent.com/bitcoin/bitcoin/mas
 # Setup Persistent Storage if it is not already
 [ -b '/dev/mapper/TailsData_unlocked' ] || $BAILS_DIR/bin/persistent-setup
 
-# Switch into most recent bitcoin-core directory
+# Switch into latest bitcoin-core directory
 cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)"
 
 zenity --question --title='Verify your download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=600 && { \
@@ -156,12 +159,59 @@ tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL
 ln --symbolic $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
 link_dotfiles &>/dev/null
 
-# install Bails executables, shortcuts and icons.
+# Install Bails executables, shortcuts and icons.
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
 link_dotfiles &>/dev/null
+
+# Change mime association from electrum to bitcoin core
+sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR/share/applications/mimeinfo.cache
+
+# create application shortcuts
+
+# create .config directories
+mkdir --parents $DOTFILES/.config/{autostart,Bitcoin}
+
+# create autostart desktop file
+echo '[Desktop Entry]
+Type=Application
+Name=Bitcoin
+Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-autostart"
+Terminal=false
+Hidden=false' >$DOTFILES/.config/autostart/bitcoin.desktop
+
+# create config to persist gui settings	#TODO uncomment if needed
+#echo "[General]
+#bPrune=true
+#fUseProxy=true
+#strDataDir="$DATA_DIR"
+#strThirdPartyTxUrls=explorerzydxu5ecjrkwceayqybizmpjjznk5izmitf2modhcusuqlid.onion/tx/%s" >$DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf
+
+# install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
+rsync --recursive --remove-source-files {bin,lib,share,state} $LOCAL_DIR
+#ln --symbolic --force /live/persistence/TailsData_unlocked/Persistent/.bitcoin $DOTFILES
+ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so it won't persist restart
+ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+
+# Add ~/.local/bin to PATH at startup
+grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc || \
+  echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
+
+# bypass wayland if not already so bitcoin-qt works
+grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || \
+  echo 'unset QT_QPA_PLATFORM' | tee -a $HOME/.bashrc
+mv $HOME/.bashrc $DOTFILES
+
+ln --symbolic $DATA_DIR $DOTFILES/.bitcoin
+# symlink the dotfiles to $HOME
+link_dotfiles
 
 # Cleanup
 rm -R $destination_dir/{download,*.tmp}
 cd -
-echo "Bitcoin Core installation complete."
+# launches bitcoin accepting RPC commands then launches bails-wallet
+bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) --rpc_port=17600 -server -startupnotify=bails-wallet
+# Final Message
+zenity --info --title='Setup Complete' \
+    --text="Congratulations! You have completed the initial setup process for Bails. You are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided documentation or visit our support resources.\n\nEnjoy using Bails!" \
+    --width=640 --ok-label=Finish
 exit 0
