@@ -14,7 +14,7 @@ zenity --title='Welcome to Bails' --info \
 # Choose passphrase
 zenity --warning --title='Choose a strong passphrase' \
     --text='It is important to select a strong passphrase to protect your Bitcoin data. We recommend using a suggested passphrase from the Persistent Storage dialog.\n\nIt is impossible to recover your passphrase if you forget it!\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in a sealed evelope in your wallet for a few days, and destroy it once you know it well. Write on a hard surface to avoid leaving an imprint of the secret.' \
-    --ok-label='I Will Use A Suggested Passphrase' --width=700 $ICON
+    --ok-label='I Will Use A Suggested Passphrase' --icon-name=org.gnome.gedit --width=700 $ICON
 
 # Persistent storage creation
 until [ -b '/dev/mapper/TailsData_unlocked' ]; do
