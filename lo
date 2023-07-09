@@ -3,3 +3,5 @@
 # 2 locations needed to restore
 export BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 $BAILS_DIR/bin/install-bitcoin
+
+# git clone https://github.com/BenWestgate/Bails --depth=1; Bails/lo
