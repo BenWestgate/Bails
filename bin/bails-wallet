@@ -25,7 +25,6 @@ unset QT_QPA_PLATFORM
 export WAYLAND_DISPLAY=""
 export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
-export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3.9/site-packages
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
 export CLI="bitcoin-cli -rpcport=17600"
