@@ -1,4 +1,7 @@
 #!/bin/bash
+#######################################
+# downloads bitcoin and installs it persistently
+#######################################
 
 # TODO use an until sha256sums --check SHA256SUMS; do wget *tar.gz,SHA256SUMS; done*
 
