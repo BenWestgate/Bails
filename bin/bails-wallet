@@ -112,31 +112,31 @@ hrp_in="${share:0:3}"
 data="${share:3}"
 if [[ "$share" == *'b'* ]]; then
     data="${data//b/6}"
-    zenity --notification --text='Detected non-bech32 character "b"'
+    zenity --notification --text='Detected non-bech32 character "b"' $ICON
 fi
 if [[ "$share" == *'i'* ]]; then
     data="${data//i/l}"
-    zenity --notification --text='Detected non-bech32 character "i"'
+    zenity --notification --text='Detected non-bech32 character "i"' $ICON
 fi
 if [[ "$share" == *'o'* ]]; then
     data="${data//o/0}"
-    zenity --notification --text='Detected non-bech32 character "o"'
+    zenity --notification --text='Detected non-bech32 character "o"' $ICON
 fi
 if [[ "$share" == *'B'* ]]; then
     data="${data//B/8}"
-    zenity --notification --text='Detected non-bech32 character "B"'
+    zenity --notification --text='Detected non-bech32 character "B"' $ICON
 fi
 if [[ "$share" == *'I'* ]]; then
     data="${data//I/L}"
-    zenity --notification --text='Detected non-bech32 character "I"'
+    zenity --notification --text='Detected non-bech32 character "I"' $ICON
 fi
 if [[ "$share" == *'O'* ]]; then
     data="${data//O/0}"
-    zenity --notification --text='Detected non-bech32 character "O"'
+    zenity --notification --text='Detected non-bech32 character "O"' $ICON
 fi
 if [[ "$data" == *'1'* ]]; then
     data="${data//1/l}"
-    zenity --notification --text='Detected non-bech32 character "1" in data portion'
+    zenity --notification --text='Detected non-bech32 character "1" in data portion' $ICON
 fi
 
 share="$hrp_in""$data"
@@ -259,12 +259,12 @@ get_codex32_secret() {
         ((${#share_list[*]} > 2)) && plur='s'
         while (( $(python3 -c 'from codex32 import ms32
 ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
-            zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your password and try again."
+            zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your password and try again." $ICON
             unset passphrase
             get_codex32_secret
             return 1
         done
-        zenity --notification --text="Passphrase verified.\nThe Bails backup passphrase you entered matches your share$plur."
+        zenity --notification --text="Passphrase verified.\nThe Bails backup passphrase you entered matches your share$plur." $ICON
 #    else
 #        if (( $(python3 -c 'from codex32 import ms32
 #ms32.identifier_verify_checksum("'$codex32_secret'")') == 0)); then
@@ -286,41 +286,6 @@ ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
     return 0
 }
 
-#######################################
-# Derives xprv from codex32 secret and imports BIP44/49/84/86 descriptors
-# Parameter $1: 'now' for new wallets and '0' for wallet restores
-# Parameter $2: (optional) load_on_startup True False
-#######################################
-
-restore_wallet() {
-    echo $codex32_secret	#TODO remove after testing
-    xprv=$(python3 -c 'from codex32 import ms32
-from electrum import bip32
-y = bip32.BIP32Node
-print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
-    echo $xprv
-    # TODO for L2 offline restores do not encrypt or persist signing wallet
-    zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in your wallet for a few days, and destroy it once you know it well.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine." $ICON
-    zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
-    zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
-    until $CLI createwallet "$name" false true "$passphrase"; do
-        name=$(zenity --title='Create wallet failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $RANDOM" $ICON);
-    done
-    for change in 0 1; do	# FIXME fix a json issue with how this is formatting the descriptors to import FIXME URGENT
-        ((change)) && internal=true || internal=false
-        path="'/0'/0'/$change/*)"
-        for desc in "pkh($xprv/44$path" "sh(wpkh($xprv/49$path)" "wpkh($xprv/84$path" "tr($xprv/86$path"; do
-            checksum=$($CLI getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
-            # unlocks wallet 1 minute
-            $CLI -rpcwallet="$name" walletpassphrase "$passphrase" 60
-            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc#${checksum:1:8}'", "active": true, "timestamp": '$1', "internal": '$internal' }]'
-            $CLI -rpcwallet="$name" walletlock
-        done
-    done
-    $CLI unloadwallet "$name"	# bech32m taproot addresses don't show in GUI until after a reload
-    $CLI loadwallet "$name" $2
-    return 0
-}
 ###################
 # Asks user if backup compromised or lost #TODO post-pone for L1
 # Parameters: $1 = dialog title
@@ -407,6 +372,44 @@ modify_backup() {
     fi
 }
 
+#######################################
+# Derives xprv from codex32 secret and imports BIP44/49/84/86 descriptors
+# Parameter $1: 'now' for new wallets and '0' for wallet restores
+# Parameter $2: (optional) load_on_startup True False
+#######################################
+
+restore_wallet() {
+    echo $codex32_secret	#TODO remove after testing
+    xprv=$(python3 -c 'from codex32 import ms32
+from electrum import bip32
+y = bip32.BIP32Node
+print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
+    echo $xprv
+    # TODO for L2 offline restores do not encrypt or persist signing wallet
+    zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine." $ICON
+    zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
+    zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
+    until $CLI createwallet "$name" false true "$passphrase"; do
+        name=$(zenity --title='Create wallet failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $RANDOM" $ICON);
+    done
+    zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from your PC.' $ICON
+    { sleep 10; tails-screen-locker; } &
+    for change in 0 1; do
+        ((change)) && internal=true || internal=false
+        path="'/0'/0'/$change/*)"
+        for desc in "pkh($xprv/44$path" "sh(wpkh($xprv/49$path)" "wpkh($xprv/84$path" "tr($xprv/86$path"; do
+            checksum=$($CLI getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
+            # unlocks wallet 1 minute
+            $CLI -rpcwallet="$name" walletpassphrase "$passphrase" 60
+            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc#${checksum:1:8}'", "active": true, "timestamp": '$1', "internal": '$internal' }]'
+            $CLI -rpcwallet="$name" walletlock
+        done
+    done
+    $CLI unloadwallet "$name"	# bech32m taproot addresses don't show in GUI until after a reload
+    $CLI loadwallet "$name" $2
+    return 0
+}
+
 ### Begins Execution Here ###
 
 name=$(zenity --title='Create Bails Wallet' --entry --text='Wallet Name:' --entry-text='Wallet' $ICON)
@@ -416,13 +419,13 @@ choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Selec
   "I already have a seed" FALSE "Import descriptors" $ICON)
 if [ "$choice" == "Create a new seed" ]; then
     until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I Understand' --width=420 $ICON; do zenity --notification --text='You must understand these risks.'; done #TODO check the formatting of this in Tails!
-    zenity --question --title='Security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3-4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nOne compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High && { locations=4; threshold=3; } || { locations=2; threshold=2; }
+    zenity --question --title='Security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3-4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nOne compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High $ICON && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     set_passphrase 'Create Bails Wallet: Set passphrase'
     user_entropy="$passphrase"
     user_entropy+="$name$(user_randomness)"
     ask_t_and_n
     user_entropy+="$threshold$locations"
-    zenity --notification --text="Generating your codex32 backup..."
+    zenity --notification --text="Generating your codex32 backup..." $ICON
     get_strong_rand_bytes
     echo "App Entropy: $extended_private_masterkey"
     codex32_array=($(python3 -c 'from codex32 import ms32
@@ -437,16 +440,17 @@ else:
     (display_confirm ${codex32_array[*]})
     unset choice passphrase confirm user_entropy threshold locations extended_private_masterkey codex32_array
     get_codex32_secret
-    restore_wallet '"now"'	# scans from current time
+    restore_wallet 1689105447	# scans from Jul 11, 2023
 elif [ "$choice" == "I already have a seed" ]; then
     get_codex32_secret
     restore_wallet 0	# scans entire blockchain for transactions
 elif [ "$choice" == "Import descriptors" ]; then
     echo 'Not yet implemented.'	#TODO postpone for L2 -- import descriptors should give a text entry, file select or QR scanner option.
-    exit 1
+    bails-wallet
 else
     exit 1
 fi
+exit 0
 
 # the extended_private_masterkey + user_entropy go thru Scrypt and the output determines master seed
 # master seed determines identifier
