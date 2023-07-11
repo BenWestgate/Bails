@@ -151,7 +151,7 @@ else
 fi
 
 # kill Bitcoin Core if it is running, wait for it to shutdown safely
-if pgrep bitcoin; then {
+if pgrep bitcoin; then
     printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
     while test -f $DATA_DIR/bitcoind.pid; do
         kill "$(<$DATA_DIR/bitcoind.pid)"
