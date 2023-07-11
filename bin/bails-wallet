@@ -385,13 +385,13 @@ from electrum import bip32
 y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
     echo $xprv
-    # TODO for L2 offline restores do not encrypt or persist signing wallet
-    zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine." $ICON
-    zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
-    zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
+    # TODO for L2 offline restores do not encrypt or persist signing wallet /tmp/$tmp_dir/$name
     until $CLI createwallet "$name" false true "$passphrase"; do
         name=$(zenity --title='Create wallet failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $RANDOM" $ICON);
     done
+    zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine." $ICON
+    zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
+    zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from your PC.' $ICON
     { sleep 10; tails-screen-locker; } &
     for change in 0 1; do
@@ -440,10 +440,10 @@ else:
     (display_confirm ${codex32_array[*]})
     unset choice passphrase confirm user_entropy threshold locations extended_private_masterkey codex32_array
     get_codex32_secret
-    restore_wallet 1689105447	# scans from Jul 11, 2023
+    restore_wallet '"now"'	# scans blockchain from current time
 elif [ "$choice" == "I already have a seed" ]; then
     get_codex32_secret
-    restore_wallet 0	# scans entire blockchain for transactions
+    restore_wallet 1689105447	# scans blockchain from Jul 11, 2023 for transactions
 elif [ "$choice" == "Import descriptors" ]; then
     echo 'Not yet implemented.'	#TODO postpone for L2 -- import descriptors should give a text entry, file select or QR scanner option.
     bails-wallet
