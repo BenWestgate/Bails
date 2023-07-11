@@ -101,7 +101,7 @@ link_dotfiles &>/dev/null
 
 versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
 
-zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=600 && { \
+zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON && { \
     # verify signatures in GUI
     printf '\033]2;Getting Bitcoin Core signatures...\a'
     ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
