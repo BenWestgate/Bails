@@ -1,6 +1,5 @@
 #!/bin/bash
-# For low value Bitcoin data, will create 1 backup location with
-# 2 locations needed to restore
+# For low value Bitcoin data, will create 1 backup location
 export BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 $BAILS_DIR/bin/install-bitcoin
 
