@@ -107,7 +107,8 @@ zenity --question --title='Verify your download' --text='Download verification i
     printf '\033]2;Getting Bitcoin Core signatures...\a'
     ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
     # Switch into latest bitcoin-core directory
-    cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)"
+    cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || exit 1
+    [ -f SHA256SUMS ] || exit 1
     printf '\033]2;Verify Bitcoin Core signatures\a'
     (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
     check_sigs 2
@@ -142,20 +143,22 @@ if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification --text="Bitcoin Core download successfully verified."
 else
     zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize &&
-    rm --verbose ./*
+    rm --verbose ./*	# removes old download
     sleep 5
     # launch script again
     $LOCAL_DIR/bin/install-bitcoin
     exit 1
 fi
 
-# kill Bitcoin Core if it was already running, wait for it to shutdown safely
-printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
-while test -f $DATA_DIR/bitcoind.pid; do
-    kill "$(<$DATA_DIR/bitcoind.pid)"
-    pkill bitcoin*
-    sleep 1
-done
+# kill Bitcoin Core if it is running, wait for it to shutdown safely
+if pgrep bitcoin; then {
+    printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
+    while test -f $DATA_DIR/bitcoind.pid; do
+        kill "$(<$DATA_DIR/bitcoind.pid)"
+        pkill bitcoin
+        sleep 1
+    done
+fi
 
 printf '\033]2;Installing Bitcoin Core...\a'
 # extract bitcoin*.tar.* to Bails directory
