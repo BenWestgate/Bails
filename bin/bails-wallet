@@ -31,9 +31,6 @@ export CLI="bitcoin-cli -rpcport=17600"
 # set PATH environment variable to include ~/.local/bin
 export PATH="${PATH}:${HOME}/.local/bin"
 
-[ "$LOCATIONS" ] && locations=$LOCATIONS || locations=2
-[ "$THRESHOLD" ] && threshold=$THRESHOLD || threshold=2
-
 hrp=ms1
 string=string
 secret_or=' secret or'
@@ -419,6 +416,7 @@ choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Selec
   "I already have a seed" FALSE "Import descriptors" $ICON)
 if [ "$choice" == "Create a new seed" ]; then
     until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I Understand' --width=420 $ICON; do zenity --notification --text='You must understand these risks.'; done #TODO check the formatting of this in Tails!
+    zenity --question --title='Security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3-4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nOne compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     set_passphrase 'Create Bails Wallet: Set passphrase'
     user_entropy="$passphrase"
     user_entropy+="$name$(user_randomness)"
