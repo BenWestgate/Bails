@@ -7,15 +7,16 @@
 #		$4 = --refresh-keys, optional, used if updating Bitcoin Core
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
 
-# TODO FOR L2 provide an option for persistent "hot" restore and offline restore "cold". The offline keeps
-# the private wallet in RAM and requires restoring from seed each time it signs transactions.
-# Creates a watch-only. persistent saves the public or private key wallets to persistent storage.
-
 # TODO FOR L1. After restoring, ask if the user has forgotten their passphrase, if they suspect
 # it has been compromised or if any share has been lost or suspected compromised.
 # Stolen will advise to create a new wallet and sweep funds. It will also increment the threshold.
 # Lost will add shares only (without rotating the backup), or decrement the threshold if no new
 # backup locations are available.
+
+# TODO FOR L2 provide an option for persistent "hot" restore and offline "cold" restore. The offline keeps
+# the private wallet in RAM and requires restoring from seed each time to sign transactions.
+# Creates a watch-only. persistent saves public or private key wallets to persistent storage.
+
 
 # unset environment variable so bitcoin-qt can launch without wayland.
 unset QT_QPA_PLATFORM
@@ -24,10 +25,10 @@ unset QT_QPA_PLATFORM
 export WAYLAND_DISPLAY=""
 export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
-export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
+export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3.9/site-packages
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
-export CLI="bitcoin-cli --rpcport=17600"
+export CLI="bitcoin-cli -rpcport=17600"
 # set PATH environment variable to include ~/.local/bin
 export PATH="${PATH}:${HOME}/.local/bin"
 
@@ -213,7 +214,7 @@ get_share() {
 
 get_passphrase() {
     unset new_kdf_share share_list[1]
-    if zenity --title='Restore Bails Wallet: Seed backup passphrase' --question --text="Do you remember your seed backup's passphrase?" $ICON; then
+    if zenity --title='Restore Bails Wallet: Seed backup passphrase' --question --text="Do you remember your seed backup's passphrase?" --width=300 $ICON; then	#TODO check & fix dialog formatting
         until [ "$passphrase" ]; do
             passphrase="$(zenity --title='Enter your Bails backup passphrase' --password $ICON)"
         done
@@ -289,33 +290,39 @@ ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
     return 0
 }
 
+#######################################
+# Derives xprv from codex32 secret and imports BIP44/49/84/86 descriptors
+# Parameter $1: 'now' for new wallets and '0' for wallet restores
+# Parameter $2: (optional) load_on_startup True False
+#######################################
+
 restore_wallet() {
     echo $codex32_secret	#TODO remove after testing
     xprv=$(python3 -c 'from codex32 import ms32
 from electrum import bip32
 y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
+    echo $xprv
     # TODO for L2 offline restores do not encrypt or persist signing wallet
     zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in your wallet for a few days, and destroy it once you know it well.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine." $ICON
     zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
     zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
-    name="$wallet_name $identifier"
-    # TODO replace $3 with 'now' for new wallets and '0' for wallet restores.
-    $CLI -rpcport=17600 createwallet "$name" false true "$passphrase"
-    for change in 0 1; do
+    until $CLI createwallet "$name" false true "$passphrase"; do
+        name=$(zenity --title='Create wallet failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $RANDOM" $ICON);
+    done
+    for change in 0 1; do	# FIXME fix a json issue with how this is formatting the descriptors to import FIXME URGENT
         ((change)) && internal=true || internal=false
         path="'/0'/0'/$change/*)"
         for desc in "pkh($xprv/44$path" "sh(wpkh($xprv/49$path)" "wpkh($xprv/84$path" "tr($xprv/86$path"; do
             checksum=$($CLI getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
             # unlocks wallet 1 minute
             $CLI -rpcwallet="$name" walletpassphrase "$passphrase" 60
-            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc#${checksum:1:8}'", "active": true, "timestamp": '$3', "internal": '$internal' }]'
+            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc#${checksum:1:8}'", "active": true, "timestamp": '$1', "internal": '$internal' }]'
             $CLI -rpcwallet="$name" walletlock
         done
     done
-	# TODO uncomment these if the taproot addresses are missing.
-	#$2 -rpcwallet="$secret$name$kyc" unloadwallet	# bech32m taproot addresses don't show in GUI until after a reload
-	#$2 loadwallet "$secret$name$kyc" "$load_on_start"
+    $CLI unloadwallet "$name"	# bech32m taproot addresses don't show in GUI until after a reload
+    $CLI loadwallet "$name" $2
     return 0
 }
 ###################
@@ -378,7 +385,7 @@ display_confirm() {
             choice="Create a new seed"
             input_share
             if [ "$codex32_string" == "$share" ]; then
-                zenity --info --title="Confirmed $string" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." --ellipsize $ICON
+                zenity --info --title="Confirmed $string" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." --ellipsize $ICON --width=400
             else
                 # save last entered text to save the user time trying again.
                 zenity zenity --warning --title="Try again" --text="The supplied $string does not match $string ${progress:1: -1}." --ellipsize --timeout=3 $ICON
@@ -387,7 +394,7 @@ display_confirm() {
     done
     progress="(1 of $threshold)"
     unset passphrase threshold identifier backups_made share_list choice backup
-    zenity --info --title='Create Bails Wallet: Seed backup complete' --text='Seed backup is complete. You will now restore your seed with it before your wallet is created.' $ICON --width=300
+    zenity --info --title='Create Bails Wallet: Seed backup complete' --text='Seed backup is complete. You will now restore your seed with it before your wallet is created.' $ICON --width=320 #TODO check formatting of this in Tails
 }
 ###################
 # Modifies a just restored backup to add security or safety #TODO postpone for L1
@@ -406,8 +413,8 @@ modify_backup() {
 
 ### Begins Execution Here ###
 
-wallet_name=$(zenity --title='Create Bails Wallet' --entry --text='Wallet Name:' --entry-text='Wallet' $ICON)
-[ "$wallet_name" ] || wallet_name='Wallet'
+name=$(zenity --title='Create Bails Wallet' --entry --text='Wallet Name:' --entry-text='Wallet' $ICON)
+[ "$name" ] || name='Wallet'
 choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Select" --column "Menu Item" \
   --text='Do you want to make a new seed, or use an existing seed?' TRUE "Create a new seed" FALSE \
   "I already have a seed" FALSE "Import descriptors" $ICON)
@@ -415,7 +422,7 @@ if [ "$choice" == "Create a new seed" ]; then
     until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I Understand' --width=420 $ICON; do zenity --notification --text='You must understand these risks.'; done #TODO check the formatting of this in Tails!
     set_passphrase 'Create Bails Wallet: Set passphrase'
     user_entropy="$passphrase"
-    user_entropy+="$wallet_name$(user_randomness)"
+    user_entropy+="$name$(user_randomness)"
     ask_t_and_n
     user_entropy+="$threshold$locations"
     zenity --notification --text="Generating your codex32 backup..."
@@ -433,42 +440,31 @@ else:
     (display_confirm ${codex32_array[*]})
     unset choice passphrase confirm user_entropy threshold locations extended_private_masterkey codex32_array
     get_codex32_secret
-    restore_wallet
+    restore_wallet '"now"'	# scans from current time
 elif [ "$choice" == "I already have a seed" ]; then
     get_codex32_secret
-    restore_wallet
+    restore_wallet 0	# scans entire blockchain for transactions
 elif [ "$choice" == "Import descriptors" ]; then
-    echo 'Not yet implemented.'	#TODO postpone for L2
+    echo 'Not yet implemented.'	#TODO postpone for L2 -- import descriptors should give a text entry, file select or QR scanner option.
     exit 1
 else
     exit 1
 fi
-# the above loads the seed or descriptor into memory
-# the wallet can either be made in /tmp or wait to be made encrypted in persistent storage.
-# earlier in ram may be better if the wallet creation step is slow
 
-# the hot wallet must not reveal the seed or the master xprv that the multisig keys derive from.
-# rather they should all derive from the master seed & xprv but not dump the root node in listdescriptors "true"
-# it is good if the default derivation when sethdseed or importdescriptors <master_xprv>/<default_paths> is used is the hot wallet however. This makes fund recovery easy.
-# the multisig keys should be the predominant multisig derivation standard, with incrementing account numbers 0 to N-1
-# the extended_private_masterkey + user_entropy will go thru Argon2i and the output determines master seed, independent shares, all N share indexes deterministically.  So one extended_private_masterkey + user_entropy + threshold + N always makes the same wallet AND the same share backup.
-# shares, seed, share indexes must all be independent and deterministically generated from app entropy and user inputs
-# seed + share quantity determine the shares. Implementations may figure out how many locations the original wallet used by searching.
+# the extended_private_masterkey + user_entropy go thru Scrypt and the output determines master seed
+# master seed determines identifier
+# passphrase & master seed determine shares, and share indexes deterministically.  So one extended_private_masterkey + user_entropy + threshold + passphrase always makes the same wallet AND the same share backup.
 
-# add the wallet name to user_entropy since both steps are mandatory add their passphrase as well since it may have been user selected.
-# import descriptors should give a text entry, file select or QR scanner option.
-# it should accept .bsms files
-# the multisig wallets by default, must not have their public keys visible with just the memorized passphrase
-# it is superior to use 10-20 characters of any share as the "watch passphrase", although adding a memorized passphrase should be an option.
+# it should accept .bsms files ???
+# L4 the multisig wallets by default, must not have their public keys visible with just the memorized passphrase
+# it is superior to use last 10 characters of any share as the "watch passphrase", although adding a memorized passphrase should be an option.
 
-
-# Min security: Can sign multisig transactions online. Uses persistent storage to pass the PSBT.
-# Medium security: Bails restarts with networking off to generate the seeds. The script to open multisig private keys does not work when networked. Uses persistent storage to pass the PSBT
+# Min security: Can sign transactions online.
+# Medium security: Bails restarts with networking off to restore the seeds whos keys are only held in RAM. The script exits when networked. Uses persistent storage to pass the PSBT
 # Max security: separate offline only Bails USB and dedicated offline PC that never goes back online after creating seed backup or is even destroyed. Uses QRs to pass the PSBT.
 # PSBT should never be stored in plaintext in the persistent storage but should have the same privacy level as the watch only wallet. They should be carried in the same encrypted loop-back file.
 
 
-# create 32 encrypted loopback files with the private keys to the multisig each named after the first 9 characters of the corresponding share
 # seed is account 0, first share is account 1 and so forth
 # the watch-only is a loopback file encrypted by hash160||identifier of the master seed.
 # max privacy = 2 shares are required to open the watch-only
@@ -476,4 +472,3 @@ fi
 # normal privacy = 1 share
 # this hash+identifier is stored in the 32 loopback files and automatically unlocks the watch only 
 # low privacy = passphrase
-# user can optionally create a 33rd encrypted loopback file containing the watch only password
