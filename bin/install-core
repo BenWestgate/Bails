@@ -98,7 +98,9 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
 link_dotfiles &>/dev/null
-
+until [ -e $destination_dir/bitcoin-core-* ]; do
+    sleep 1
+done
 versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
 
 zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON && { \
@@ -213,9 +215,9 @@ grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc || \
   echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
 
 # bypass wayland if not already so bitcoin-qt works
-grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || \
-  echo 'unset QT_QPA_PLATFORM' | tee -a $HOME/.bashrc
-rsync $HOME/.bashrc $DOTFILES
+grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || { \
+  echo 'unset QT_QPA_PLATFORM' | tee -a $HOME/.bashrc;
+  rsync $HOME/.bashrc $DOTFILES; }
 ln --symbolic --force $DATA_DIR $HOME
 
 # symlink the dotfiles to $HOME
@@ -228,7 +230,7 @@ cd -
 # Launch Bitcoin core minimized and run bails-wallet creator
 printf '\033]2;Create Bails Wallet\a'
 # launches bitcoin accepting RPC commands then launches bails-wallet
-bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -min -splash -startupnotify='until bails-wallet; do :;done' &
+bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -min -splash -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize || break ;done" &
 
 # Wait for bails-wallet to exit
 wait -f $(pidof bails-wallet)
