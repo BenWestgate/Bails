@@ -9,7 +9,7 @@ timeout=5
 # Display welcome message
 zenity --title='Welcome to Bails' --info \
     --text="Thank you for choosing Bails, a self-custodial Bitcoin Core wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps to ensure a smooth experience. Let's get started!" \
-    --width=640 --ok-label=Continue $ICON
+    --width=640 --ok-label=Continue $ICON --icon-name=bails128
 
 # Choose passphrase
 zenity --warning --title='Choose a strong passphrase' \
