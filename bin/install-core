@@ -13,17 +13,13 @@ export WAYLAND_DISPLAY=""
 # set PATH environment variable to include ~/.local/bin
 export PATH="${PATH}:${HOME}/.local/bin"
 
-threshold=2
-locations=2
-
-timeout=5
+timeout=5	# initial spaced repetition delay in seconds
 SOURCE='/live/persistence/TailsData_unlocked'
 
 export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
-export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
 
 link_dotfiles() {
     cd $DOTFILES
@@ -220,9 +216,6 @@ grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc || \
 grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || \
   echo 'unset QT_QPA_PLATFORM' | tee -a $HOME/.bashrc
 rsync $HOME/.bashrc $DOTFILES
-
-ln --symbolic --force $DATA_DIR $DOTFILES/.bitcoin
-ln --symbolic --force $DOTFILES/.bitcoin $HOME/.bitcoin
 
 # symlink the dotfiles to $HOME
 link_dotfiles
