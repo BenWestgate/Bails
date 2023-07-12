@@ -82,7 +82,7 @@ ask_t_and_n () {
     # Explain the seed backup and what conditions will recover the seed
     # allows tweaking it or skipping it in a 'Change Something' dialog TODO decide best formatting in Tails
     tn_grammar
-    until $(zenity --question --icon-name=org.gnome.gedit --title="$threshold-of-$locations codex32 seed backup" --text="<big>In case all Bails USBs fail or you lose your passphrase, we will split your seed into <b>$locations</b> codex32 $string$plurs across <b>$locations location$plurs</b>, with <b>any $threshold</b> of those ${string}s able to restore your seed by typing $pronoun into a codex32-enabled wallet such as Bails.$password_derived</big>\n\nYou will need:\n\t• $locations piece$plurs of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret\n\nOne $string can stay hidden near this Bails USB and the others will go offsite, one to each of your backup locations.\n\n-If <b>$threshold</b> $string$plurtss $plurts stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n\n-If <b>$((locations-threshold+2 > locations ? locations : locations-threshold+2))</b> location$plurs are lost$password_loss, you will <b>NOT</b> be able to recover your seed.\n\nDo you understand?" --cancel-label='Change Something' --width=520 $ICON); do
+    until $(zenity --question --icon-name=org.gnome.gedit --title="$threshold-of-$locations codex32 seed backup" --text="In case all Bails USBs fail or you lose your passphrase, we will split your seed into <b>$locations</b> codex32 $string$plurs across <b>$locations location$plurs</b>, with <b>any $threshold</b> of those ${string}s able to restore your seed by typing $pronoun into a codex32-enabled wallet such as Bails.$password_derived\n\nYou will need:\n\t• $locations piece$plurs of paper about the size of an index card\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret\n\nOne $string can stay hidden near this Bails USB and the others will go offsite, one to each of your backup locations.\n\n-If <b>$threshold</b> $string$plurtss $plurts stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n\n-If <b>$((locations-threshold+2 > locations ? locations : locations-threshold+2))</b> location$plurs are lost$password_loss, you will <b>NOT</b> be able to recover your seed.\n\nDo you understand?" --cancel-label='Change Something' --width=520 $ICON); do
         backup_choice="$(zenity --title='Change backup parameters' --question --extra-button='Location Quantity' --extra-button='Threshold' --switch --text="Location quantity is how many places you will store a codex32 $string.\n\nThreshold is how many shares are needed to steal or recover your seed.\n\nWhat would you like to change?" --ellipsize $ICON)"
         [ "$backup_choice" == 'Location Quantity' ] && locations=$(zenity --scale --text="How many total locations do you want to store ${string}s at?\n\nMinimum $threshold is for low value data.\nUse $((threshold+2)) or more for high value data." --min-value=$threshold --value=$locations --max-value=$((locations+threshold*3-1 < 30 ? locations+threshold*3-1 : 30)) --title='Location quantity' $ICON)
         [ "$backup_choice" == 'Threshold' ] && threshold=$(zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data.\nUse 3 for high value data.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value=$((locations == 5 ? threshold : $(( locations < 5 ? 2 : 3)))) --title='Recovery threshold' $ICON)
@@ -162,7 +162,7 @@ else
 fi
 
 if [[ "$share" =~ [^a-zA-Z0-9] ]]; then
-    zenity --title='Found non-alphanumeric character in '$string --error --text="Codex32 ${string}s contain only letters and numbers." $ICON --ellipsize
+    zenity --title='Non-alphanumeric character in '$string --error --text="Codex32 ${string}s contain only letters and numbers." $ICON --ellipsize
     return 1
 fi
 
@@ -345,7 +345,7 @@ display_confirm() {
             choice="Create a new seed"
             input_share
             if [ "$codex32_string" == "$share" ]; then
-                zenity --info --title="Confirmed $string" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." --ellipsize $ICON --width=400
+                zenity --info --title="Confirmed $string" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." $ICON --width=400 #TODO verify GUI width is ok
             else
                 # save last entered text to save the user time trying again.
                 zenity zenity --warning --title="Try again" --text="The supplied $string does not match $string ${progress:1: -1}." --ellipsize --timeout=3 $ICON
@@ -354,7 +354,7 @@ display_confirm() {
     done
     progress="(1 of $threshold)"
     unset passphrase threshold identifier backups_made share_list choice backup
-    zenity --info --title='Create Bails Wallet: Seed backup complete' --text='Seed backup is complete. You will now restore your seed with it before your wallet is created.' $ICON --width=320 #TODO check formatting of this in Tails
+    zenity --info --title='Seed backup complete' --text='You will now restore your seed with your backup before your wallet is created.' $ICON --width=320 --icon-name=starred
 }
 ###################
 # Modifies a just restored backup to add security or safety #TODO postpone for L1
@@ -443,6 +443,9 @@ else:
     (display_confirm ${codex32_array[*]})
     unset choice passphrase confirm user_entropy threshold locations extended_private_masterkey codex32_array
     get_codex32_secret
+    # TODO if [ new_codex32_secret != confirmed_codex32_secret ]; then 
+        # display error about passphrase typo or seeds did not match and call get_codex32_secret
+    #fi	#TODO this should be an until loop so they can fail multiple times.
     restore_wallet '"now"' true		# scans blockchain from current time
 elif [ "$choice" == "I already have a seed" ]; then
     get_codex32_secret
