@@ -29,6 +29,13 @@ export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 
 total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
+if ! grep 'progress=0.999' $DATA_DIR/debug.log; then
+    {
+        sleep 60
+        zenity --notification --text='Synchronizing with the bitcoin network. This may take a while...\nPlease lock the screen if you need to walk away from your PC.' $ICON
+        tails-screen-locker
+    } &
+fi
 until grep 'progress=0.999' $DATA_DIR/debug.log; do
     cat $DATA_DIR/chainstate/* &> /dev/null & full_speed=$!
     # exit when <10% of memory is free
