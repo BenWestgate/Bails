@@ -393,7 +393,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
     zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from your PC.' $ICON
-    { sleep 10; tails-screen-locker; } &
+    { sleep 5; tails-screen-locker &>/dev/null; } &
     for change in 0 1; do
         ((change)) && internal=true || internal=false
         path="'/0'/0'/$change/*)"
@@ -440,10 +440,10 @@ else:
     (display_confirm ${codex32_array[*]})
     unset choice passphrase confirm user_entropy threshold locations extended_private_masterkey codex32_array
     get_codex32_secret
-    restore_wallet '"now"'	# scans blockchain from current time
+    restore_wallet '"now"' True	# scans blockchain from current time
 elif [ "$choice" == "I already have a seed" ]; then
     get_codex32_secret
-    restore_wallet 1689105447	# scans blockchain from Jul 11, 2023 for transactions
+    restore_wallet 1689105447 True	# scans blockchain from Jul 11, 2023 for transactions
 elif [ "$choice" == "Import descriptors" ]; then
     echo 'Not yet implemented.'	#TODO postpone for L2 -- import descriptors should give a text entry, file select or QR scanner option.
     bails-wallet
