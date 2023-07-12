@@ -214,7 +214,7 @@ link_dotfiles
 rmdir --parents $BAILS_DIR/{bin,lib,share,state,.config}
 rsync --remove-source-files $BAILS_DIR $LOCAL_DIR/share/Bails
 rmdir --parents $BAILS_DIR
-# TODO remove wget logs from executed directory
+rm wget-log*
 rm -R $destination_dir/{download,*.tmp}
 cd -
 
@@ -228,7 +228,7 @@ gtk-launch bitcoin-qt &
 
 # Final Message
 zenity --info --title='Setup Complete' \
-    --text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href="file:///home/amnesia/share/Bails/docs">documentation</a> or visit our <a href="https://bitcoin-core-on-tails.slack.com/">support resources</a>.\n\nEnjoy using Bails!" \
+    --text='Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href="file:///home/amnesia/share/Bails/docs">documentation</a> or visit our <a href="https://bitcoin-core-on-tails.slack.com/">support resources</a>.\n\nEnjoy using Bails!' \
     --width=640 --ok-label=Finish $ICON --icon-name=bails128 &
 
 # Close the terminal and exit
