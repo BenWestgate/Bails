@@ -180,7 +180,7 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 mkdir --parents $DOTFILES/.config/{autostart,Bitcoin}
 
 # Create config to persist gui settings and autostart
-[ -f $DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf ] && rm -Rf $BAILS_DIR/.config || rsync --remove-source-files $BAILS_DIR/.config $DOTFILES/.config
+[ -f $DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf ] || rsync --remove-source-files $BAILS_DIR/.config $DOTFILES/.config
 
 # Enable proxies for Tor
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -209,13 +209,13 @@ ln --symbolic --force $DATA_DIR $HOME
 link_dotfiles
 
 # Cleanup
-rmdir --parents $BAILS_DIR/{bin,lib,share,state,.config}
-rsync --remove-source-files $BAILS_DIR $LOCAL_DIR/share/Bails
-rmdir --parents $BAILS_DIR
-zenity --info --text="$PWD"
-rm wget-log*
+rm --recursive --force $BAILS_DIR/{bin,lib,share,state,.config}
+mv --force $BAILS_DIR $LOCAL_DIR/share/
 rm -R $destination_dir/{download,*.tmp}
 cd -
+zenity --info --text="$PWD"
+rm --force wget-log*
+
 
 # Launch Bitcoin core minimized and run bails-wallet creator
 printf '\033]2;Create Bails Wallet\a'
