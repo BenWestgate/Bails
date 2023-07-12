@@ -108,7 +108,7 @@ cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || exit 1
 
 versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
 
-zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON --icon-name=/usr/share/doc/tails/website/install/inc/infography/verify-from-tails.png && { \
+zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON --icon-name=checkbox-checked && { \
     # verify signatures in GUI
     [ -f SHA256SUMS ] || exit 1
     printf '\033]2;Verify Bitcoin Core signatures\a'
