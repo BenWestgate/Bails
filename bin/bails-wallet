@@ -404,7 +404,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
             $CLI -rpcwallet="$name" walletlock
         done
     done
-    pkill tails-screen-locker
+    pkill python3	# kills tails-screen-locker
     return 0
 }
 
