@@ -25,16 +25,15 @@
 # quits as soon as progress is made, RAM is full or chainstate is loaded.
 #################################################
 
-export LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local/
-export BAILS_DIR=$LOCAL_DIR
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
+export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 
 total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 until grep 'progress=0.999' $DATA_DIR/debug.log; do
-    cat $DATA_DIR/chainstate/* > /dev/null & full_speed=$!
-    # quit when free memory is full of chainstate
-    (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )) && { zenity --notification --text='RAM fully preloaded with Bitcoin chainstate'; exit 1; }
+    cat $DATA_DIR/chainstate/* &> /dev/null & full_speed=$!
+    # exit when <10% of memory is free
+    (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )) && { zenity --notification --text='RAM fully preloaded with Bitcoin chainstate' $ICON; exit 1; }
     sleep $((++i))
     # exit if cat command finishes and can't be killed. Means entire chainstate is preloaded.
-    kill $full_speed || { zenity --notification --text='Bitcoin chainstate fully preloaded to RAM'; exit 0; }
+    kill $full_speed || { zenity --notification --text='Bitcoin chainstate fully preloaded to RAM' $ICON; exit 0; }
 done
