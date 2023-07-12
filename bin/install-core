@@ -181,7 +181,7 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 #TODO for L1
 
 # Create config to persist gui settings and autostart
-rsync --remove-source-files $BAILS_DIR/config/ $DOTFILES/.config
+rsync --remove-source-files -recursive $BAILS_DIR/config/ $DOTFILES/.config
 read -p "Bails/config should have moved to $DOTFILES/.config"
 
 # Enable proxies for Tor and prune
