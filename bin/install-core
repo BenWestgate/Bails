@@ -97,7 +97,7 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 [ -b '/dev/mapper/TailsData_unlocked' ] || persistent-setup
 
 # Installs Bails to Persistent Storage
-zenity --info --text="rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR"
+zenity --info --text="rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR"
 rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
 link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
 
