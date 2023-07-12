@@ -78,7 +78,6 @@ destination_dir="$HOME/.local/share/bitcoin-core"
 
 # Installs Bails to tmpfs
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $HOME/.local/
-read -p "Bails should be copied into $HOME/.local/"
 
 # Create the destination directory if it doesn't exist
 mkdir -p "$destination_dir"
@@ -98,8 +97,7 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 [ -b '/dev/mapper/TailsData_unlocked' ] || persistent-setup
 
 # Installs Bails to Persistent Storage
-zenity --info --text="rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR"
-rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
+rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
 read -p "Bails should be copied into $LOCAL_DIR"
 link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
 read -p "symlinks should have overwritten the Bails files in $HOME/.local"
