@@ -181,16 +181,8 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 # create .config directories
 mkdir --parents $DOTFILES/.config/{autostart,Bitcoin}
 
-# create autostart desktop file
-echo '[Desktop Entry]
-Type=Application
-Name=Bitcoin
-Exec=/bin/bash -c "unset QT_QPA_PLATFORM; '$LOCAL_DIR'/bin/bitcoin-autostart"
-Terminal=false
-Hidden=false' >$DOTFILES/.config/autostart/bitcoin.desktop
-
 # Create config to persist gui settings and autostart
-[ -f $DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf ] && rm -Rf $BAILS_DIR/.config || rsync --remove-source-files $BAILS_DIR/.config $DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf
+[ -f $DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf ] && rm -Rf $BAILS_DIR/.config || rsync --remove-source-files $BAILS_DIR/.config $DOTFILES/.config
 
 # Enable proxies for Tor
 [ -f $DATA_DIR/settings.json ] || echo '{
