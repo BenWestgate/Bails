@@ -20,10 +20,11 @@ export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 
 link_dotfiles() {
-    cd $DOTFILES
-    for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-    for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
-    cd -
+    (	# runs in a subshell to preserve current directory
+      cd $DOTFILES
+      for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
+      for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
+    )
 }
 
 # Looks for good signatures
