@@ -98,9 +98,7 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 
 # Installs Bails to Persistent Storage
 rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
-read -p "Bails should be copied into $LOCAL_DIR"
 link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
-read -p "symlinks should have overwritten the Bails files in $HOME/.local"
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
@@ -110,7 +108,7 @@ cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || exit 1
 
 versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
 
-zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON --icon-name=auth-fingerprint && { \
+zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON --icon-name=/usr/share/doc/tails/website/install/inc/infography/verify-from-tails.png && { \
     # verify signatures in GUI
     [ -f SHA256SUMS ] || exit 1
     printf '\033]2;Verify Bitcoin Core signatures\a'
