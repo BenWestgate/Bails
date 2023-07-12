@@ -20,7 +20,7 @@ zenity --warning --title='Choose a strong passphrase' \
 until [ -b '/dev/mapper/TailsData_unlocked' ]; do
     pgrep notify-send || {
         sleep 5
-        notify-send 'Important: Use a suggested passphrase. To help remember:' 'Create a mental image or mnemonic using the words, in order.\n\nIt might be a story, scenario, or sentence that you will be able to remember and that can remind you of the particular words you chose, in order.'
+        notify-send --icon=bails128 'Important: Use a suggested passphrase. To help remember:' 'Create a mental image or mnemonic using the words, in order.\n\nIt might be a story, scenario, or sentence that you will be able to remember and that can remind you of the particular words you chose, in order.'
     } &
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
         { tps-frontend-wrapper & zenity --notification --text='Click Continue to create a Persistent Storage'; }
