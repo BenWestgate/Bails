@@ -96,8 +96,9 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 # Setup Persistent Storage if it is not already
 [ -b '/dev/mapper/TailsData_unlocked' ] || persistent-setup
 
-# Installs Bails to Presistent Storage
-rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR	
+# Installs Bails to Persistent Storage
+zenity --info --text="rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR"
+rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
 link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
