@@ -79,17 +79,17 @@ rsync --recursive $BAILS_DIR/{bin,lib,share,state} $HOME/.local/
 
 # Create the destination directory if it doesn't exist
 mkdir -p "$destination_dir"
-
+# TODO uncomment the downloads when done testing other things
 # Download Bitcoin core checksums and signatures in background
-{ #wget -P "$destination_dir" --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || 
-wget -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; } & sig_dl=$!
+#{ #wget -P "$destination_dir" --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || 
+#wget -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; } & sig_dl=$!
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
-{ #wget --continue -P "$destination_dir" --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || 
-wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; } & core_download=$!
+#{ #wget --continue -P "$destination_dir" --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || 
+#wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; } & core_download=$!
 
 # Download chain parameters in background
-wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
+#wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
 
 # Setup Persistent Storage if it is not already
 [ -b '/dev/mapper/TailsData_unlocked' ] || persistent-setup
