@@ -392,7 +392,12 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
     zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from your PC.' $ICON
-    { sleep 3; tails-screen-locker &>/dev/null; } &
+    {
+        sleep 3
+        tails-screen-locker &>/dev/null
+        # Clear notifications
+        dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
+    } &
     for change in 0 1; do
         ((change)) && internal=true || internal=false
         path="'/0'/0'/$change/*)"
@@ -448,6 +453,8 @@ elif [ "$choice" == "Import descriptors" ]; then
 else
     exit 1
 fi
+# Clear notifications
+dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 exit 0
 
 # the extended_private_masterkey + user_entropy go thru Scrypt and the output determines master seed
