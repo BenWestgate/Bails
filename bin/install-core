@@ -171,6 +171,7 @@ mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
 
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
 ln --symbolic --force $DATA_DIR $DOTFILES
+ln --symbolic $DOTFILES/.bitcoin $HOME
 
 # Change mime association from electrum to bitcoin core
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR/share/applications/mimeinfo.cache
