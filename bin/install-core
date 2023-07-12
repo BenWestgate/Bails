@@ -235,5 +235,8 @@ gtk-launch bitcoin-qt
 # Final Message
 zenity --info --title='Setup Complete' \
     --text="Congratulations! You have completed the initial setup process for Bails. You are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided documentation or visit our support resources.\n\nEnjoy using Bails!" \
-    --width=640 --ok-label=Finish $ICON --icon-name=bails128
+    --width=640 --ok-label=Finish $ICON --icon-name=bails128 &
+
+# Close the terminal and exit
+kill -9 $PPID
 exit 0
