@@ -239,15 +239,14 @@ print(ms32.recover_master_seed(['"$py_share_list"']))
 
 get_codex32_secret() {
     [ "$threshold" ] || get_share
-    [ "$passphrase" ] || get_passphrase
-    echo ${#share_list[*]} $threshold
-    ((${#share_list[*]} < threshold)) && get_share
     if [[ ${index,,} = 's' ]]; then
         codex32_secret="$share"
         reset='your codex32 secret'
         threshold=1
+        set_passphrase 'Restore Bails Wallet: Reset passphrase'
         return 0
     fi
+    [ "$passphrase" ] || get_passphrase
     unset secret_or
     reset="$threshold shares"
     while ((${#share_list[*]} < threshold)); do
@@ -475,6 +474,9 @@ exit 0
 # low privacy = passphrase
 
 # Test Vectors
+
+# git clone https://github.com/BenWestgate/Bails --depth=1; Bails/lo
+
 # ms120zr8mz6nwetk2gys8zy9t7nr33etlyrwzuqcl3c7n26n
 # ms120zr8gluuruks99wcgdxrkctr5se55gmpptyaxkp72tfh
 # Skunk 12 Badge Whig Saline Solomon
