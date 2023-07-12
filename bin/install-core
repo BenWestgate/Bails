@@ -5,8 +5,6 @@
 
 # TODO use an until sha256sums --check SHA256SUMS; do wget *tar.gz,SHA256SUMS; done*
 
-# Optional TODO clear notifications https://superuser.com/questions/1592674/how-to-clear-notification-sent-by-shell-script
-
 # Needed for zenity dialogs to have window icons 
 export WAYLAND_DISPLAY=""
 
@@ -214,6 +212,7 @@ link_dotfiles
 rmdir --parents $BAILS_DIR/{bin,lib,share,state,.config}
 rsync --remove-source-files $BAILS_DIR $LOCAL_DIR/share/Bails
 rmdir --parents $BAILS_DIR
+zenity --info --text="$PWD"
 rm wget-log*
 rm -R $destination_dir/{download,*.tmp}
 cd -
@@ -225,6 +224,9 @@ printf '\033]2;Create Bails Wallet\a'
 bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize || break; done; pkill bitcoind;"
 
 gtk-launch bitcoin-qt &
+
+# Clear notifications
+dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 
 # Final Message
 zenity --info --title='Setup Complete' \
