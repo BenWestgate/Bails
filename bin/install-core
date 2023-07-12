@@ -97,7 +97,7 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 [ -b '/dev/mapper/TailsData_unlocked' ] || persistent-setup
 
 # Installs Bails to Presistent Storage
-mv --force $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR/	
+rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR	
 link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
@@ -205,6 +205,7 @@ grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || { \
 link_dotfiles &>/dev/null
 
 # Cleanup
+rm -Rf $BAILS_DIR/{bin,lib,share,state}
 mv --force $BAILS_DIR $LOCAL_DIR/share/
 rm -R $destination_dir/{download,*.tmp}
 cd -
