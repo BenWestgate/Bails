@@ -1,0 +1,43 @@
+#!/bin/bash
+# Copyright (c) 2023 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+BITCOIN_ADDRESS_BENEVOLENT=	#TODO add these
+BITCOIN_ADDRESS_SELFISH=	#TODO add these
+
+if ! (( RANDOM % 20 )); then
+        # 1 out of 20 start-ups show donation message
+    if (( RANDOM % 2 )); then
+        # In half of the cases, display a message with benevolent incentive
+        text="Bails needs donations to keep everybody using Bitcoin free and safe.\n\n
+Every bit helps in our fight against surveillance, censorship and seizure!"
+        bitcoin_address=$BITCOIN_ADDRESS_BENEVOLENT
+    else
+        # In the other half, display a message with a more selfish incentive
+        text="Bails protects your wallet.\n\nHelp us keep your bitcoins safe!"
+        bitcoin_address=$BITCOIN_ADDRESS_SELFISH
+    fi
+    if zenity --question --title "Make Bails Stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 --window-icon=$LOCAL_DIR/share/icons/bails128.png --modal --ellipsize; then
+        notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
+        xdg-open bitcoin:$bitcoin_address
+        exit 0
+    fi
+fi
+space=$(( ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240))
+/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) $@
