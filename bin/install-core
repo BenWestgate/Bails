@@ -23,7 +23,7 @@ link_dotfiles() {
     (	# runs in a subshell to preserve current directory
       cd $DOTFILES
       for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-      for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
+      for file in $(find . -type f); do ln --symbolic --force --no-dereference $PWD${file:1} $HOME${file:1}; done
     )
 }
 
@@ -214,7 +214,7 @@ rm --force wget-log*
 printf '\033]2;Create Bails Wallet\a'
 
 # launches bitcoind, then launches bails-wallet
-bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize || break; done; pkill bitcoind;"
+bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
 
 gtk-launch bitcoin-qt &
 
