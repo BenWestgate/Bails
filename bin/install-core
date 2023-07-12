@@ -78,6 +78,7 @@ destination_dir="$HOME/.local/share/bitcoin-core"
 
 # Installs Bails to tmpfs
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $HOME/.local/
+read -p "Bails should be copied into $HOME/.local/"
 
 # Create the destination directory if it doesn't exist
 mkdir -p "$destination_dir"
@@ -99,7 +100,9 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 # Installs Bails to Persistent Storage
 zenity --info --text="rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR"
 rsync --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
+read -p "Bails should be copied into $LOCAL_DIR"
 link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
+read -p "symlinks should have overwritten the Bails files in $HOME/.local"
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
@@ -142,6 +145,7 @@ ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f
 
 # Move completed download to persistent storage
 rsync --remove-source-files $destination_dir $LOCAL_DIR/share/
+read -p "bitcoin-core download should have moved to $LOCAL_DIR/share/"
 link_dotfiles &>/dev/null
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
@@ -182,6 +186,7 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 
 # Create config to persist gui settings and autostart
 rsync --remove-source-files $BAILS_DIR/config/ $DOTFILES/.config
+read -p "Bails/config should have moved to $DOTFILES/.config"
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -205,6 +210,7 @@ grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || { \
 
 # symlink the dotfiles to $HOME
 link_dotfiles &>/dev/null
+read -p "config should have been symlinked to $HOME/.config"
 
 # Cleanup
 rm -Rf $BAILS_DIR/{bin,lib,share,state,config}
@@ -212,6 +218,8 @@ mv --force $BAILS_DIR $LOCAL_DIR/share/
 rm -R $destination_dir/{download,*.tmp}
 cd -
 rm --force wget-log*
+
+read -p "Bails should have moved to $LOCAL_DIR/share/ and nothing remain in home folder"
 
 # Launch Bitcoin core minimized and run bails-wallet creator
 printf '\033]2;Create Bails Wallet\a'
