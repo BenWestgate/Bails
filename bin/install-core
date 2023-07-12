@@ -97,11 +97,11 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 [ -b '/dev/mapper/TailsData_unlocked' ] || persistent-setup
 
 # Installs Bails to Presistent Storage
-rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR	
+mv --force $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR/	
 link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
-ps -p $sig_dl >/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 # Switch into latest bitcoin-core directory
 cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || exit 1
@@ -117,7 +117,7 @@ zenity --question --title='Verify Bitcoin download' --text='Download verificatio
 }
 
 # Bring chainparams.cpp download to foreground then set assumed chainstate & blockchain size
-ps -p $get_size >/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
 assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $destination_dir/chainparams.cpp | sed 's/[^0-9]*//g')
 assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $destination_dir/chainparams.cpp | sed 's/[^0-9]*//g')	
 
@@ -137,7 +137,11 @@ Bitcoin Core is the original Bitcoin client and it builds the backbone of the ne
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
-ps -p $core_download >/dev/null && fg %$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')
+
+# Move completed download to persistent storage
+rsync --remove-source-files $destination_dir $LOCAL_DIR/share/
+link_dotfiles &>/dev/null
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 if sha256sum --ignore-missing --check SHA256SUMS; then
@@ -147,7 +151,7 @@ else
     rm --verbose ./*	# removes old download
     sleep 5
     # launch script again
-    $LOCAL_DIR/bin/install-bitcoin
+    install-bitcoin
     exit 1
 fi
 
@@ -162,10 +166,11 @@ if pgrep bitcoin; then
 fi
 
 printf '\033]2;Installing Bitcoin Core...\a'
-mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
-ln --symbolic --force $DATA_DIR $DOTFILES
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+
+mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
+ln --symbolic --force $DATA_DIR $DOTFILES
 
 # Change mime association from electrum to bitcoin core
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR/share/applications/mimeinfo.cache
@@ -174,7 +179,7 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 #TODO for L1
 
 # Create config to persist gui settings and autostart
-[ -f $DOTFILES/.config/Bitcoin/Bitcoin-Qt.conf ] || rsync --remove-source-files $BAILS_DIR/.config $DOTFILES/.config
+mv --force $BAILS_DIR/.config $DOTFILES/
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -183,17 +188,15 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
     "prune": "'$prune_MiB'"
 }' > $DATA_DIR/settings.json
 
-# install Bitcoin, icons, associate mime types, application shortcuts, autostart, and Qt-config
-rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
-ln --symbolic --force $DATA_DIR $DOTFILES
-ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so it won't persist restart
+ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so logs won't persist restart
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+#TODO possibly drop a directory to make it difficult to create new Wallets in Bitcoin Core's GUI.
 
 # Add ~/.local/bin to PATH at startup
 grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc || \
   echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
 
-# bypass wayland if not already so bitcoin-qt works
+# bypass wayland if not already so bitcoin-qt works	# TODO: Low priority: this may not be necessary anymore, verify
 grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || { \
   echo 'unset QT_QPA_PLATFORM' | tee -a $HOME/.bashrc;
   rsync $HOME/.bashrc $DOTFILES; }
@@ -202,11 +205,9 @@ grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || { \
 link_dotfiles &>/dev/null
 
 # Cleanup
-rm --recursive --force $BAILS_DIR/{bin,lib,share,state,.config}
 mv --force $BAILS_DIR $LOCAL_DIR/share/
 rm -R $destination_dir/{download,*.tmp}
 cd -
-zenity --info --text="$PWD"
 rm --force wget-log*
 
 # Launch Bitcoin core minimized and run bails-wallet creator
