@@ -63,7 +63,7 @@ search_key() {
     pkill gpg &>/dev/null
     if grep '@' $temp_file >/dev/null; then 
         sed -i 's/(1)/   /' $temp_file
-        zenity --question --title='Do you find this individual trustworthy?' --no-markup --text="$(<$temp_file)" --ellipsize --window-icon=$LOCAL_DIR/share/icons/bails128.png && gpg $1 --recv-key $key && ((++good_sig))
+        zenity --question --title='Do you find this individual trustworthy?' --no-markup --text="$(<$temp_file)" --ellipsize $ICON --icon-name=auth-fingerprint && gpg $1 --recv-key $key && ((++good_sig))
     else
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver keyserver.ubuntu.com'
@@ -108,7 +108,7 @@ cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || exit 1
 
 versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
 
-zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON && { \
+zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON --icon-name=auth-fingerprint && { \
     # verify signatures in GUI
     [ -f SHA256SUMS ] || exit 1
     printf '\033]2;Verify Bitcoin Core signatures\a'
@@ -179,7 +179,7 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 #TODO for L1
 
 # Create config to persist gui settings and autostart
-mv --force $BAILS_DIR/.config $DOTFILES/
+rsync --remove-source-files $BAILS_DIR/config/ $DOTFILES/.config
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -205,7 +205,7 @@ grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc || { \
 link_dotfiles &>/dev/null
 
 # Cleanup
-rm -Rf $BAILS_DIR/{bin,lib,share,state}
+rm -Rf $BAILS_DIR/{bin,lib,share,state,config}
 mv --force $BAILS_DIR $LOCAL_DIR/share/
 rm -R $destination_dir/{download,*.tmp}
 cd -
