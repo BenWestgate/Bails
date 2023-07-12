@@ -25,7 +25,7 @@ until [ -b '/dev/mapper/TailsData_unlocked' ]; do
         notify-send --icon=bails128 'Important: Use a suggested passphrase. To help remember:' 'Create a mental image or mnemonic using the words, in order.\n\nIt might be a story, scenario, or sentence that you will be able to remember and that can remind you of the particular words you chose, in order.'
     } &
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
-        { tails-persistent-storage & notify-send --icon=tails-persistent-storage.svg 'Click Continue to create a Persistent Storage'; }
+        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
     sleep 1
 done
 
