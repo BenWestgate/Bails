@@ -228,10 +228,12 @@ cd -
 # Launch Bitcoin core minimized and run bails-wallet creator
 printf '\033]2;Create Bails Wallet\a'
 # launches bitcoin accepting RPC commands then launches bails-wallet
-bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -min -splash -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize || break ;done" &
+{ bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1)) - 10485760 > 1953125 ? ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240 : 1907)) -rpcport=17600 -server -min -splash -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize || break ;done"; } &
 
 # Wait for bails-wallet to exit
+echo "waiting for bails-wallet to exit..."
 wait -f $(pidof bails-wallet)
+
 # Final Message
 zenity --info --title='Setup Complete' \
     --text="Congratulations! You have completed the initial setup process for Bails. You are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided documentation or visit our support resources.\n\nEnjoy using Bails!" \
