@@ -1,15 +1,16 @@
 [Desktop Entry]
 Version=1.0
-Name=Bitcoin Core
+Name=Bitcoin Core uri handler
 Comment=Connect to the Bitcoin P2P Network
 Comment[de]=Verbinde mit dem Bitcoin peer-to-peer Netzwerk
 Comment[fr]=Bitcoin, monnaie virtuelle cryptographique pair à pair
 Comment[tr]=Bitcoin, eşten eşe kriptografik sanal para birimi
-Exec=bash -c "space=$(( ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240)); bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$((space > 1907 ? space : 1907)) -startupnotify=chainstate-preload %u"
+Exec=bash -c "cd $HOME/Persistent/.bitcoin; space=$(( ($(df --output=avail . | tail -1) + $(du --summarize blocks | cut -f1))/1024 - 10240)); /live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) -startupnotify=chainstate-preload %u"
 Terminal=false
 Type=Application
 Icon=bitcoin128
 MimeType=x-scheme-handler/bitcoin;
 Categories=Office;Finance;P2P;Network;Qt;
 StartupWMClass=Bitcoin-qt
-#NoDisplay=True
+NoDisplay=true
+NotShowIn=GNOME
