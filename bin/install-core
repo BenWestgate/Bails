@@ -141,14 +141,13 @@ ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f
 
 # Move completed download to persistent storage
 rsync --remove-source-files --recursive $destination_dir $LOCAL_DIR/share/
-read -p "bitcoin-core download should have moved to $LOCAL_DIR/share/"
 link_dotfiles &>/dev/null
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --icon-name=bitcoin128
 else
-    zenity --warning --title="Download Integrity Failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize &&
+    zenity --warning --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize &&
     rm --verbose ./*	# removes old download
     sleep 5
     # launch script again
