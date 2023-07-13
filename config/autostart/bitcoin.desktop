@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
 Name=Bitcoin
-Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt-wrapper -min -chain=main -startupnotify=chainstate-preload
+Exec=sh -c "ln -s /live/persistence/TailsData_unlocked/Persistent/.bitcoin $HOME; bitcoin-qt-wrapper -min -chain=main -startupnotify=chainstate-preload"
 Terminal=false
 Hidden=false

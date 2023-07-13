@@ -199,7 +199,7 @@ grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc &> /dev/nu
 
 # bypass wayland if not already so bitcoin-qt works	# TODO: Low priority: this may not be necessary anymore, verify
 if ! grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc; then
-    echo -e "unset QT_QPA_PLATFORM\nln -s $DATA_DIR $HOME" | tee -a $HOME/.bashrc
+    echo -e "unset QT_QPA_PLATFORM" | tee -a $HOME/.bashrc
     rsync $HOME/.bashrc $DOTFILES
 fi
 ) &> /dev/null
