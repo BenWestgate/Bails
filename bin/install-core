@@ -167,11 +167,10 @@ fi
 
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
-mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
-
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
-ln --symbolic --force $DATA_DIR $DOTFILES
-ln --symbolic $DOTFILES/.bitcoin $HOME
+mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+ln --symbolic --force $DATA_DIR $DOTFILES	#TODO I can probably remove these and should
+ln --symbolic $DOTFILES/.bitcoin $HOME		#TODO I can probably remove these and should
 
 # Change mime association from electrum to bitcoin core
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR/share/applications/mimeinfo.cache
@@ -181,7 +180,6 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 
 # Create config to persist gui settings and autostart
 rsync --remove-source-files -recursive $BAILS_DIR/config/ $DOTFILES/.config
-read -p "Bails/config should have moved to $DOTFILES/.config"
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
