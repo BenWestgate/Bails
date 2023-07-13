@@ -193,7 +193,8 @@ ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount dir
 #TODO possibly drop a directory to make it difficult to create new Wallets in Bitcoin Core's GUI.
 
 # Add ~/.local/bin to PATH at startup
-grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc || \
+(
+grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc &> /dev/null || \
   echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
 
 # bypass wayland if not already so bitcoin-qt works	# TODO: Low priority: this may not be necessary anymore, verify
@@ -201,6 +202,7 @@ if ! grep --count 'unset QT_QPA_PLATFORM' $HOME/.bashrc; then
     echo -e "unset QT_QPA_PLATFORM\nln -s $DATA_DIR $HOME" | tee -a $HOME/.bashrc
     rsync $HOME/.bashrc $DOTFILES
 fi
+) &> /dev/null
 # symlink the dotfiles to $HOME
 link_dotfiles &>/dev/null
 read -p "config should have been symlinked to $HOME/.config"
