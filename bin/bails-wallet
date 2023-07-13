@@ -393,11 +393,11 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     zenity --title="Wallet to be encrypted" --width=500 --warning --text="Your wallet is about to be encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from your PC.' $ICON
     {
-        sleep 3
-        tails-screen-locker &>/dev/null
+        sleep 4
+        tails-screen-locker
         # Clear notifications
         dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
-    } &
+    } &>/dev/null & lock_if_slow=$!
     for change in 0 1; do
         ((change)) && internal=true || internal=false
         path="'/0'/0'/$change/*)"
@@ -409,6 +409,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
             $CLI -rpcwallet="$name" walletlock
         done
     done
+    kill $lock_if_slow
     pkill python3	# kills tails-screen-locker
     return 0
 }
