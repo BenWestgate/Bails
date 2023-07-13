@@ -51,9 +51,8 @@ while true; do
     tails-screen-locker &>/dev/null
 done &
 
-zenity --info --title='Tips for the new passphrase' \
-    --text="You will be prompted periodically to enter your passphrase for spaced repetition training. Practice entering the passphrase regularly to commit it to memory, daily at first and then at least once a week.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you have memorized it." \
-    --ok-label='Continue' --width=600 $ICON
+zenity --info --title='Tips for your new passphrase' \
+    --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering the passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you have memorized it." --ok-label='Continue' --width=600 $ICON
 
 # Checking persistent features
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
