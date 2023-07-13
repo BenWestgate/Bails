@@ -169,8 +169,8 @@ printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
 mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
-ln --symbolic --force $DATA_DIR $DOTFILES	#TODO I can probably remove these and should
-ln --symbolic $DOTFILES/.bitcoin $HOME		#TODO I can probably remove these and should
+ln --symbolic --force $DATA_DIR $DOTFILES		#TODO I can probably remove these and should
+ln --symbolic $DOTFILES/.bitcoin $HOME &>/dev/null	#TODO I can probably remove these and should
 
 # Change mime association from electrum to bitcoin core
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR/share/applications/mimeinfo.cache
@@ -205,7 +205,6 @@ fi
 ) &> /dev/null
 # symlink the dotfiles to $HOME
 link_dotfiles &>/dev/null
-read -p "config should have been symlinked to $HOME/.config"
 
 # Cleanup
 rm -Rf $BAILS_DIR/{bin,lib,share,state,config}
@@ -214,8 +213,6 @@ link_dotfiles &>/dev/null	#TODO consolidate link_dotfiles commands
 rm -R $destination_dir/{download,*.tmp}
 cd -
 rm --force wget-log*
-
-read -p "Bails should have moved to $LOCAL_DIR/share/ and nothing remain in home folder"
 
 # Launch Bitcoin core minimized and run bails-wallet creator
 printf '\033]2;Create Bails Wallet\a'
@@ -227,7 +224,7 @@ space=$(( ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOM
 
 # Launch bitcoin-qt and then display final message
 bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) -startupnotify="zenity --info --title='Setup Complete' \
-    --text='Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href=file:///home/amnesia/share/Bails/docs>documentation</a> or visit our <a href=https://bitcoin-core-on-tails.slack.com/>support resources</a>.\n\nEnjoy using Bails!' \
+    --text='Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href=file:///home/amnesia/share/Bails/docs>documentation</a> or visit our <a href=https://bitcoin-core-on-tails.slack.com/>support resources</a>.\n\nEnjoy using Bails\!' \
     --width=640 --ok-label=Finish $ICON --icon-name=bails128"
 
 # Clear notifications
