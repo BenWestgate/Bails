@@ -193,6 +193,7 @@ printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
 mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+chmod -w $DATA_DIR/wallets	# TODO see what permissions bitcoin-core would have made its folders at.
 ln --symbolic $DATA_DIR $HOME # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Change mime association from electrum to bitcoin core
@@ -217,7 +218,7 @@ ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount dir
 #TODO try disable write permission in wallet folder to break the GUI 'create' function more simply
 
 # Add $HOME/.local/bin to PATH at startup	https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-#TODO Raise Tails Issue: Distributions should ensure this directory shows up in the UNIX $PATH environment variable, at an appropriate place.
+#TODO Raise Tails Issue: "Distributions should ensure this directory shows up in the UNIX $PATH environment variable, at an appropriate place."
 (
 grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc &> /dev/null || \
   echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
@@ -238,15 +239,15 @@ cd -
 rm --force wget-log*
 
 printf '\033]2;Create Bails Wallet\a'
-
 # Start bitcoind, then launches bails-wallet
 # TODO if there are NO memory contention issues on 4GB PCs on real USB sticks switch to bitcoin-qt
 # TODO may be able to remove -prune here
+# TODO the bails-wallet command should shutdown bitcoin core (if runnin) and launch the server and then reload what they had afterwards
 bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
 
 
 # Start bitcoin-qt and then display final message
-space=$(( ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240))
+space=$(( ($(df --output=avail $DATA_DIR | tail -1) + $(du --summarize $DATA_DIR/blocks | cut -f1))/1024 - 10240))
 text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nEnjoy using Bails!"
 
 bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) -startupnotify="zenity --info --title='Setup Complete' --text=\"$text\" --width=640 --ok-label=Finish $ICON --icon-name=bails128" &
@@ -256,4 +257,3 @@ dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell o
 
 # Exit by killing controlling terminal
 gnome-terminal -- pkill gnome-terminal &
-
