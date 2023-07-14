@@ -49,7 +49,7 @@ In the next step, you will shut down the computer. To be able to follow the rest
 
 * Take note of the URL of this page:
 ```
-https://github.com/BenWestgate/Bails#install-steps
+https://github.com/benwestgate/bails#install-steps
 ```
 
 ### Install steps
