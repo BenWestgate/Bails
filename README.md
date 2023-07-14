@@ -60,7 +60,7 @@ https://github.com/benwestgate/bails#install-steps
       * If you installed by cloning Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase.
 1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html).
-      * If you *cloned* Bitcoin Core on Tails, skip to step 7.
+      * If you cloned Bails, skip to step 7.
 1. Open a terminal. Choose <b>Applications ▸ Utilities ▸ Terminal</b>.
 1.  Type or Paste the following in Terminal, then press Enter:
 ``` bash
