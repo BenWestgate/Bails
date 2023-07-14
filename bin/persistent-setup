@@ -24,6 +24,8 @@
 # Bails Persistent Storage Setup Tutorial
 ###############################################################################
 
+# For security reviewing this use: https://explainshell.com/ for commands that are unclear.
+
 timeout=5	# initial spaced repetition delay in seconds
 
 # Display welcome message
