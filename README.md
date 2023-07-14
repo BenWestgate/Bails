@@ -44,12 +44,12 @@ In the next step, you will shut down the computer. To be able to follow the rest
 
 * Scan this QR code on your smartphone or tablet:
 
-![image](https://github.com/BenWestgate/bitcoin-core-on-tails/raw/master/mobile-qr.png)
+![image](https://github.com/BenWestgate/Bails/assets/73506583/72496200-fa4f-4ce3-94de-06cc88296e73)
 * Print these instructions on paper.
 
 * Take note of the URL of this page:
 ```
-https://github.com/BenWestgate/Bails/blob/master/README.md#install-steps
+https://github.com/BenWestgate/Bails#install-steps
 ```
 
 ### Install steps
