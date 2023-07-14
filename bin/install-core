@@ -1,23 +1,39 @@
 #!/bin/bash
-#######################################
-# downloads bitcoin and installs it persistently
-#######################################
 
-# TODO use an until sha256sums --check SHA256SUMS; do wget *tar.gz,SHA256SUMS; done*
+# Copyright (c) 2023 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
-# Needed for zenity dialogs to have window icons 
-export WAYLAND_DISPLAY=""
+###############################################################################
+# Downloads Bitcoin Core and installs it persistently. Starts bails-wallet.
+###############################################################################
 
-# set PATH environment variable to include ~/.local/bin
-export PATH="${PATH}:${HOME}/.local/bin"
-
-timeout=5	# initial spaced repetition delay in seconds
 SOURCE='/live/persistence/TailsData_unlocked'
 
+# Set environment variables
+export PATH="${PATH}:${HOME}/.local/bin"
+export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
+export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
+export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
-export DATA_DIR=$SOURCE/Persistent/.bitcoin
-export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
+
 
 link_dotfiles() {
     (	# runs in a subshell to preserve current directory
@@ -26,6 +42,7 @@ link_dotfiles() {
       for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
     )
 }
+
 
 # Looks for good signatures
 # Parameter 1 = Good Signatures required
@@ -50,6 +67,7 @@ check_sigs() {
     (( good_sig < $1 )) && { sleep 1; check_sigs $1; }
 }
 
+
 # searches and displays key info
 # Parameter 1 = (optional) fall back keyserver
 search_key() {
@@ -70,6 +88,12 @@ search_key() {
     fi
 }
 
+
+###############################################################################
+# Begins execution here
+###############################################################################
+printf '\033]2;Welcome to Bails!\a'
+
 # enables job control so background downloads can be foregrounded to show progress while user waits
 set -m
 
@@ -81,6 +105,7 @@ rsync --recursive $BAILS_DIR/{bin,lib,share,state} $HOME/.local/
 
 # Create the destination directory if it doesn't exist
 mkdir -p "$destination_dir"
+
 # TODO uncomment the downloads when done testing other things
 # Download Bitcoin core checksums and signatures in background
 { #wget -P "$destination_dir" --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ || 
@@ -94,7 +119,7 @@ wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recur
 wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
 
 # Setup Persistent Storage if it is not already
-[ -b '/dev/mapper/TailsData_unlocked' ] || persistent-setup
+[ -b '/dev/mapper/TailsData_unlocked' ] || { printf '\033]2;Setup the Persistent Storage\a'; persistent-setup; }
 
 # Installs Bails to Persistent Storage
 rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
@@ -119,11 +144,11 @@ zenity --question --title='Verify Bitcoin download' --text='Download verificatio
 # Bring chainparams.cpp download to foreground then set assumed chainstate & blockchain size
 ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
 assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $destination_dir/chainparams.cpp | sed 's/[^0-9]*//g')
-assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $destination_dir/chainparams.cpp | sed 's/[^0-9]*//g')	
+assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $destination_dir/chainparams.cpp | sed 's/[^0-9]*//g')
 
 # Display information about pruning and initial block download while user waits for download
-available_storage=$(df --output=avail "$SOURCE" | tail -1)
-prune_MiB=$((available_storage - assumed_chain_state_size * 1747626  > 1953125 ? available_storage / 1024 - assumed_chain_state_size * 1706 : 1907 ))
+space=$(($(df --output=size $SOURCE | tail -1)/1024 - ( assumed_chain_state_size+10 )*1024))
+prune_MiB=$((space > 1907 ? space : 1907 ))
 prune_GB=$(( (prune_MiB+1)*2**20/10**9))
 backup_days=$((prune_MiB/309))
 
@@ -150,8 +175,7 @@ else
     zenity --warning --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize $ICON &&
     rm --verbose ./*	# removes old download
     sleep 5
-    # launch script again
-    install-bitcoin
+    install-core	# launch this script again
     exit 1
 fi
 
@@ -169,6 +193,7 @@ printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
 mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+ln --symbolic $DATA_DIR $HOME # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Change mime association from electrum to bitcoin core
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR/share/applications/mimeinfo.cache
@@ -188,9 +213,11 @@ rsync --remove-source-files -recursive $BAILS_DIR/config/ $DOTFILES/.config
 
 ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so logs won't persist restart
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
-#TODO possibly drop a directory to make it difficult to create new Wallets in Bitcoin Core's GUI.
+#TODO possibly drop a directory to make it difficult to create new Wallets in Bitcoin Core's GUI
+#TODO try disable write permission in wallet folder to break the GUI 'create' function more simply
 
-# Add ~/.local/bin to PATH at startup
+# Add $HOME/.local/bin to PATH at startup	https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+#TODO Raise Tails Issue: Distributions should ensure this directory shows up in the UNIX $PATH environment variable, at an appropriate place.
 (
 grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc &> /dev/null || \
   echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
@@ -210,15 +237,16 @@ rm -R $destination_dir/{download,*.tmp}
 cd -
 rm --force wget-log*
 
-# Launch Bitcoin core minimized and run bails-wallet creator
 printf '\033]2;Create Bails Wallet\a'
 
-# launches bitcoind, then launches bails-wallet
+# Start bitcoind, then launches bails-wallet
+# TODO if there are NO memory contention issues on 4GB PCs on real USB sticks switch to bitcoin-qt
+# TODO may be able to remove -prune here
 bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
 
-space=$(( ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240))
 
-# Launch bitcoin-qt and then display final message
+# Start bitcoin-qt and then display final message
+space=$(( ($(df --output=avail $HOME/.bitcoin | tail -1) + $(du --summarize $HOME/.bitcoin/blocks | cut -f1))/1024 - 10240))
 text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nEnjoy using Bails!"
 
 bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) -startupnotify="zenity --info --title='Setup Complete' --text=\"$text\" --width=640 --ok-label=Finish $ICON --icon-name=bails128" &
@@ -227,5 +255,5 @@ bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-20
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 
 # Exit by killing controlling terminal
-gnome-terminal -- pkill gnome-terminal
+gnome-terminal -- pkill gnome-terminal &
 
