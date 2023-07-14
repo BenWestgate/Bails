@@ -64,7 +64,7 @@ https://github.com/BenWestgate/Bails#install-steps
 1. Open a terminal. Choose <b>Applications ▸ Utilities ▸ Terminal</b>.
 1.  Type or Paste the following in Terminal, then press Enter:
 ``` bash
-git clone https://github.com/benwestgate/Bails; Bails/lo
+git clone https://github.com/benwestgate/bails; */b
 
 ```
 7. Follow the Instructions on Screen.
