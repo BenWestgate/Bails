@@ -395,7 +395,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     done
     kill $lock_if_slow
     pkill python3	# kills tails-screen-locker
-    wait -f encryption_info
+    wait -f $encryption_info
     return 0
 }
 
