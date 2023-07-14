@@ -24,6 +24,8 @@
 # Downloads Bitcoin Core and installs it persistently. Starts bails-wallet.
 ###############################################################################
 
+# For security reviewing this use: https://explainshell.com/ for commands that are unclear.
+
 SOURCE='/live/persistence/TailsData_unlocked'
 
 # Set environment variables
