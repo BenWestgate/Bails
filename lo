@@ -1,6 +1,0 @@
-#!/bin/bash
-# For low value Bitcoin data, will create 1 backup location
-export BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-$BAILS_DIR/bin/install-core
-
-# git clone https://github.com/BenWestgate/Bails --depth=1; Bails/lo
