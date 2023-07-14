@@ -1,10 +1,30 @@
 #!/bin/bash
 
-########################################
-# Bails Initial Setup Script
-########################################
+# Copyright (c) 2023 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
-timeout=5
+###############################################################################
+# Bails Persistent Storage Setup Tutorial
+###############################################################################
+
+timeout=5	# initial spaced repetition delay in seconds
 
 # Display welcome message
 zenity --title='Welcome to Bails' --info \
@@ -33,7 +53,6 @@ done
 kill ${notifying[*]}
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 
-
 # Memorization help
 until {
     zenity --info --title='Spaced repetition trainer' \
@@ -51,6 +70,7 @@ while true; do
     tails-screen-locker &>/dev/null
 done &
 
+# Display memorization tips
 zenity --info --title='Tips for your new passphrase' \
     --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering the passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you have memorized it." --ok-label='Continue' --width=600 $ICON
 
@@ -60,19 +80,19 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active Dotfiles; do
     {
         /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be turned on.' --timeout=6; false; }
+            { zenity --notification --text='Persistent Folder must be turned on.' --window-icon=folder --timeout=6; false; }
     } &&
         {
             /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 3)) && zenity --notification --text='Turn on Network Connections to remember your Wi-Fi' --timeout=6; true; }
+                { ((i++ < 3)) && zenity --notification --text='Turn on Network Connections to remember your Wi-Fi' --window-icon=network-wired --timeout=6; true; }
         } &&
         {
             /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='GnuPG must be turned on.' --timeout=6; false; }
+                { zenity --notification --text='GnuPG must be turned on.' --window-icon=gcr-key --timeout=6; false; }
         } &&
         {
             /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='Dotfiles must be turned on.' --timeout=6; false; }
+                { zenity --notification --text='Dotfiles must be turned on.' --window-icon=gnome-settings --timeout=6; false; }
         }
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
         { tails-persistent-storage & notify-send --icon=tails-persistent-storage.svg 'You must turn on Persistent features to continue'; }
