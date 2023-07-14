@@ -365,11 +365,11 @@ y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
     echo $xprv
     # TODO for L2 offline restores do not persist signing wallet /tmp/$tmp_dir/$name	# easiest Idea may be just symlink to any tmpfs as target, name it amnesia,
-    chmod +w $DATA_DIR/wallets
+    chmod +w $DATA_DIR/wallets # writes enabled to create wallet
     until $CLI createwallet "$name" false true "$passphrase" false true $2; do
         name=$(zenity --title='Create wallet failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $RANDOM" $ICON --width=340);
     done
-    chmod -w $DATA_DIR/wallets
+    chmod -w $DATA_DIR/wallets	# write protect folder so wallets w/o seed backups can't be made
     {
     zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine." $ICON
     zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
