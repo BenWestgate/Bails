@@ -6,13 +6,15 @@ Bails is the most private way to transact and store bitcoin. It protects your mo
 
 ## Bitcoin Core on Tails
 
-Tails and Bitcoin Core are depended on by millions to maintain their privacy and security online especially in sensitive and high-risk situations.
+Bitcoin Core and Tails are depended on by millions to maintain their privacy and security online especially in sensitive and high-risk situations.
 
 This repository contains a script that installs Bitcoin Core to Tails and creates a Bails wallet.
 
 <b>Bitcoin Core</b> connects to the Bitcoin peer-to-peer network to download and fully validate blocks and transactions. It also includes a wallet and graphical user interface.
 
 <b>Tails</b> is a portable operating system that protects against surveillance and censorship. It connects to the Internet exclusively through the anonymity network Tor.
+
+See Also:
 
 [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
 
