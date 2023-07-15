@@ -20,7 +20,6 @@
 # THE SOFTWARE.
 #
 #################################################
-
 # autostart: Preloads the chainstate into memory while waiting to connect to Tor.
 # quits as soon as progress is made, RAM is full or chainstate is loaded.
 #################################################
