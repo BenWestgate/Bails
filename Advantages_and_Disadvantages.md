@@ -34,8 +34,3 @@ While we believe Bails provides the best balance of privacy, security, ease of u
 * Time. To complete setup you will need to invest 1 hour spread over the course of a couple days. This time includes writing down security words and creating backup USBs. Because Bails runs exclusively off a USB drive and over Tor, it may take longer to sync than a less private option that used the internal drive. This is especially the case with small <64GB USB sticks and systems with <8GB RAM.
 * Redundancy. Privacy and easy setup are at odds with redundancy. Because the memorized passphrase is used to reduce the shares stored, the Bails backups have a higher risk of loss than other solutions if you forget your passphrase. It is expected that Bails will be used regularly enough to give an early alarm to a forgotten passphrase so it can be reset before access is lost. If you do not intend to use Bails weekly or bi-monthly it is recommended to increase the number of locations to prevent accidental loss from forgetting the passphrase.
 * Wallet privacy. While the threshold of backups can be set to 3 shares or higher, the Bails USBs will always decrypt with just the passphrase alone potentially revealing your transactions and balances were your passphrase and Bails USB both to be compromised. Besides keeping the USBs secure or destroying them, there are options to require additional authentication factors to watch wallets that need less acessibility and more confidentiality.
-
-For support join our slack channel https://join.slack.com/t/yeticold/shared_invite/zt-1lwka5184-NSDwVpxl7mGHykqfqblCzg
-
-For more reading checkout our FAQ https://github.com/JWWeatherman/yeticold/blob/master/FAQ.md
-
