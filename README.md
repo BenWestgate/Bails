@@ -2,35 +2,29 @@
 
 # Bails
 
-Bails is the most private way to transact and store bitcoin. It protects your money from surveillance, censorship and confiscation. And leaves no trace of your Bitcoin use on the computer nor the Internet. Keeping your transactions anonymous and balances a secret with strong encryption.
+Bails is the most private way to transact and store bitcoin. It ensures your money is protected from surveillance, censorship, and confiscation, leaving no trace of your Bitcoin use on the computer or the Internet. Combining Bitcoin Core and Tails, Bails offers strong anonymity for transactions and secure encrypted storage.
 
 ## Bitcoin Core on Tails
 
-Bitcoin Core and Tails are depended on by millions to maintain their privacy and security online especially in sensitive and high-risk situations.
+Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails and create a Bails wallet.
 
-This repository contains a script that installs Bitcoin Core to Tails and creates a Bails wallet.
-
-<b>Bitcoin Core</b> connects to the Bitcoin peer-to-peer network to download and fully validate blocks and transactions. It also includes a wallet and graphical user interface.
-
-<b>Tails</b> is a portable operating system that protects against surveillance and censorship. It connects to the Internet exclusively through the anonymity network Tor.
+Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet. Tails is a portable operating system that defends against surveillance and censorship, exclusively utilizing the Tor anonymity network.
 
 See Also:
-
-[Bitcoin Core :: About](https://bitcoincore.org/en/about/)
-
-[Tails - How Tails works](https://tails.net/about/index.en.html)
+- [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
+- [Tails - How Tails works](https://tails.net/about/index.en.html)
 
 ## Why use Bitcoin Core?
 
 ### Full Validation
 
-Bitcoin Core ensures every block and transaction it accepts is valid, increasing not only your security but also <b>helping prevent miners and banks from taking control of Bitcoin.</b>
+Bitcoin Core ensures the validity of every block and transaction, enhancing your security and preventing miners and banks from seizing control of Bitcoin.
 
 [Learn about full validation](https://bitcoin.org/en/bitcoin-core/features/validation)
 
 ### Excellent Privacy
 
-Bitcoin Core provides <b>exclusive privacy features</b> to make it hard for anyone to link you to your transactions.
+Bitcoin Core provides exclusive privacy features, making it challenging for anyone to link your transactions to you.
 
 [Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
@@ -56,13 +50,13 @@ https://github.com/benwestgate/bails#install-steps
 
 ### Install steps
 
-1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or Memory Card, minimum 16 GB capacity.
-      * If you know someone you trust who uses Tails already, you can [install Tails by cloning](https://tails.boum.org/install/clone/index.en.html) their Tails.
+1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or Memory Card (minimum 16 GB capacity).
+   - If you know someone you trust already uses Tails, you can [install Tails by cloning](https://tails.boum.org/install/clone/index.en.html) their Tails.
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
-      * If you installed by cloning Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase.
+   - If you installed by cloning Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase.
 1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html).
-      * If you cloned Bails, skip to step 7.
+   - If you cloned Bails, skip to step 7.
 1. Open a terminal. Choose <b>Applications ▸ Utilities ▸ Terminal</b>.
 1.  Type or Paste the following in Terminal, then press Enter:
 ``` bash
@@ -80,7 +74,6 @@ Why clone Bails?
 
 * Sharing hand-to-hand prevents censorship and surveillance.
 * Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
-
 
 ## Source Code Headers
 
@@ -111,12 +104,13 @@ MIT header:
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     THE SOFTWARE.
 
-### Bails is the World's First Codex32-enabled (BIP93) Wallet
-https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki
 
-https://secretcodex32.com/index.html
+
+### Bails is the World's First Codex32-enabled (BIP93) Wallet
+
+Find more information on [Codex32](https://secretcodex32.com/index.html) and [BIP93](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki).
 
 ### Compliant with Auditable Bitcoin Wallets Standard
-https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md
 
-All information needed to audit `bails-wallet` is displayed by the terminal.
+Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md
+) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
