@@ -373,9 +373,9 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     done
     chmod -w $DATA_DIR/wallets	# write protect folder so wallets w/o seed backups can't be made
     {
-    zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption prevents people who steal your wallet file from automatically getting access to all of your bitcoins. Your passphrase must be entered before sending coins.\n\nWallet encryption may prevent unauthorized access. However, it increases the risk of losing coins due to forgotten passphrases. There is no way to recover a passphrase. But it can be reset by finding $reset.\n\nWallet encryption may also not protect against more sophisticated attacks. An attacker can, for example, obtain the password by installing a keylogger on your machine." $ICON
-    zenity --title="Wallet encryption warning" --width=500 --warning --text="If you lose your passphrase and can not find $reset, you will\n<b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
-    zenity --title="Wallet encrypted" --width=500 --warning --text="Your wallet has been encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
+      zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption adds an extra layer of security by requiring a passphrase to access your bitcoins. This helps protect against unauthorized access if your wallet file is stolen." $ICON
+      zenity --title="Wallet encryption warning" --width=500 --warning --text="Warning: If you lose your passphrase <u>and</u> can not find $reset, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
+      zenity --title="Wallet encrypted" --width=500 --warning --text="Your wallet has been encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     } & encryption_info=$!
     {
         zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from your PC.' $ICON
