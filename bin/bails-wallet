@@ -37,7 +37,7 @@
 # PC keeps the private wallet in RAM and requires restore from seed each time to sign transactions.
 # Creates a watch-only. persistent saves public or private key wallets to persistent storage.
 
-
+export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export CLI="bitcoin-cli -rpcport=17600"
 
 hrp='ms1'
@@ -110,7 +110,7 @@ tn_grammar() {
 display_confirm() {
     echo "$*"	# TODO remove after testing FIXME
     for codex32_string in ${codex32_array[*]}; do
-        displayed=$(echo "$codex32_string" | sed 's/.\{4\}/& /g')	# adds space every 4 chars
+        displayed="$(echo "$codex32_string" | sed 's/.\{4\}/& /g')"	# adds space every 4 chars
         x=$((backups_made++))		# refactor the ${x} variable out FIXME
         ((x==1)) && backup=' Backup'
         ((x==2)) && backup=' second Backup'
@@ -119,11 +119,11 @@ display_confirm() {
         progress="($backups_made of $locations)"
         unset share
         until [ "$codex32_string" == "$share" ]; do
-            zenity --title="Create Bails Wallet: Seed backup $progress" --text="Write this $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --width=600 $ICON
+            zenity --title="Create Bails Wallet: Seed backup $progress" --text="Write this $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
             choice="Create a new seed"
             input_share
             if [ "$codex32_string" == "$share" ]; then
-                zenity --info --title="Confirmed $string" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." $ICON --width=400 #TODO verify GUI width is ok
+                zenity --info --title="Confirmed $string" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." $ICON --width=400 --icon-name=checkbox-checked
             else
                 zenity zenity --warning --title="Try again" --text="The supplied $string does not match $string ${progress:1: -1}." --ellipsize --timeout=3 $ICON
             fi
@@ -411,12 +411,12 @@ choice=$(zenity --list --radiolist --title "Create Bails Wallet" --column "Selec
   "I already have a seed" FALSE "Import descriptors" $ICON)
 if [ "$choice" == "Create a new seed" ]; then
     until zenity --warning --title='Two things you must understand' --text='With bitcoin, you are your own bank. No one else has access to your private keys.\n\nIf you lose access to your Bails USB sticks and the seed backup we will help you create, your bitcoin cannot be recovered.' --ok-label='I Understand' --width=420 $ICON; do zenity --notification --text='You must understand these risks.'; done #TODO check the formatting of this in Tails!
-    zenity --question --title='Security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3-4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nOne compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High $ICON && { locations=4; threshold=3; } || { locations=2; threshold=2; }
+    zenity --question --title='Backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nOne compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     set_passphrase 'Create Bails Wallet: Set passphrase'
     user_entropy="$passphrase"	#TODO see if icon-name=die is better
-    user_randomness="$(if zenity --info --icon-name=die2 --question --width=400 --title="Help randomize new seed" \
+    user_randomness="$(if zenity --icon-name=die --question --width=400 --title="Help randomize new seed" \
         --cancel-label='Skip' --ok-label='Add Randomness' --text="• Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\n• Bitcoin Core will generate a random seed, but it is good to provide extra randomness if paranoid.\n\n• This is unnecessary but it will protect against a backdoored random number generator.\n\n• You can not hurt your seed's randomness no matter what data you provide, it can only help." $ICON;
-        then until zenity --entry --title='Add Randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-side dice 50+ times or\nflip a coin 128+ times.  A fast way is mashing the keyboard." $ICON; do : ; done; fi)"
+        then until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-side dice 50+ times or\nflip a coin 128+ times.  A fast way is mashing the keyboard." $ICON; do : ; done; fi)"
     user_entropy+="$name$user_randomness"
     ask_t_and_n
     user_entropy+="$threshold$locations"
