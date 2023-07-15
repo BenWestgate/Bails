@@ -81,9 +81,9 @@ For a comprehensive discussion on the advantages and disadvantages of using Bail
 
 # Support resources
 
-For support join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA)
+For support join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
 
-For more reading checkout our [FAQ](FAQ.md)
+For more reading checkout our [FAQ](FAQ.md).
 
 ## Source Code Headers
 
