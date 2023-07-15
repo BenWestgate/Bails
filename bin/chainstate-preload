@@ -31,7 +31,7 @@ total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin
 if ! grep 'progress=0.999' debug.log; then
     {
-        sleep 60
+        sleep 30
         zenity --notification --text='Synchronizing with the bitcoin network. This may take a while...\nPlease lock the screen if you need to walk away from your PC.' $ICON
         tails-screen-locker
         # Clear notifications
@@ -43,7 +43,7 @@ until grep 'progress=0.999' debug.log; do
     # exit when free memory <10% total memory
     (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )) && {
         {
-            zenity --notification --text='RAM fully preloaded with Bitcoin chainstate\nAdditional RAM may signficantly improve sync performance.' $ICON
+            zenity --notification --text='Your computer is low on memory.\nAdditional RAM may signficantly improve sync performance.' $ICON
             sleep 60
             # Clear notifications
             dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
@@ -53,7 +53,7 @@ until grep 'progress=0.999' debug.log; do
     sleep $((++i))
     # exit if cat command finishes and can't be killed. Means entire chainstate is preloaded.
     kill $full_speed &>/dev/null || {
-        zenity --notification --text='Bitcoin chainstate fully preloaded to RAM' $ICON
+        zenity --notification --text='Bitcoin chainstate preloaded to RAM' $ICON
         sleep 20
         # Clear notifications
         dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
