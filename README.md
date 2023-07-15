@@ -79,6 +79,12 @@ Why clone Bails?
 
 For a comprehensive discussion on the advantages and disadvantages of using Bails as a Bitcoin solution, please refer to our [detailed document](Advantages_and_Disadvantages.md). It provides valuable insights into the unique features and potential limitations of the Bails platform.
 
+# Support resources
+
+For support join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
+
+For more reading checkout our [FAQ](FAQ.md).
+
 ## Source Code Headers
 
 Every file containing source code must include copyright and license
