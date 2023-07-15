@@ -52,7 +52,7 @@ until [ -b '/dev/mapper/TailsData_unlocked' ]; do
 done
 
 # Clear notifications
-kill ${notifying[*]}
+kill ${notifying[*]} &>/dev/null
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 
 # Memorization help
@@ -60,7 +60,7 @@ until {
     zenity --info --title='Spaced repetition trainer' \
         --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
         --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize $ICON
-    tails-screen-locker
+    tails-screen-locker &>/dev/null
 }; do
     zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
         --ok-label='Try Again' --ellipsize
