@@ -75,6 +75,10 @@ Why clone Bails?
 * Sharing hand-to-hand prevents censorship and surveillance.
 * Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
 
+## Advantages and Disadvantages
+
+For a comprehensive discussion on the advantages and disadvantages of using Bails as a Bitcoin solution, please refer to our [detailed document](Advantages_and_Disadvantages.md). It provides valuable insights into the unique features and potential limitations of the Bails platform.
+
 ## Source Code Headers
 
 Every file containing source code must include copyright and license
