@@ -27,6 +27,8 @@ Bails is a script that installs Bitcoin Core on Tails and then walks the user th
 * Bitcoin private keys are stored on paper in multiple geographic locations with professionals that do not know they are storing bitcoin private keys or who are informed and paid for protecting them.
 * Private keys are written down using the codex32 format where the last 13 characters form a checksum that can correct 13 contiguous erases, 8 random erases and 4 random errors to reduce the possibility that a private key will be unreadable when needed.
 * Instructions for recovering the bitcoin are given to next-of-kin to reduce the likelihood of loss.
+* Bails installations can be cloned to save loved ones the time required to sync the blockchain. Clones also include an encrypted copy of your private data reducing the likelihood you will need to restore your wallet from seed in the event you lose all Bails USBs.
+* Bails creates backups of your Tails persistent storage so that you can lose your Bails USB without having to restore your seed and resync the blockchain saving hours or days in recovery.
   
 While we believe Bails provides the best balance of privacy, security, ease of use and cost when storing privacy critical sums of bitcoin, it has the following disadvantages that might not be expected:
 * Time. To complete setup you will need to invest 1 hour spread over the course of a couple days. This time includes writing down security words and creating backup USBs. Because Bails runs exclusively off a USB drive and over Tor, it may take longer to sync than a less private option that used the internal drive. This is especially the case with small <64GB USB sticks and systems with <8GB RAM.
