@@ -169,7 +169,7 @@ link_dotfiles &>/dev/null
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 if sha256sum --ignore-missing --check SHA256SUMS; then
-    zenity --notification --text="Bitcoin Core download integrity successfully verified." --icon-name=bitcoin128
+    zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
 else
     zenity --warning --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize $ICON &&
     rm --verbose ./*	# removes old download
