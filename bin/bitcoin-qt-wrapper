@@ -18,6 +18,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+
+###############################################################################
+# wraps bitcoin-qt to sometimes ask for donations.
+###############################################################################
 BITCOIN_ADDRESS_BENEVOLENT=	#TODO add these
 BITCOIN_ADDRESS_SELFISH=	#TODO add these
 export WAYLAND_DISPLAY=""
@@ -40,5 +44,6 @@ if ! (( RANDOM % 20 )); then
         exit 0
     fi
 fi
-cd $HOME/Persistent/.bitcoin; space=$(( ($(df --output=avail . | tail -1) + $(du --summarize blocks | cut -f1))/1024 - 10240))
+cd $HOME/Persistent/.bitcoin
+space=$(( ($(df --output=avail . | tail -1) + $(du --summarize blocks | cut -f1))/1024 - 10240))
 /live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) $@
