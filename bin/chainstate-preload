@@ -32,7 +32,7 @@ if ! grep 'progress=0.999' debug.log; then
     {
         sleep 30
         zenity --notification --text='Synchronizing with the bitcoin network. This may take a while...\nPlease lock the screen if you need to walk away from your PC.' $ICON
-        tails-screen-locker
+        tails-screen-locker &>/dev/null
         # Clear notifications
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
     } &
