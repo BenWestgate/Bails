@@ -37,9 +37,11 @@ export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 
 link_dotfiles() {
-    ( cd $DOTFILES # runs in subshell to preserve current directory
+    ( # runs in subshell to preserve current directory
+      cd $DOTFILES
       for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-      for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done )
+      for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
+    ) &>/dev/null
 }
 
 
@@ -93,6 +95,9 @@ search_key() {
 ###############################################################################
 printf '\033]2;Welcome to Bails!\a'
 
+# closes tor connection assistant to clean up the screen
+pkill tca
+
 # enables job control so background downloads can be foregrounded to show progress while user waits
 set -m
 
@@ -122,7 +127,7 @@ wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bit
 
 # Installs Bails to Persistent Storage
 rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
-link_dotfiles &>/dev/null	# Clobbers the tmpfs installation
+link_dotfiles	# Clobbers the tmpfs installation
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
@@ -151,13 +156,12 @@ prune_MiB=$((space > 1907 ? space : 1907 ))
 prune_GB=$(( (prune_MiB+1)*2**20/10**9))
 backup_days=$((prune_MiB/309))
 
-# Display info about IBD, keeping Tails private and reading material.	# TODO change this to hyper links
-((versions)) || { while pidof zenity; do sleep 1; done; until [ "$docs" == 'Continue' ]; do docs=$(zenity --question --title='Setup almost complete' --icon-name=bails128 $ICON --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nKeep an eye on your PC so no one messes with it.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the documentation.\n\nAn excellent way to improve your physical and digital security tactics is the "security in-a-box" website.' --extra-button='Tails Documentation' --extra-button='Security Tactics' --extra-button='Continue' --switch --width=552);
-    [ "$docs" == 'Tails Documentation' ] && tor-browser file:///usr/share/doc/tails/website/doc.en.html 
-    [ "$docs" == 'Security Tactics' ] && tor-browser http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/
-done; zenity --title='Bitcoin Core info' --icon-name=bitcoin128 $ICON --info --text="<b>Setup</b>
----------------------
-Bitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently $assumed_blockchain_size gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)" --width=552; } &>/dev/null &
+# Display info about IBD, keeping Tails private and reading material.	# TODO change this to hyperlinks
+if ((versions < 2)); then
+    while pidof zenity; do sleep 1; done # waits to run these dialogs until there are no prompts on screen.
+    zenity --info --title='Setup almost complete' --icon-name=bails128 $ICON --width=552 --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nMake sure no one messes with your PC.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
+    zenity --info --title='Bitcoin Core info' --icon-name=bitcoin128 $ICON --width=552 --text="<b>Setup</b>\n---------------------\nBitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently $assumed_blockchain_size gigabytes.\n\nDepending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)"
+fi &>/dev/null &
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
@@ -165,7 +169,7 @@ ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f
 
 # Move completed download to persistent storage
 rsync --remove-source-files --recursive $destination_dir $LOCAL_DIR/share/
-link_dotfiles &>/dev/null
+link_dotfiles
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 if sha256sum --ignore-missing --check SHA256SUMS; then
@@ -230,7 +234,7 @@ fi
 # Cleanup
 rm -Rf $BAILS_DIR/{bin,lib,share,state,config} $destination_dir/{download,*.tmp}
 mv --force $BAILS_DIR $LOCAL_DIR/share/
-link_dotfiles &>/dev/null
+link_dotfiles
 cd -
 rm --force wget-log*
 
