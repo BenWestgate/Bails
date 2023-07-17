@@ -30,7 +30,7 @@ Bitcoin Core provides exclusive privacy features, making it challenging for anyo
 
 ## How to use this script
 
-If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
+   - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
 
 First, open these instructions on another device
 
