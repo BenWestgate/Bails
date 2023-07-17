@@ -96,7 +96,7 @@ search_key() {
 printf '\033]2;Welcome to Bails!\a'
 
 # closes tor connection assistant to clean up the screen
-pkill tca
+pkill tca &>/dev/null
 
 # enables job control so background downloads can be foregrounded to show progress while user waits
 set -m
