@@ -122,6 +122,9 @@ wget --continue -P "$destination_dir" --no-host-directories --cut-dirs=1 --recur
 # Download chain parameters in background
 wget -O "$destination_dir/chainparams.cpp" https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
 
+# clear the terminal
+clear -x
+
 # Setup Persistent Storage if it is not already
 [ -b '/dev/mapper/TailsData_unlocked' ] || { printf '\033]2;Setup the Persistent Storage\a'; persistent-setup; }
 
