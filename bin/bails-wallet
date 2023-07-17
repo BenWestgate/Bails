@@ -129,113 +129,112 @@ display_confirm() {
             fi
         done
     done
-    progress="(1 of $threshold)"
-    unset passphrase threshold identifier backups_made share_list choice backup
+    unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_array codex32_string share displayed x backup backups_made progress
     zenity --info --title='Seed backup complete' --text='You will now restore your seed with your backup before your wallet is created.' $ICON --width=320 --icon-name=starred
 }
 
 
 # Accepts and processes user share input, performs error correction
 input_share() {	# TODO FIXME refactor at 100 lines, this may be better as a separate file
-if [ "$choice" == "Create a new seed" ]; then
-    title="Create Bails Wallet: Enter your codex32 $string $progress"
-    unset entry
-    action='Create'
-    
-else
-    title="Restore Bails Wallet: Enter a codex32$secret_or share $progress"
-    entry=$hrp$threshold$identifier
-    action='Restore'
-fi
-unset corr
-[ "$share" ] && { entry="$share"; title="$action Bails Wallet: Re-enter your codex32 $string"; corr=' corrected'; }
-share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
-[ "$share" ] || return 1
-hrp_in="${share:0:3}"
-data="${share:3}"
-if [[ "$share" == *'b'* ]]; then
-    data="${data//b/6}"
-    zenity --notification --text='Detected non-bech32 character "b"' $ICON
-fi
-if [[ "$share" == *'i'* ]]; then
-    data="${data//i/l}"
-    zenity --notification --text='Detected non-bech32 character "i"' $ICON
-fi
-if [[ "$share" == *'o'* ]]; then
-    data="${data//o/0}"
-    zenity --notification --text='Detected non-bech32 character "o"' $ICON
-fi
-if [[ "$share" == *'B'* ]]; then
-    data="${data//B/8}"
-    zenity --notification --text='Detected non-bech32 character "B"' $ICON
-fi
-if [[ "$share" == *'I'* ]]; then
-    data="${data//I/L}"
-    zenity --notification --text='Detected non-bech32 character "I"' $ICON
-fi
-if [[ "$share" == *'O'* ]]; then
-    data="${data//O/0}"
-    zenity --notification --text='Detected non-bech32 character "O"' $ICON
-fi
-if [[ "$data" == *'1'* ]]; then
-    data="${data//1/l}"
-    zenity --notification --text='Detected non-bech32 character "1" in data portion' $ICON
-fi
+    if [ "$choice" == "Create a new seed" ]; then
+        title="Create Bails Wallet: Enter your codex32 $string $progress"
+        unset entry
+        action='Create'
 
-share="$hrp_in""$data"
-threshold="${share:3:1}"
-identifier="${share:4:4}"
-index="${share:8:1}"
-if [[ $index ]] && [[ ${index,,} != 's' ]]; then
-    string=share
-elif [[ ${index,,} = 's' ]] || [[ $threshold = 0 ]]; then
-    string=secret
-else
-    string=string
-fi
-if [[ "$share" = "${share^^}" ]]; then
-    hrp=${hrp^^}
-    identifier="${identifier^^}"
-elif [[ "$share" != "${share,,}" ]]; then
-    zenity --title='Mixed case is not allowed' --error --text="A codex32 $string MUST be entirely uppercase or entirely lowercase." $ICON --ellipsize
-    return 1
-else
-    hrp="${hrp,,}"
-    identifier="${identifier,,}"
-fi
+    else
+        title="Restore Bails Wallet: Enter a codex32$secret_or share $progress"
+        entry=$hrp$threshold$identifier
+        action='Restore'
+    fi
+    unset corr
+    [ "$share" ] && { entry="$share"; title="$action Bails Wallet: Re-enter your codex32 $string"; corr=' corrected'; }
+    share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
+    [ "$share" ] || return 1
+    hrp_in="${share:0:3}"
+    data="${share:3}"
+    if [[ "$share" == *'b'* ]]; then
+        data="${data//b/6}"
+        zenity --notification --text='Detected non-bech32 character "b"' $ICON
+    fi
+    if [[ "$share" == *'i'* ]]; then
+        data="${data//i/l}"
+        zenity --notification --text='Detected non-bech32 character "i"' $ICON
+    fi
+    if [[ "$share" == *'o'* ]]; then
+        data="${data//o/0}"
+        zenity --notification --text='Detected non-bech32 character "o"' $ICON
+    fi
+    if [[ "$share" == *'B'* ]]; then
+        data="${data//B/8}"
+        zenity --notification --text='Detected non-bech32 character "B"' $ICON
+    fi
+    if [[ "$share" == *'I'* ]]; then
+        data="${data//I/L}"
+        zenity --notification --text='Detected non-bech32 character "I"' $ICON
+    fi
+    if [[ "$share" == *'O'* ]]; then
+        data="${data//O/0}"
+        zenity --notification --text='Detected non-bech32 character "O"' $ICON
+    fi
+    if [[ "$data" == *'1'* ]]; then
+        data="${data//1/l}"
+        zenity --notification --text='Detected non-bech32 character "1" in data portion' $ICON
+    fi
 
-if [[ "$share" =~ [^a-zA-Z0-9] ]]; then
-    zenity --title='Non-alphanumeric character in '$string --error --text="Codex32 ${string}s contain only letters and numbers." $ICON --ellipsize
-    return 1
-fi
+    share="$hrp_in""$data"
+    threshold="${share:3:1}"
+    identifier="${share:4:4}"
+    index="${share:8:1}"
+    if [[ $index ]] && [[ ${index,,} != 's' ]]; then
+        string=share
+    elif [[ ${index,,} = 's' ]] || [[ $threshold = 0 ]]; then
+        string=secret
+    else
+        string=string
+    fi
+    if [[ "$share" = "${share^^}" ]]; then
+        hrp=${hrp^^}
+        identifier="${identifier^^}"
+    elif [[ "$share" != "${share,,}" ]]; then
+        zenity --title='Mixed case is not allowed' --error --text="A codex32 $string MUST be entirely uppercase or entirely lowercase." $ICON --ellipsize
+        return 1
+    else
+        hrp="${hrp,,}"
+        identifier="${identifier,,}"
+    fi
 
-if [[ "$hrp_in" != "$hrp" ]] ; then
-    zenity --title='Wrong human-readable prefix' --error --text='Codex32 '$string's start with "'$hrp'".\n\nYou typed "'$hrp_in'".' $ICON --ellipsize
-    return 1
-fi
-if [[ $threshold = 0 ]]; then
-    if [[ ${index,,} != 's' ]]; then
-        zenity --title='Bad share index' --error --text='Share index (9th character) must be "'${hrp:1:1}'" when threshold is "0".\n\nYou typed "'$index'".' $ICON --ellipsize
+    if [[ "$share" =~ [^a-zA-Z0-9] ]]; then
+        zenity --title='Non-alphanumeric character in '$string --error --text="Codex32 ${string}s contain only letters and numbers." $ICON --ellipsize
         return 1
     fi
-elif (( threshold < 2 || threshold > 9 )) ; then
-    zenity --title='Bad threshold' --error --text='Threshold parameter (4th character) MUST be a single digit between "2" and "9", or the digit "0".\n\nYou typed "'$threshold'".' $ICON --ellipsize
-    unset threshold
-    return 1
-fi
-if (( ${#share} < 48 )); then
-    zenity --title='Entry too short' --error --text="Codex32 ${string}s are at least 48 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize
-    return 1
-elif (( ${#share} > 93 && ${#share} < 96 )); then
-    zenity --title="Illegal codex32 ${string} length" --error --text="Codex32 ${string}s are 48 to 102 characters or 105 to 127 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize
-    return 1
-elif (( ${#share} != 74 && ${#share} != 48 && ${#share} != 127 )); then
-    zenity --title='Unusual length' --warning --text="Codex32 ${string}s are usually 48, 74 or 127 characters long.\n\nYou typed ${#share} characters." $ICON --ellipsize
-fi
 
-# call checksum verification function here
-return $(python3 -c 'from codex32 import ms32
-ms32.verify_checksum("'$share'")')
+    if [[ "$hrp_in" != "$hrp" ]] ; then
+        zenity --title='Wrong human-readable prefix' --error --text='Codex32 '$string's start with "'$hrp'".\n\nYou typed "'$hrp_in'".' $ICON --ellipsize
+        return 1
+    fi
+    if [[ $threshold = 0 ]]; then
+        if [[ ${index,,} != 's' ]]; then
+            zenity --title='Bad share index' --error --text='Share index (9th character) must be "'${hrp:1:1}'" when threshold is "0".\n\nYou typed "'$index'".' $ICON --ellipsize
+            return 1
+        fi
+    elif (( threshold < 2 || threshold > 9 )) ; then
+        zenity --title='Bad threshold' --error --text='Threshold parameter (4th character) MUST be a single digit between "2" and "9", or the digit "0".\n\nYou typed "'$threshold'".' $ICON --ellipsize
+        unset threshold
+        return 1
+    fi
+    if (( ${#share} < 48 )); then
+        zenity --title='Entry too short' --error --text="Codex32 ${string}s are at least 48 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize
+        return 1
+    elif (( ${#share} > 93 && ${#share} < 96 )); then
+        zenity --title="Illegal codex32 ${string} length" --error --text="Codex32 ${string}s are 48 to 102 characters or 105 to 127 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize
+        return 1
+    elif (( ${#share} != 74 && ${#share} != 48 && ${#share} != 127 )); then
+        zenity --title='Unusual length' --warning --text="Codex32 ${string}s are usually 48, 74 or 127 characters long.\n\nYou typed ${#share} characters." $ICON --ellipsize
+    fi
+
+    # call checksum verification function here
+    return $(python3 -c 'from codex32 import ms32
+    ms32.verify_checksum("'$share'")')
 }
 
 
@@ -450,7 +449,6 @@ if "'$threshold'" == "1":
 else:
     ms32.existing_master_seed(master_seed,"'$threshold'",id,'$locations',"'"$passphrase"'")'))
     display_confirm ${codex32_array[*]}
-    unset choice passphrase confirm user_entropy threshold locations extended_private_masterkey codex32_array
     get_codex32_secret
     # TODO if [ restored_codex32_secret != confirmed_codex32_secret ]; then 
         # display error about passphrase typo or seeds did not match and call get_codex32_secret
