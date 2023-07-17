@@ -36,14 +36,14 @@ zenity --title='Welcome to Bails' --info \
 # Choose passphrase
 zenity --warning --title='Choose a strong passphrase' \
     --text='It is important to select a strong passphrase to protect your Bitcoin data.\n\nWe recommend using a suggested passphrase from the Persistent Storage dialog.' \
-    --ok-label='I Will Use A Suggested Passphrase' --icon-name=bails128 --ellipsize $ICON
+    --ok-label='I Will Use A Suggested Passphrase' --icon-name=tails-persistent-storage --ellipsize $ICON
 zenity --warning --title='Write your passphrase down' \
     --text='It is impossible to recover your passphrase if you forget it!\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in a sealed evelope in your wallet for a few days, and destroy it once you know it well. Write on a hard surface to avoid leaving an imprint of the secret.' --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.gedit --width=700 $ICON
 
 # Persistent storage creation
 until [ -b '/dev/mapper/TailsData_unlocked' ]; do
     pgrep notify-send || {
-        sleep 5
+        sleep 10
         notify-send --icon=bails128 'Important: Use a suggested passphrase. To help remember:' 'Create a mental image or mnemonic using the words, in order.\n\nIt might be a story, scenario, or sentence that you will be able to remember and that can remind you of the particular words you chose, in order.'
     } & notifying+=($!)
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
@@ -75,33 +75,36 @@ done &
 # Display memorization tips
 zenity --info --title='Tips for your new passphrase' \
     --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering the passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you have memorized it." --ok-label='Continue' --width=600 $ICON
-
 # Checking persistent features
+zenity --info --title='Turn on Persistent Storage features' \
+    --text='In the Persistent Storage application below,\nscroll and click the toggle to activate necessary features.' \
+    --icon-name=tails-persistent-storage $ICON --no-wrap &
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
     {
         /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be turned on.' --window-icon=folder --timeout=6; false; }
+            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; false; }
     } &&
         {
             /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 3)) && zenity --notification --text='Turn on Network Connections to remember your Wi-Fi' --window-icon=network-wired --timeout=6; true; }
+                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections" to remember your Wi-Fi' --window-icon=network-wired --timeout=6; true; }
         } &&
         {
             /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='GnuPG must be turned on.' --window-icon=gcr-key --timeout=6; false; }
+                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=6; false; }
         } &&
         {
             /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='Dotfiles must be turned on.' --window-icon=gnome-settings --timeout=6; false; }
+                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; false; }
         }
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
-        { tails-persistent-storage & notify-send --icon=tails-persistent-storage.svg 'You must turn on Persistent features to continue'; }
+        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on Persistent features to continue'; }
 done
 
 # Closes the Persistent Storage window
 pkill python3 &>/dev/null
+pkill zenity &>/dev/null
 
 # Clear notifications
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
