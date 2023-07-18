@@ -143,7 +143,7 @@ if [ "$choice" == "Create a new seed" ]; then
     action='Create'
     
 else
-    title="Restore wallet: Enter a $secret_or share $progress"
+    title="Enter a codex32 $secret_or share $progress"
     entry=$hrp$threshold$identifier
     action='Restore'
 fi
