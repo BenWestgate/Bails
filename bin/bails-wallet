@@ -120,7 +120,7 @@ display_confirm() {
         progress="($backups_made of $locations)"
         unset share
         until [ "$codex32_string" == "$share" ]; do
-            zenity --title="Create wallet: Seed backup $progress" --text="Write this $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
+            zenity --title="Create wallet: Seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
             choice="Create a new seed"
             input_share
             if [ "$codex32_string" == "$share" ]; then
