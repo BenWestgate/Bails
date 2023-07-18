@@ -239,6 +239,7 @@ ms32.verify_checksum("'$share'")')
 }
 
 get_codex32_secret() {
+    printf '\033]2;Restore wallet\a'
     [ "$threshold" ] || get_share
     if [[ ${index,,} = 's' ]]; then
         codex32_secret="$share"
@@ -377,7 +378,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
       zenity --title="Wallet encrypted" --width=500 --warning --text="Your wallet has been encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     } & encryption_info=$!
     {
-        zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from the PC.' $ICON
+        zenity --notification --text='Importing your wallet. This may take several minutes...\nLock the screen if you need to walk away from the PC.' $ICON
         sleep 4
         tails-screen-locker
         # Clear notifications
@@ -410,7 +411,7 @@ choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --c
    TRUE "Create a new seed" FALSE "I already have a seed" FALSE "Import descriptors" $ICON --height=225)
 if [ "$choice" == "Create a new seed" ]; then
     until zenity --warning --title='Important: Safeguard Your bitcoin' --text='With Bitcoin, you are in control of your funds. No one else has access to your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks and the seed backup we help you create, your bitcoin cannot be recovered.\n\nPlease make sure to securely store your USB sticks and backup to avoid any potential loss.' --ok-label='I Understand' --width=420 $ICON; do zenity --notification --text='You must understand these risks.'; done #TODO check the formatting of this in Tails!
-    zenity --question --title='Backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nOne compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
+    zenity --question --title='Backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nA single compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     set_passphrase 'Create wallet: Set passphrase'
     user_entropy="$passphrase"	#TODO see if icon-name=die is better
     user_randomness="$(if zenity --icon-name=die --question --width=400 --title="Help randomize new seed" \
