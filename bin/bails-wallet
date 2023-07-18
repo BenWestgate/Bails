@@ -149,7 +149,7 @@ else
 fi
 unset corr
 [ "$share" ] && { entry="$share"; title="$action wallet: Re-enter your $string"; corr=' corrected'; }
-share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
+share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string (no spaces):" --width=650 $ICON)"
 [ "$share" ] || return 1
 hrp_in="${share:0:3}"
 data="${share:3}"
@@ -377,7 +377,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
       zenity --title="Wallet encrypted" --width=500 --warning --text="Your wallet has been encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     } & encryption_info=$!
     {
-        zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from the computer.' $ICON
+        zenity --notification --text='Importing your wallet. This may take several minutes...\nPlease lock the screen if you need to walk away from the PC.' $ICON
         sleep 4
         tails-screen-locker
         # Clear notifications
