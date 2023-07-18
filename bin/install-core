@@ -104,6 +104,9 @@ set -m
 # Set the destination directory for the download
 destination_dir="$HOME/.local/share/bitcoin-core"
 
+# Checks for existing Bitcoin Core versions
+old_versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
+
 # Installs Bails to tmpfs
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $HOME/.local/
 
@@ -136,16 +139,30 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 # Switch into latest bitcoin-core directory
-cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || exit 1
+cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || {
+    zenity --warning --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize $ICON &&
+    sleep 5
+    install-core	# launch this script again
+    exit 1
+}
 
 versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
 
-zenity --question --title='Verify Bitcoin download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify Download' --width=610 $ICON --icon-name=gtk-dialog-authentication && { \
-    # verify signatures in GUI
-    [ -f SHA256SUMS ] || exit 1
-    printf '\033]2;Verify Bitcoin Core signatures\a'
-    (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
-    check_sigs 2
+if (( old_versions != versions )) || [ ! -f $PATH/bitcoind ]; then
+    if zenity --question --title='Verify Bitcoin Core download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify' --width=610 $ICON --icon-name=gtk-dialog-authentication; then
+        if [ ! -f SHA256SUMS ]; then
+            zenity --warning --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize $ICON
+            pkill wget
+            rm --verbose ./*	# removes old download
+            sleep 5
+            install-core	# launch this script again
+            exit 1
+        }
+        printf '\033]2;Verify Bitcoin Core signatures\a'
+        (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
+        check_sigs 2
+    fi
+fi
 }
 
 # Bring chainparams.cpp download to foreground then set assumed chainstate & blockchain size
@@ -241,7 +258,7 @@ link_dotfiles
 cd -
 rm --force wget-log*
 
-printf '\033]2;Create Bails Wallet\a'
+printf '\033]2;Create wallet\a'
 # Start bitcoind, then launches bails-wallet
 # TODO if there are NO memory contention issues on 4GB PCs on real USB sticks switch to bitcoin-qt
 # TODO may be able to remove -prune here
