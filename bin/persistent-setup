@@ -75,10 +75,10 @@ done &
 # Display memorization tips
 zenity --info --title='Tips for your new passphrase' \
     --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering the passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you have memorized it." --ok-label='Continue' --width=600 $ICON
-# Checking persistent features
-zenity --info --title='Turn on Persistent Storage features' \
-    --text='In the Persistent Storage application below,\nscroll and click the toggle to activate necessary features.' \
-    --icon-name=tails-persistent-storage $ICON --no-wrap &
+    
+# Checking features of the Persistent Storage
+zenity --info --title='Features of the Persistent Storage'     --text='In the Persistent Storage application below, scroll\nand click the toggle to activate necessary features.' \
+  --icon-name=tails-persistent-storage $ICON --no-wrap &
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
@@ -99,7 +99,7 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
                 { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; false; }
         }
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
-        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on Persistent features to continue'; }
+        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
 done
 
 # Closes the Persistent Storage window
