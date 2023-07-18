@@ -251,7 +251,7 @@ get_codex32_secret() {
     reset="$threshold shares"
     if ! [ "$passphrase" ]; then
         unset new_kdf_share share_list[1]
-        if zenity --title='Restore Bails Wallet: Seed backup passphrase' --question --text="Do you remember this seed backup's passphrase?" --width=300 $ICON; then	#TODO check dialog formatting
+        if zenity --title='Restore wallet: Seed backup passphrase' --question --text="Do you remember this seed backup's passphrase?" --width=300 $ICON; then	#TODO check dialog formatting
             until [ "$passphrase" ]; do
                 passphrase="$(zenity --title='Enter your Bails backup passphrase' --password $ICON)"
             done
