@@ -38,6 +38,7 @@
 # Creates a watch-only. persistent saves public or private key wallets to persistent storage.
 
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
+export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export CLI="bitcoin-cli -rpcport=17600"
 
 hrp='ms1'
