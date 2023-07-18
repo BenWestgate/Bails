@@ -157,13 +157,12 @@ if (( old_versions != versions )) || [ ! -f $PATH/bitcoind ]; then
             sleep 5
             install-core	# launch this script again
             exit 1
-        }
+        fi
         printf '\033]2;Verify Bitcoin Core signatures\a'
         (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
         check_sigs 2
     fi
 fi
-}
 
 # Bring chainparams.cpp download to foreground then set assumed chainstate & blockchain size
 ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
