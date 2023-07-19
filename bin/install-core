@@ -262,7 +262,7 @@ printf '\033]2;Create wallet\a'
 # TODO if there are NO memory contention issues on 4GB PCs on real USB sticks switch to bitcoin-qt
 # TODO may be able to remove -prune here
 # TODO the bails-wallet command should shutdown bitcoin core (if runnin) and launch the server and then reload what they had afterwards
-bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create Bails Wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
+bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
 
 # Start bitcoin-qt and then display final message
 space=$(( ($(df --output=avail $DATA_DIR | tail -1) + $(du --summarize $DATA_DIR/blocks | cut -f1))/1024 - 10240))
