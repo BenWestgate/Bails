@@ -50,12 +50,12 @@ secret_or=' secret or'
 # Sets or Resets passphrase with confirmation
 # Parameters: $1 = dialog title
 ###################	#TODO check the titles fit the dialogs in Tails
-# Do NOT permit default, weak, or well-known passwords, such as "Password1" or "admin/admin".
+# TODO Do NOT permit default, weak, or well-known passwords, such as "Password1" or "admin/admin".
 
 set_passphrase() {
     until [ "$passphrase" ]; do
-        passphrase="$(python3 -c 'from bails import set_passphrase
-dialog = PassphraseDialog(None,"'$1'")
+        passphrase="$(python3 -c 'from bails import set_pass
+dialog = set_pass.PassphraseDialog(None,"'"$1"'")
 if dialog.passphrase:
     print(dialog.passphrase)
 else:
@@ -408,7 +408,7 @@ choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --c
   --text='Do you want to make a new seed, or use an existing seed?\n\nIf this is your first use select "Create a new seed".\n' \
     TRUE "Create a new seed" FALSE "I already have a seed" FALSE "Import descriptors" $ICON --height=250)
 if [ "$choice" == "Create a new seed" ]; then
-    until zenity --warning --title='Important: Safeguard your bitcoin' --text='With Bails, you are in control of your bitcoin funds. No one else has access\nto your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks\nand the seed backup we help you create, your bitcoin cannot be recovered.\n\nWe strongly urge you to securely store your Bails USB sticks and backup in secure locations to ensure the safety of your bitcoin funds.' --ok-label='I Understand' --no-wrap $ICON; do zenity --notification --text='You must understand these risks.'; done
+    until zenity --warning --title='Important: Safeguard your bitcoin' --text='With Bails, you are in control of your bitcoin funds. No one else has access\nto your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks\nand the seed backup we help you create, your bitcoin cannot be recovered.\n\nWe strongly urge you to securely store your Bails USB sticks and backup in\nsecure locations to ensure the safety of your bitcoin funds.' --ok-label='I Understand' --no-wrap $ICON; do zenity --notification --text='You must understand these risks.'; done
     zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nA single compromised backup location can not jeopardize your privacy or funds.' --width=500 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     set_passphrase 'Create wallet: Set passphrase'
     user_entropy="$passphrase"
