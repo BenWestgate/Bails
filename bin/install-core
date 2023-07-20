@@ -50,18 +50,13 @@ link_dotfiles() {
 check_sigs() {
     temp_file=$(mktemp)
     type=info
-    gpg --verify SHA256SUMS.asc SHA256SUMS &>gpg-verify
-    good_sig=$(grep --count 'Good signature' gpg-verify)
+    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS &> | grep --count 'Good signature')
     if (( good_sig < $1 )); then
         type=warning
-        keys="$(grep 'using' gpg-verify | awk '{print $NF}' | shuf)"
+        keys="$(grep fingerprint $destination_dir/show-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
         for key in $keys; do
-            # look for key in guix.sigs, if found display it.
-            spaced_key="$(echo $key | sed 's/.\{4\}/& /g')"
-            if grep "${spaced_key::25} ${spaced_key:25:-1}" "$destination_dir"/show-keys; then
-                search_key
-                (( good_sig >= $1 )) && { type=info; break; }
-            fi
+            search_key
+            (( good_sig >= $1 )) && { type=info; break; }
         done
     fi
     zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize $ICON --timeout=10 & next_dialog=$!	#TODO use this to prevent multiple dialogs showing if unintended install
@@ -89,7 +84,7 @@ search_key() {
             gpg $1 --recv-key $key
             good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
         else
-            gpg --delete-keys $key
+            gpg --batch --yes --delete-keys $key
         fi
     else
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
