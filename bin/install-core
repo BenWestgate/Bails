@@ -123,11 +123,11 @@ mkdir -p "$destination_dir"
 wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; ) & sig_dl=$!
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
-( cd "$destination_dir"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
+( while pgrep wget; do sleep 1; done; cd "$destination_dir"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
 wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; ) & core_download=$!
 
 # Download chain parameters in background
-wget -O $destination_dir/chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
+( cd $destination_dir; wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp ) & get_size=$!
 
 # clear the terminal
 clear -x
