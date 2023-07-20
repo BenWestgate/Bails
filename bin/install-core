@@ -50,7 +50,7 @@ link_dotfiles() {
 check_sigs() {
     temp_file=$(mktemp)
     type=info
-    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS &> | grep --count 'Good signature')
+    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
     if (( good_sig < $1 )); then
         type=warning
         keys="$(grep fingerprint $destination_dir/show-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
