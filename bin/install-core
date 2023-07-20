@@ -49,17 +49,16 @@ link_dotfiles() {
 # Parameter 1 = Good Signatures required
 check_sigs() {
     temp_file=$(mktemp)
-    sig_file=$(mktemp)
     type=info
-    gpg --verify SHA256SUMS.asc SHA256SUMS &>$sig_file
-    good_sig=$(grep --count 'Good signature' $sig_file)
+    gpg --verify SHA256SUMS.asc SHA256SUMS &>gpg-verify
+    good_sig=$(grep --count 'Good signature' gpg-verify)
     if (( good_sig < $1 )); then
         type=warning
-        keys="$(grep 'using' $sig_file | awk '{print $NF}' | shuf)"
+        keys="$(grep 'using' gpg-verify | awk '{print $NF}' | shuf)"
         for key in $keys; do
             # look for key in guix.sigs, if found display it.
-            displayed_key="$(echo $key | sed 's/.\{4\}/& /g')"
-            if grep "${displayed_key::25} ${displayed_key:25:-1}" "$destination_dir"/show-keys; then
+            spaced_key="$(echo $key | sed 's/.\{4\}/& /g')"
+            if grep "${spaced_key::25} ${spaced_key:25:-1}" "$destination_dir"/show-keys; then
                 search_key
                 (( good_sig >= $1 )) && { type=info; break; }
             fi
@@ -67,9 +66,8 @@ check_sigs() {
     fi
     zenity --$type --title="$good_sig of $1 good signatures needed found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --ellipsize $ICON --timeout=10 & next_dialog=$!	#TODO use this to prevent multiple dialogs showing if unintended install
     shred --remove $temp_file
-    shred --remove $sig_file
-    unset sig_file temp_file
-    (( good_sig < $1 )) && { sleep 1; check_sigs $1; }
+    unset temp_file
+    (( good_sig < $1 )) && { sleep 2; check_sigs $1; }
 }
 
 
@@ -77,7 +75,7 @@ check_sigs() {
 # Parameter 1 = (optional) fall back keyserver
 search_key() {
     echo ''>$temp_file
-    { gpg --search-keys $1 $key >$temp_file; } & PID=$!
+    { gpg --search-keys $1 $key >$temp_file; } &
     [ "$1" ] || echo -e "\nSearching $key on openpgp.org keyserver..."
     until grep 'key' $temp_file >/dev/null; do
         sleep 1; printf '.'
@@ -86,7 +84,13 @@ search_key() {
     pkill gpg &>/dev/null
     if grep '@' $temp_file >/dev/null; then 
         sed -i 's/(1)/   /' $temp_file
-        zenity --question --title='Do you trust this individual?' --no-markup --text="$(<$temp_file)" --ellipsize $ICON --icon-name=auth-fingerprint && gpg $1 --recv-key $key && ((++good_sig))
+        if zenity --question --title='Do you trust this individual?' --no-markup --ellipsize \
+        --text="$(<$temp_file)" $ICON --icon-name=auth-fingerprint; then
+            gpg $1 --recv-key $key
+            good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
+        else
+            gpg --delete-keys $key
+        fi
     else
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver keyserver.ubuntu.com'
