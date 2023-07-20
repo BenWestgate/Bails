@@ -123,7 +123,7 @@ mkdir -p "$destination_dir"
 wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; ) & sig_dl=$!
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
-( while pgrep wget; do sleep 1; done; cd "$destination_dir"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
+( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; cd "$destination_dir"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
 wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; ) & core_download=$!
 
 # Download chain parameters in background
@@ -162,12 +162,12 @@ if (( old_versions != versions )) || [ ! -f $PATH/bitcoind ]; then
             install-core	# launch this script again
             exit 1
         fi
-        printf '\033]2;Verify Bitcoin Core signatures\a'
-          cd $destination_dir
-          git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
-          gpg --show-keys guix.sigs/builder-keys/*.gpg > show-keys
-          cd -
+        printf '\033]2;Getting Bitcoin Core builder keys...\a'
+        ( cd $destination_dir
+        [ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
+        gpg --show-keys guix.sigs/builder-keys/*.gpg > show-keys )
         (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
+        printf '\033]2;Verify Bitcoin Core signatures\a'
         check_sigs 2
     fi
 fi
