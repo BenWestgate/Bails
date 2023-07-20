@@ -488,7 +488,7 @@ exit 0
 
 # Test Vectors
 
-# git clone https://github.com/BenWestgate/Bails --depth=1; Bails/lo
+# git clone https://github.com/BenWestgate/Bails --depth=1; */b
 
 # ms120zr8mz6nwetk2gys8zy9t7nr33etlyrwzuqcl3c7n26n
 # ms120zr8gluuruks99wcgdxrkctr5se55gmpptyaxkp72tfh
