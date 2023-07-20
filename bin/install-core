@@ -59,7 +59,7 @@ check_sigs() {
         for key in $keys; do
             # look for key in guix.sigs, if found display it.
             displayed_key="$(echo $key | sed 's/.\{4\}/& /g')"
-            if true; then #grep "${displayed_key:0: -1}" "$destination_dir"/show-keys; then
+            if grep "${displayed_key::25} ${displayed_key:25:-1}" "$destination_dir"/show-keys; then
                 search_key
                 (( good_sig >= $1 )) && { type=info; break; }
             fi
