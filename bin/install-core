@@ -84,8 +84,11 @@ search_key() {
             gpg $1 --recv-key $key
             good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
         else
-            gpg --batch --yes --delete-keys $key
+            gpg --batch --yes --delete-keys $key &>/dev/null
         fi
+    elif ["$1"]; then
+        echo "$key not found."
+        return 1
     else
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver keyserver.ubuntu.com'
