@@ -30,22 +30,24 @@ timeout=5	# initial spaced repetition delay in seconds
 
 # Display welcome message
 zenity --title='Welcome to Bails' --info \
-    --text="Thank you for choosing Bails, a self-custodial Bitcoin Core wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps to ensure a smooth experience. Let's get started!" \
-    --width=640 --ok-label='Continue' $ICON --icon-name=bails128
+    --text="Thank you for choosing Bails, a self-custodial Bitcoin Core wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
+    --no-wrap --ok-label='Continue' $ICON --icon-name=bails128
 
 # Choose passphrase
 zenity --warning --title='Choose a strong passphrase' \
     --text='It is important to select a strong passphrase to protect your Bitcoin data.\n\nWe recommend using a suggested passphrase from the Persistent Storage dialog.' \
-    --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage --ellipsize $ICON
+    --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage --no-wrap $ICON
 zenity --warning --title='Write your passphrase down' \
-    --text='It is impossible to recover your passphrase if you forget it!\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in a sealed evelope in your wallet for a few days, and destroy it once you know it well. Write on a hard surface to avoid leaving an imprint of the secret.' --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.gedit --width=700 $ICON
+    --text='It is impossible to recover your passphrase if you forget it!\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in a sealed envelope in your wallet for a few days, and destroy it once you know it well. Write on a hard surface to avoid leaving an imprint of the secret.' \
+    --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.gedit --width=530 $ICON
 
 # Persistent storage creation
 until [ -b '/dev/mapper/TailsData_unlocked' ]; do
-    pgrep notify-send || {
         sleep 10
         notify-send --icon=bails128 'Important: Use a suggested passphrase. To help remember:' 'Create a mental image or mnemonic using the words, in order.\n\nIt might be a story, scenario, or sentence that you will be able to remember and that can remind you of the particular words you chose, in order.'
-    } & notifying+=($!)
+done & notifying+=($!)
+
+until [ -b '/dev/mapper/TailsData_unlocked' ]; do
     grep --count 'python3 /usr/local/lib/tps-frontend' <<< $(ps -ef) - >/dev/null ||
         { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
     sleep 1
@@ -74,11 +76,14 @@ done &
 
 # Display memorization tips
 zenity --info --title='Tips for your new passphrase' \
-    --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering the passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you have memorized it." --ok-label='Continue' --width=600 $ICON
+    --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering the passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you memorize it." \
+    --ok-label='I Will Destroy It Once Memorized' --width=640 $ICON
     
 # Checking features of the Persistent Storage
-zenity --info --title='Features of the Persistent Storage'     --text='In the Persistent Storage application below, scroll\nand click the toggle to activate necessary features.' \
-  --icon-name=tails-persistent-storage $ICON --no-wrap &
+zenity --info --title='Features of the Persistent Storage' \
+    --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
+    --icon-name=tails-persistent-storage $ICON --no-wrap &
+sleep 2
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
