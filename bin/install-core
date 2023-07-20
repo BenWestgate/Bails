@@ -70,11 +70,11 @@ check_sigs() {
 # Parameter 1 = (optional) fall back keyserver
 search_key() {
     echo ''>$temp_file
-    { gpg --search-keys $1 $key >$temp_file; } &
+    { gpg --search-keys $1 $key >$temp_file; } & gpg_pid=$!
     [ "$1" ] || echo -e "\nSearching $key on openpgp.org keyserver..."
     until grep 'key' $temp_file >/dev/null; do
         sleep 1; printf '.'
-        pidof gpg >/dev/null || break
+        ps -p $gpg_pid &>/dev/null || break
     done
     pkill gpg &>/dev/null
     if grep '@' $temp_file >/dev/null; then 
