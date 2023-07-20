@@ -58,7 +58,8 @@ check_sigs() {
         keys="$(grep 'using' $sig_file | awk '{print $NF}' | shuf)"
         for key in $keys; do
             # look for key in guix.sigs, if found display it.
-            if grep "$key" $destination_dir/show-keys; then
+            displayed_key="$(echo $key | sed 's/.\{4\}/& /g')"
+            if grep "$displayed_key" "$destination_dir"/show-keys; then
                 search_key
                 (( good_sig >= $1 )) && { type=info; break; }
             fi
