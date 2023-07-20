@@ -83,7 +83,7 @@ zenity --info --title='Tips for your new passphrase' \
 zenity --info --title='Features of the Persistent Storage' \
     --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
     --icon-name=tails-persistent-storage $ICON --no-wrap &
-sleep 4
+sleep 6
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
