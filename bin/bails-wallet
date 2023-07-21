@@ -415,17 +415,17 @@ if [ "$choice" == "Create a new seed" ]; then
     zenity --notification --text="Generating your codex32 backup..." $ICON
     
     # Creates generator wallet, dumps its extended private masterkey, leaves no traces behind
-    temp=$(mktemp)		# temporary filename
+    temp="$(mktemp)"		# temporary filename
+    trap 'rm -rf -- "$temp"' EXIT
     shred --remove $temp	# delete file to make room for wallet
     key="$(head -c64 /dev/urandom | base64 --wrap=0)"	# 64 byte wallet encryption key to crypto-shred the wallet
     $CLI createwallet $temp false false "$key"
     $CLI -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
+    $CLI -rpcwait # waits for the RPC server to respond to ensure we get a private masterkey
     extended_private_masterkey="$($CLI -rpcwallet=$temp listdescriptors "true" | grep --max-count=1 -oP '(?<=tr\().*?(?=/)')"
     $CLI -rpcwallet=$temp walletlock
     $CLI -rpcwallet=$temp unloadwallet
-    find $temp -type f -exec shred --remove {} +	# shreds the temporary wallet in memory by overwriting randomness
-    rm -Rf $temp
-    unset $key $temp # deletes encryption key from memory
+    unset $key # deletes encryption key from memory
     if [ ${extended_private_masterkey:0:4} != 'xprv' ]; then
         zenity --warning --title='Failed to get Bitcoin Core entropy' --text='Bitcoin core may not be running or the RPC server got disabled.' $ICON &
         exit 1

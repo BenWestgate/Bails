@@ -48,7 +48,8 @@ link_dotfiles() {
 # Looks for good signatures
 # Parameter 1 = Good Signatures required
 check_sigs() {
-    temp_file=$(mktemp)
+    temp_file="$(mktemp)"
+    trap 'rm -rf -- "$temp_file"' EXIT
     type=info
     good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
     if (( good_sig < $1 )); then
@@ -60,8 +61,6 @@ check_sigs() {
         done
     fi
     zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap $ICON --timeout=10 & next_dialog=$!	#TODO use this to prevent multiple dialogs showing if unintended install
-    shred --remove $temp_file
-    unset temp_file
     (( good_sig < $1 )) && { sleep 2; check_sigs $1; }
 }
 
