@@ -260,7 +260,7 @@ get_codex32_secret() {
     reset="$threshold shares"
     while ((${#share_list[*]} < threshold)); do
         progress="($((1+${#share_list[*]})) of $threshold)"
-        if ((${#share_list[*]} == threshold - 1)); then
+        if ((${#share_list[*]} > threshold - 2)); then
             if zenity --title='Got seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
                     passphrase="$(python3 -c 'from bails import passphrase
@@ -270,15 +270,17 @@ if dialog.passphrase:
 else:
     print("")')"
                 done
-                share_list[threshold - 1]=$(python3 -c 'from codex32 import ms32
+                share_list+=($(python3 -c 'from codex32 import ms32
 k, identifier, share_index, decoded = ms32.decode("ms", "'$share'")
 codex32_kdf_share, salt , indices_free = ms32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
-print(codex32_kdf_share)')
+print(codex32_kdf_share)'))
             else
                 unset passphrase share_list[threshold-1]
+                get_share
             fi
+        else
+            get_share
         fi
-        get_share
     done
     codex32_secret="$(recover_seed)"
     if [ "$passphrase" ]; then
