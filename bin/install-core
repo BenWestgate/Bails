@@ -127,7 +127,7 @@ wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUM
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
 ( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; cd "$destination_dir"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
-wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; ) & core_download=$!
+wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; ) & core_download=$!
 
 # Download chain parameters in background
 ( cd $destination_dir; wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp ) & get_size=$!
