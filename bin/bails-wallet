@@ -261,6 +261,7 @@ get_codex32_secret() {
     while ((${#share_list[*]} < threshold)); do
         echo ${#share_list[*]} $threshold
         progress="($((1+${#share_list[*]})) of $threshold)"
+        echo $progress
         if ((${#share_list[*]} > threshold - 2)); then
             if zenity --title='Got seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
@@ -280,6 +281,7 @@ print(codex32_kdf_share)')
                 get_share
             fi
         else
+            read -p 'about to get share'
             get_share
         fi
     done
@@ -379,7 +381,7 @@ y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
     echo $xprv
     # TODO for L2 offline restores do not persist signing wallet /tmp/$tmp_dir/$name	# easiest Idea may be just symlink to any tmpfs as target, name it amnesia
-    zenity --notification --text="Wallet seed successfully restored." "$ICON"
+    zenity --notification --text="Wallet seed restored successfully." "$ICON"
     [ "$passphrase" ] || set_passphrase 'Set passphrase for the wallet'
     chmod +w $DATA_DIR/wallets # writes enabled to create wallet
     until $CLI createwallet "$name" false true "$passphrase" false true $2; do
