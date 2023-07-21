@@ -221,7 +221,7 @@ def fresh_master_seed(seed_length,user_entropy,bitcoin_core_entropy):
 def seed_identifier(master_seed):
     """Derive identifier from master seed hash to distinguish between multiple different master seeds."""
     identifier = ''
-    h = hashlib.new('sha256')    # TODO turn back to ripemd160
+    h = hashlib.new('ripemd160')
     h.update(master_seed)
     hd_seed_id = h.digest()
     for char in convertbits(list(hd_seed_id), 8, 5)[:4]:
