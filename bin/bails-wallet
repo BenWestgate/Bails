@@ -249,8 +249,7 @@ ms32.verify_checksum("'$share'")')
 
 get_codex32_secret() {
     printf '\033]2;Restore wallet\a'
-    read -p "the threshold is $threshold"
-    [ "$thresold" ] || get_share
+    [ "$threshold" ] || get_share
     if [[ ${index,,} = 's' ]]; then
         codex32_secret="$share"
         reset='your codex32 secret'
@@ -272,49 +271,26 @@ if dialog.passphrase:
     print(dialog.passphrase)
 else:
     print("")')"
-                done
-                share_list[threshold - 1]=$(python3 -c 'from codex32 import ms32
+                done # TODO FIXME these two python3 commands can also be combined into one, possibly with the above
+                share_list[$(( threshold - 1 ))]=$(python3 -c 'from codex32 import ms32
 k, identifier, share_index, decoded = ms32.decode("ms", "'$share'")
 codex32_kdf_share, salt , indices_free = ms32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
 print(codex32_kdf_share)')
+                if (( $(python3 -c 'from codex32 import ms32
+ms32.identifier_verify_checksum("'$(recover_seed)'")') )); then
+                    ((${#share_list[*]} > 2)) && plur='s'
+                    zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your passphrase and try again." "$ICON"
+                    unset passphrase share_list[$(( threshold - 1 ))]
+                fi
             else
-                read - p "don't got passphrase?"
-                unset passphrase share_list[threshold - 1]
+                unset passphrase share_list[$(( threshold - 1 ))]
                 get_share
             fi
         else
-            read -p 'about to get share'
             get_share
         fi
     done
     codex32_secret="$(recover_seed)"
-    if [ "$passphrase" ]; then
-        ((${#share_list[*]} > 2)) && plur='s'
-        while (( $(python3 -c 'from codex32 import ms32
-ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
-            zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your passphrase and try again." "$ICON"
-            unset passphrase share_list[threshold - 1]
-            get_codex32_secret
-            return 1
-        done
-#    else
-#        if (( $(python3 -c 'from codex32 import ms32
-#ms32.identifier_verify_checksum("'$codex32_secret'")') == 0)); then
-#            share_list[1]=$new_kdf_share
-#            new_codex32_secret="$(recover_seed)"
-#            if [ "$new_codex32_secret" != "$codex32_secret" ]; then
-#                zenity --warning --title='Create new codex32 backup now' --text='Passphrase was changed.\n\n<b>A new backup needs to be created immediately.\n\nIMPORTANT: Any previous backups you have made of your seed should be replaced with a newly generated set of codex32 shares. Previous backups of your seed will be useless to restore your wallet using the new passphrase.</b>' $ICON
-#                threshold=${codex32_secret:3:1}
-#                locations=$((threshold*2-1))	# adds an extra location because user is forgetful.
-#                ask_t_and_n                
-#                zenity --notification --text="Generating your codex32 backup..."
-#                codex32_array=($(python3 -c 'from codex32 import ms32
-#ms32.rotate_shares("'$codex32_secret'","'$threshold'",'$locations',"'"$passphrase"'")'))
-#                unset share_list new_codex32_secret
-#                display_confirm ${codex32_array[*]}
-#            fi
-#        fi
-    fi
     return 0
 }
 
