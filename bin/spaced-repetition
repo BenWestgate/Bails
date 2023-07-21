@@ -62,7 +62,7 @@ while true; do
         enter='Enter'
     else
         unset passphrase temp_pass
-        zenity --warning --text="Passphrase does not match.\nTry again to improve your memory."
+        zenity --notification --text="Passphrase does not match.\nTry again to improve your memory."
         sleep 2
         enter='Re-enter'
         ((exp = (exp == 0) ? 2 : exp + 1)) 
