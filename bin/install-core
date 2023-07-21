@@ -186,13 +186,6 @@ prune_MiB=$((space > 1907 ? space : 1907 ))
 prune_GB=$(( (prune_MiB+1)*2**20/10**9))
 backup_days=$((prune_MiB/309))
 
-# Display info about IBD, keeping Tails private and reading material
-if ((versions < 2)); then
-    while pidof zenity; do sleep 1; done # waits to run these dialogs until there are no prompts on screen.	# TODO display this at a consistent point in the setup. make it easier to read.
-    zenity --info --title='Setup almost complete' --icon-name=bails128 $ICON --width=552 --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
-    zenity --info --title='Bitcoin Core info' --icon-name=bitcoin128 $ICON --width=552 --text="<b>Setup</b>\n---------------------\nBitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently $assumed_blockchain_size gigabytes.\n\nDepending on your computer and network the speed, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronization is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)"
-fi &>/dev/null &
-
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')
@@ -239,7 +232,7 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$LOCAL_DIR
 #TODO for L1
 
 # Create config to persist gui settings and autostart
-rsync --remove-source-files -recursive $BAILS_DIR/config/ $DOTFILES/.config
+rsync --remove-source-files -recursive "$BAILS_DIR"/config/ $DOTFILES/.config
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -262,11 +255,10 @@ fi
 ) &> /dev/null
 
 # Cleanup
-rm -Rf $BAILS_DIR/{bin,lib,share,state,config} $destination_dir/{download,*.tmp}
+rm -Rf $BAILS_DIR/{bin,lib,share,state,config} "$destination_dir"/{download,*.tmp}
 mv --force $BAILS_DIR $LOCAL_DIR/share/
 link_dotfiles
-cd -
-rm --force wget-log*
+rm --force "$destination_dir"/wget-log*
 
 printf '\033]2;Create wallet\a'
 # Start bitcoind, then launches bails-wallet
@@ -275,9 +267,16 @@ printf '\033]2;Create wallet\a'
 # TODO the bails-wallet command should shutdown bitcoin core (if runnin) and launch the server and then reload what they had afterwards
 bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
 
+# Display info about IBD, keeping Tails private and reading material
+if ((versions < 2)); then
+    # TODO display this at a consistent point in the setup. make it easier to read.
+    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --width=552 --text='Bitcoin Core will begin syncing the block chain automatically after it downloads.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press Super+L (Windows key + L)\n\nIt is safer to exit Bitcoin Core, <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown/index.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
+    zenity --info --title='Bitcoin Core info' --icon-name=bitcoin128 "$ICON" --width=552 --text="<b>Setup</b>\n---------------------\nBitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently $assumed_blockchain_size gigabytes.\n\nDepending on your computer and network the speed, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronization is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)"
+fi &>/dev/null
+
 # Start bitcoin-qt and then display final message
 space=$(( ($(df --output=avail $DATA_DIR | tail -1) + $(du --summarize $DATA_DIR/blocks | cut -f1))/1024 - 10240))
-# TODO this dialog should run every time a Bails wallet is created or restored.
+# TODO dialog should run every time a Bails wallet is created or restored. means bails-wallet should launch bitcoin-qt
 # TODO this dialog needs improvement
 text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by donating or contributing.\n\nEnjoy using Bails!" # TODO donation hyperlink
 bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) -startupnotify="zenity --info --title='Setup Complete' --text=\"$text\" --width=640 --ok-label=Finish $ICON --icon-name=bails128" &
