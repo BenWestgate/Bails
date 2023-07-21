@@ -258,27 +258,26 @@ get_codex32_secret() {
     fi
     unset secret_or
     reset="$threshold shares"
-    if ! [ "$passphrase" ]; then
-        unset new_kdf_share share_list[1]
-        if zenity --title='Restore wallet: Seed backup passphrase' --question --text="Do you remember this seed backup's passphrase?" --width=300 $ICON; then	#TODO check dialog formatting
-            until [ "$passphrase" ]; do
-                passphrase="$(python3 -c 'from bails import passphrase
+    while ((${#share_list[*]} < threshold)); do
+        progress="($((1+${#share_list[*]})) of $threshold)"
+        if ((${#share_list[*]} == threshold - 1)); then
+            if zenity --title='Restore wallet: Seed backup passphrase' --question --text="Do you remember the passphrase of this seed backup?" --width=300 $ICON; then	#TODO check dialog formatting
+                until [ "$passphrase" ]; do
+                    passphrase="$(python3 -c 'from bails import passphrase
 dialog = passphrase.PassphraseDialog(None, "Enter seed backup passphrase")
 if dialog.passphrase:
     print(dialog.passphrase)
 else:
     print("")')"
-            done
-            share_list[1]=$(python3 -c 'from codex32 import ms32
-k, identifier, share_index, decoded = ms32.decode("ms", "'$share'")
-codex32_kdf_share, salt , indices_free = ms32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
-print(codex32_kdf_share)')
-        else
-            unset passphrase share_list[1]
-        fi
-    fi
-    while ((${#share_list[*]} < threshold)); do
-        progress="($((1+${#share_list[*]})) of $threshold)"
+                done
+                share_list[threshold - 1]=$(python3 -c 'from codex32 import ms32
+    k, identifier, share_index, decoded = ms32.decode("ms", "'$share'")
+    codex32_kdf_share, salt , indices_free = ms32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
+    print(codex32_kdf_share)')
+            else
+                unset passphrase share_list[threshold-1]
+            fi
+        fi        
         get_share
     done
     codex32_secret="$(recover_seed)"
