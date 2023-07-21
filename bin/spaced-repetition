@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Copyright (c) 2023 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+###############################################################################
+# Prompts the user for their user account password as spaced repetition.
+###############################################################################
+
+# Function to prompt for passphrase using pinentry-gnome3
+get_passphrase() {
+    passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 2>&1 | grep D | cut -c3-)"
+}
+
+check_passphrase() {
+    read -s passphrase
+    temp_passw="$(head -c16 /dev/urandom | xxd -p)"
+    printf "$passphrase\n$temp_passw\n$temp_passw" | passwd && \
+    printf "$temp_passw\n$passphrase\n$passphrase" | passwd
+}
+
+# Initialize variables
+# Set a minimum interval of 5 seconds
+min_interval=5
+interval=$min_interval
+exp=1
+enter='Enter'
+while true; do
+    get_passphrase
+    # Check if the passphrase is empty (user canceled) or not
+    until [ "$passphrase" ]; do
+        zenity --notification --text="No passphrase entered!\nEnter your passphrase to check your memory."
+        # Call the function to get the passphrase
+        sleep 2
+        get_passphrase
+    done
+    # Check if the entered passphrase matches the correct one
+    if check_passphrase &>/dev/null <<< "$passphrase"; then
+        unset passphrase temp_passw
+        interval=$((interval * ($RANDOM % 1000 + 500) / 2 ** exp / 500))
+        (( interval < min_interval )) && interval=$min_interval
+        # Wait for the specified interval before showing the pinentry dialog again
+        sleep $interval
+        exp=0
+        enter='Enter'
+    else
+        unset passphrase temp_pass
+        zenity --warning --text="Passphrase does not match.\nTry again to improve your memory."
+        sleep 2
+        enter='Re-enter'
+        ((exp = (exp == 0) ? 2 : exp + 1)) 
+    fi
+done
