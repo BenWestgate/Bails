@@ -175,11 +175,23 @@ if [[ "$share" == *'O'* ]]; then
     data="${data//O/0}"
     zenity --notification --text='Detected non-bech32 character "O"' $ICON
 fi
+
+if [[ "$share" == *' '* ]]; then
+    for (( i = 4; i < ${#share}; i += 5 )); do
+        if [[ "${string:i:1}" != " " ]]; then
+            ((typo_spaces++))
+        fi
+    done
+    if ! ((typo_spaces)); then
+        zenity --notification --text='Typing spaces is unnecessary.' $ICON
+        share="${share// /}"
+    fi
+fi
+
 if [[ "$data" == *'1'* ]]; then
     data="${data//1/l}"
     zenity --notification --text='Detected non-bech32 character "1" in data portion' $ICON
 fi
-
 share="$hrp_in""$data"
 threshold="${share:3:1}"
 identifier="${share:4:4}"
