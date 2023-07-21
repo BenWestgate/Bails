@@ -135,6 +135,7 @@ if [ "$choice" == "Create a new seed" ]; then
 else
     title="Enter a codex32 $secret_or share $progress"
     entry="$hrp$threshold$identifier"
+    string="string"
 fi
 unset corr
 [ "$share" ] && { title="Re-enter your codex32 $string"; corr=' corrected'; }
