@@ -145,7 +145,7 @@ hrp_in="${share:0:3}"
 if [[ "$share" == *' '* ]]; then
     zenity --info --text="spaces detected\n$share"
     for (( i = 4; i < ${#share}; i += 5 )); do
-        if [[ "${string:i:1}" != " " ]]; then
+        if [[ "${share:i:1}" != " " ]]; then
             ((typo_spaces++))
         fi
     done
