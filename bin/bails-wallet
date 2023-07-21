@@ -142,14 +142,15 @@ entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your
 [ "$entry" ] || return 1
 hrp_in="${entry:0:3}"
 if [[ "$entry" == *' '* ]]; then
-    zenity --info --text="spaces detected\n$share"
-    for (( i = 4; i < ${#share}; i += 5 )); do
-        if [[ "${entry:i:1}" != " " ]]; then
-            ((typo_spaces++))
+    for (( i = 0; i < ${#entry}; i++ )); do
+        if [[ "${entry:i:1}" == " " ]]; then
+            (( i % 5 != 4 )) && ((typo_spaces++))
+        else
+            (( i % 5 == 4 )) && ((typo_spaces++))
         fi
     done
     if ! ((typo_spaces)); then
-        zenity --notification --text='Typing spaces is unnecessary.' $ICON
+        zenity --notification --text='Typing spaces is unnecessary' $ICON
         share="${entry// /}"
     fi
     unset typo_spaces
