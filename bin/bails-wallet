@@ -92,7 +92,7 @@ tn_grammar() {
     ((locations > 2)) && plur=s || plur=''
     ((threshold-2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
     ((locations-threshold)) && plurl='s' || plurl=''
-    ((threshold > 1 )) && { string='share'; password_derived="\nAn additional <b>1</b> share is formed by your <b>passphrase</b>." ; password_steal=", OR <b>$((threshold-1))</b> share$plurt and your passphrase" ; password_loss=", OR <b>$((locations-threshold+1))</b> location$plurl and your passphrase"; plurts=are; plurtss='s'; } || { plurts=is; string='secret' ; unset plurtss password_derived password_steal password_loss; }
+    ((threshold > 1 )) && { string='share'; password_derived="\nAn additional <b>1</b> share is formed by your <b>seed backup passphrase</b>." ; password_steal=", OR <b>$((threshold-1))</b> share$plurt and your passphrase" ; password_loss=", OR <b>$((locations-threshold+1))</b> location$plurl and your passphrase"; plurts=are; plurtss='s'; } || { plurts=is; string='secret' ; unset plurtss password_derived password_steal password_loss; }
     ((locations < 2)) && { plurs=''; pronoun='it'; } || { plurs='s'; pronoun='them'; }
 }
 
