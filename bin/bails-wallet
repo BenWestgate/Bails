@@ -259,6 +259,7 @@ get_codex32_secret() {
     unset secret_or
     reset="$threshold shares"
     while ((${#share_list[*]} < threshold)); do
+        echo ${#share_list[*]} $threshold
         progress="($((1+${#share_list[*]})) of $threshold)"
         if ((${#share_list[*]} > threshold - 2)); then
             if zenity --title='Got seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
@@ -270,12 +271,12 @@ if dialog.passphrase:
 else:
     print("")')"
                 done
-                share_list+=($(python3 -c 'from codex32 import ms32
+                share_list[threshold - 1]=$(python3 -c 'from codex32 import ms32
 k, identifier, share_index, decoded = ms32.decode("ms", "'$share'")
 codex32_kdf_share, salt , indices_free = ms32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
-print(codex32_kdf_share)'))
+print(codex32_kdf_share)')
             else
-                unset passphrase share_list[$((${#share_list[*]}-1))]
+                unset passphrase share_list[threshold - 1]
                 get_share
             fi
         else
@@ -288,7 +289,7 @@ print(codex32_kdf_share)'))
         while (( $(python3 -c 'from codex32 import ms32
 ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
             zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your passphrase and try again." "$ICON"
-            unset passphrase share_list[$((${#share_list[*]}-1))]
+            unset passphrase share_list[threshold - 1]
             get_codex32_secret
             return 1
         done
