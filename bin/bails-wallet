@@ -443,9 +443,9 @@ else:
     ms32.existing_master_seed(master_seed,"'$threshold'",id,'$locations',"'"$passphrase"'")'))
     display_confirm ${codex32_array[*]}
     get_codex32_secret
-    # TODO if [ restored_codex32_secret != confirmed_codex32_secret ]; then 
-        # display error about passphrase typo or seeds did not match and call get_codex32_secret
-    #fi	#TODO this should be an until loop so they can fail repeatedly.
+    # TODO if [ share_list is not in codex32 array ]; then
+        # warn: this was not a $string you wrote down earlier! and reject the share for recovery
+    #fi	#TODO this should be an until loop so they can fail repeatedly and re-call get_codex32_secret.
     restore_wallet '"now"' true		# scans blockchain from current time
 elif [ "$choice" == "I already have a seed" ]; then
     get_codex32_secret
