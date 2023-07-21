@@ -132,28 +132,29 @@ display_confirm() {
 input_share() {	# TODO FIXME refactor at 100 lines, this may be better as a separate file
 if [ "$choice" == "Create a new seed" ]; then
     title="Enter your codex32 $string $progress"
-    unset entry
 else
     title="Enter a codex32 $secret_or share $progress"
-    entry=$hrp$threshold$identifier
+    entry="$hrp$threshold$identifier"
 fi
 unset corr
-[ "$share" ] && { entry="$share"; title="Re-enter your codex32 $string"; corr=' corrected'; }
-share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
-[ "$share" ] || return 1
-hrp_in="${share:0:3}"
-if [[ "$share" == *' '* ]]; then
+[ "$share" ] && { title="Re-enter your codex32 $string"; corr=' corrected'; }
+entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
+[ "$entry" ] || return 1
+hrp_in="${entry:0:3}"
+if [[ "$entry" == *' '* ]]; then
     zenity --info --text="spaces detected\n$share"
     for (( i = 4; i < ${#share}; i += 5 )); do
-        if [[ "${share:i:1}" != " " ]]; then
+        if [[ "${entry:i:1}" != " " ]]; then
             ((typo_spaces++))
         fi
     done
     if ! ((typo_spaces)); then
         zenity --notification --text='Typing spaces is unnecessary.' $ICON
-        share="${share// /}"
+        share="${entry// /}"
     fi
     unset typo_spaces
+else
+    share="$entry"
 fi
 data="${share:3}"
 if [[ "$share" == *' '* ]]; then
@@ -314,7 +315,7 @@ ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
 
 get_share() {
     threshold="${share:3:1}"
-    unset share
+    unset share entry
     until input_share; do
         zenity --notification --text="Invalid checksum. Please correct all errors and try again." $ICON
     done
