@@ -64,7 +64,6 @@ else:
             zenity --warning --text='No passphrase was entered.\n\nA passphrase is required to send bitcoin.' --title="$1" --ellipsize $ICON
         fi
     done
-    confirm="$passphrase"
 }
 
 
@@ -282,16 +281,16 @@ print(codex32_kdf_share)')
         get_share
     done
     codex32_secret="$(recover_seed)"
-    if ! [ "$confirm" ]; then
+
+    if [ "$passphrase" ]; then
         ((${#share_list[*]} > 2)) && plur='s'
         while (( $(python3 -c 'from codex32 import ms32
 ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
-            zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your password and try again." $ICON
+            zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your passphrase and try again." "$ICON"
             unset passphrase share_list[1]
             get_codex32_secret
             return 1
         done
-        zenity --notification --text="Passphrase verified.\nThe Bails backup passphrase you entered matches your share$plur." $ICON
 #    else
 #        if (( $(python3 -c 'from codex32 import ms32
 #ms32.identifier_verify_checksum("'$codex32_secret'")') == 0)); then
@@ -310,6 +309,7 @@ ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
 #            fi
 #        fi
     fi
+    zenity --notification --text="Codex32 seed backup restoration successful." "$ICON"
     return 0
 }
 
@@ -378,7 +378,6 @@ y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
     echo $xprv
     # TODO for L2 offline restores do not persist signing wallet /tmp/$tmp_dir/$name	# easiest Idea may be just symlink to any tmpfs as target, name it amnesia
-    zenity --notification --text="Codex32 seed backup restoration successful." $ICON
     [ ! "$passphrase" ] && set_passphrase 'Set passphrase for the wallet'
     chmod +w $DATA_DIR/wallets # writes enabled to create wallet
     until $CLI createwallet "$name" false true "$passphrase" false true $2; do
