@@ -249,7 +249,6 @@ ms32.verify_checksum("'$share'")')
 
 get_codex32_secret() {
     printf '\033]2;Restore wallet\a'
-    [ "$threshold" ] || get_share
     if [[ ${index,,} = 's' ]]; then
         codex32_secret="$share"
         reset='your codex32 secret'
