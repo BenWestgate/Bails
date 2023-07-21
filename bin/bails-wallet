@@ -263,7 +263,7 @@ get_codex32_secret() {
         progress="($((1+${#share_list[*]})) of $threshold)"
         echo $progress
         if ((${#share_list[*]} > threshold - 2)); then
-            if zenity --title='Got seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
+            if zenity --title='Use seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
                     passphrase="$(python3 -c 'from bails import passphrase
 dialog = passphrase.PassphraseDialog(None, "Enter seed backup passphrase")
@@ -486,12 +486,16 @@ exit 0
 
 # git clone https://github.com/BenWestgate/Bails --depth=1; */b
 
-# ms120zr8mz6nwetk2gys8zy9t7nr33etlyrwzuqcl3c7n26n
-# ms120zr8gluuruks99wcgdxrkctr5se55gmpptyaxkp72tfh
-# Skunk 12 Badge Whig Saline Solomon
+# Low security level vector
+# ms12sq405jt9gxgqsnyg6pv53flaqp3y4n4dg42cwztypfjr
+# ms12sq40nux796hz9jm8stsz4pc6vzq0yevxkp0f352gdr2q
+# skunk 12 badge whig saline solomon
+# first address: bc1qckgm74d36ly8aq0rnx80myy2g5vgcnx9xfpfn3
 
-# Resulting codex32 secret:
-# ms120zr8snm9qv6hux8t35uy6lhryaezsx8ckwedhus7mx32
-# Master node:
-# xprv9s21ZrQH143K29o4w5GXxU3HAdVaBEQ7Vm4hya7e4nWyKaN1XzwKUGZkjFmh4oppRT7YgVWN4ut2hwpTpPNsioD8AjwU8es9EbSwKe6LKHx
-
+# High security level vector
+# ms134uzkdy30apzfzqjzeftu27x56l7lt2v6xqutnd30q9gj
+# ms134uzklurlkgz759e279pfycg4zldhwqlyrhvh5e9r3den
+# ms134uzk4k5smystn20dvgpunsu5gkf3fdx7z7vn58en975d
+# ms134uzkv8qsn5q0wnlg2kf2dduhe7w7jvv5va3czywq57fh
+# skunk 12 badge whig saline solomon
+# first address: bc1qd2qz3lyrek39hm2pxag8p07kuswmje07lyk3rm
