@@ -260,6 +260,7 @@ get_codex32_secret() {
     reset="$threshold shares"
     while ((${#share_list[*]} < threshold)); do
         progress="($((1+${#share_list[*]})) of $threshold)"
+        get_share
         if ((${#share_list[*]} == threshold - 1)); then
             if zenity --title='Got seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
@@ -278,16 +279,14 @@ print(codex32_kdf_share)')
                 unset passphrase share_list[threshold-1]
             fi
         fi
-        get_share
     done
     codex32_secret="$(recover_seed)"
-
     if [ "$passphrase" ]; then
         ((${#share_list[*]} > 2)) && plur='s'
         while (( $(python3 -c 'from codex32 import ms32
 ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
             zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your passphrase and try again." "$ICON"
-            unset passphrase share_list[1]
+            unset passphrase share_list[threshold-1]
             get_codex32_secret
             return 1
         done
@@ -309,7 +308,6 @@ ms32.identifier_verify_checksum("'$codex32_secret'")') )); do
 #            fi
 #        fi
     fi
-    zenity --notification --text="Codex32 seed backup restoration successful." "$ICON"
     return 0
 }
 
@@ -378,10 +376,11 @@ y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
     echo $xprv
     # TODO for L2 offline restores do not persist signing wallet /tmp/$tmp_dir/$name	# easiest Idea may be just symlink to any tmpfs as target, name it amnesia
-    [ ! "$passphrase" ] && set_passphrase 'Set passphrase for the wallet'
+    zenity --notification --text="Wallet seed successfully restored." "$ICON"
+    [ "$passphrase" ] || set_passphrase 'Set passphrase for the wallet'
     chmod +w $DATA_DIR/wallets # writes enabled to create wallet
     until $CLI createwallet "$name" false true "$passphrase" false true $2; do
-        name=$(zenity --title='Create wallet failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $RANDOM" $ICON --width=340);
+        name=$(zenity --title='Create failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $RANDOM" $ICON --width=340);
     done
     chmod -w $DATA_DIR/wallets	# write protect folder so wallets w/o seed backups can't be made
     {
