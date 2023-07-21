@@ -413,14 +413,12 @@ choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --c
 if [ "$choice" == "Create a new seed" ]; then
     until zenity --warning --title='Important: Safeguard your bitcoin' --text='With Bails, you are in control of your bitcoin funds. No one else has access\nto your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks\nand the seed backup we help you create, your bitcoin cannot be recovered.\n\nWe strongly urge you to securely store your Bails USB sticks and backup.' --ok-label='I Understand' --no-wrap $ICON; do zenity --notification --text='You must understand these risks.'; done
     zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nIf a single backup location is compromised, your privacy is not jeopardized.' --width=515 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
-    set_passphrase 'Set seed backup passphrase'
-    user_entropy="$passphrase"
-    user_randomness="$(if zenity --icon-name=die --question --width=400 --title="Help randomize new seed" \
+    user_entropy="$(if zenity --icon-name=die --question --width=400 --title="Help randomize new seed" \
         --cancel-label='Skip' --ok-label='Add Randomness' --text="• Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\n• Bitcoin Core will generate a random seed, but it is good to provide extra randomness if paranoid.\n\n• This is unnecessary but it will protect against a backdoored random number generator.\n\n• You can not hurt your seed's randomness no matter what data you provide, it can only help." $ICON;
         then until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-side dice 50+ times or\nflip a coin 128+ times.  A fast way is mashing the keyboard." $ICON; do : ; done; fi)"
-    user_entropy+="$name$user_randomness"
     ask_t_and_n
-    user_entropy+="$threshold$locations"
+    (( threshold > 1 )) && set_passphrase 'Set seed backup passphrase'
+    user_entropy+="$name$threshold$locations$passphrase"
     zenity --notification --text="Generating your codex32 backup..." $ICON
     
     # Creates generator wallet, dumps its extended private masterkey, leaves no traces behind
