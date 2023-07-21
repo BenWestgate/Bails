@@ -59,7 +59,7 @@ dialog = set_pass.PassphraseDialog(None,"'"$1"'")
 if dialog.passphrase:
     print(dialog.passphrase)
 else:
-    print("")')"
+    print("")' 2>/dev/null)"
         if [ ! "$passphrase" ]; then
             zenity --warning --text='No passphrase was entered.\n\nA passphrase is required to send bitcoin.' --title="$1" --ellipsize $ICON
         fi
@@ -79,8 +79,8 @@ ask_t_and_n () {
          --extra-button='Threshold' --switch --text="Location quantity is how many places you will store a codex32 $string.\n\nThreshold is how many shares are needed to steal or recover your seed.\n\nWhat would you like to change?" --ellipsize $ICON)"
         [ "$backup_choice" == 'Location Quantity' ] && locations=$(until zenity --scale --text="How many total locations do you want to store ${string}s at?\n\nMinimum $threshold is for low value data.\nUse $((threshold+2)) or more for high value data." --min-value=$threshold --value=$locations --max-value=$((locations+threshold*3 < 31 ? locations+threshold*3-1 : 30)) --title='Location quantity' $ICON; do :; done)
         [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data.\nUse 3 for high value data.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value=$threshold --title='Recovery threshold' $ICON; do :; done)
-        (( threshold < 2 )) && { zenity --question --icon-name=dialog-warning --title='Security warning' --text='<b>Caution</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel --width=400 $ICON || threshold=2; }
-        (( threshold > 3 )) && { zenity --question --icon-name=dialog-warning --title='Safety warning' --text="<b>Caution</b>: Higher threshold values than <b>3</b>, in our view, are a bad trade-off between usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel --width=440 $ICON || threshold=3; }
+        (( threshold < 2 )) && { zenity --question --icon-name=dialog-warning --title='Threshold security warning' --text='<b>Caution</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel --width=400 $ICON || threshold=2; }
+        (( threshold > 3 )) && { zenity --question --icon-name=dialog-warning --title='Threshold safety warning' --text="<b>Caution</b>: Higher threshold values than <b>3</b>, in our view, are a bad trade-off between usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel --width=440 $ICON || threshold=3; }
         # reset the variables to sensible values if exited
         tn_grammar
     done
@@ -104,7 +104,7 @@ tn_grammar() {
 display_confirm() {
     echo "$*"	# TODO remove after testing FIXME
     for codex32_string in ${codex32_array[*]}; do
-        displayed="$(echo "$codex32_string" | sed 's/.\{4\}/& /g' | sed 's/./&\u200B/g')"	# adds space every 4 chars
+        displayed="$(echo "$codex32_string" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
         x=$((backups_made++))
         ((x==1)) && backup=' Backup'
         ((x==2)) && backup=' second Backup'
@@ -146,6 +146,11 @@ share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your
 [ "$share" ] || return 1
 hrp_in="${share:0:3}"
 data="${share:3}"
+if [[ "$share" == *' '* ]]; then
+    zenity --warning --title="Do not copy and paste" --text="You MUST write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>!" --no-wrap $ICON
+    data=''
+    return 1
+fi
 if [[ "$share" == *'b'* ]]; then
     data="${data//b/6}"
     zenity --notification --text='Detected non-bech32 character "b"' $ICON
