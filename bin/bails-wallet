@@ -124,7 +124,7 @@ display_confirm() {
         done
     done
     unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_array codex32_string share displayed x backup backups_made progress
-    zenity --info --title='Seed backup complete' --text='You will now restore your seed with your codex32 backup before your wallet is created.' $ICON --width=320 --icon-name=starred
+    zenity --info --title='Seed backup complete' --text='You will now restore your new seed with your codex32 backup before your wallet is created.' --ok-label='Restore Seed' $ICON --width=320 --icon-name=starred
 }
 
 
@@ -135,7 +135,7 @@ if [ "$choice" == "Create a new seed" ]; then
 else
     title="Enter a codex32 $secret_or share $progress"
     entry="$hrp$threshold$identifier"
-    string="string"
+    [ "$string" ] || string="string"
 fi
 unset corr
 [ "$share" ] && { title="Re-enter your codex32 $string"; corr=' corrected'; }
@@ -277,7 +277,7 @@ else:
             else
                 unset passphrase share_list[threshold-1]
             fi
-        fi        
+        fi
         get_share
     done
     codex32_secret="$(recover_seed)"
