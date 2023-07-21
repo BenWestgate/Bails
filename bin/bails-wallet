@@ -229,7 +229,6 @@ if [[ $threshold = 0 ]]; then
     fi
 elif (( threshold < 2 || threshold > 9 )) ; then
     zenity --title='Bad threshold' --error --text='Threshold parameter (4th character) MUST be a single digit between "2" and "9", or the digit "0".\n\nYou typed "'$threshold'".' $ICON --ellipsize
-    unset threshold
     return 1
 fi
 if (( ${#share} < 48 )); then
