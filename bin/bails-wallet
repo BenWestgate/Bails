@@ -249,6 +249,7 @@ ms32.verify_checksum("'$share'")')
 
 get_codex32_secret() {
     printf '\033]2;Restore wallet\a'
+    read -p "the threshold is $threshold"
     [ "$thresold" ] || get_share
     if [[ ${index,,} = 's' ]]; then
         codex32_secret="$share"
@@ -277,6 +278,7 @@ k, identifier, share_index, decoded = ms32.decode("ms", "'$share'")
 codex32_kdf_share, salt , indices_free = ms32.kdf_share("'"$passphrase"'", k, identifier, len(decoded))
 print(codex32_kdf_share)')
             else
+                read - p "don't got passphrase?"
                 unset passphrase share_list[threshold - 1]
                 get_share
             fi
