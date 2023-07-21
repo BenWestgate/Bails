@@ -142,6 +142,17 @@ unset corr
 share="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
 [ "$share" ] || return 1
 hrp_in="${share:0:3}"
+if [[ "$share" == *' '* ]]; then
+    for (( i = 4; i < ${#share}; i += 5 )); do
+        if [[ "${string:i:1}" != " " ]]; then
+            ((typo_spaces++))
+        fi
+    done
+    if ! ((typo_spaces)); then
+        zenity --notification --text='Typing spaces is unnecessary.' $ICON
+        share="${share// /}"
+    fi
+fi
 data="${share:3}"
 if [[ "$share" == *' '* ]]; then
     zenity --warning --title="Do not copy and paste" --text="You MUST write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>!" --no-wrap $ICON
@@ -172,19 +183,6 @@ if [[ "$share" == *'O'* ]]; then
     data="${data//O/0}"
     zenity --notification --text='Detected non-bech32 character "O"' $ICON
 fi
-
-if [[ "$share" == *' '* ]]; then
-    for (( i = 4; i < ${#share}; i += 5 )); do
-        if [[ "${string:i:1}" != " " ]]; then
-            ((typo_spaces++))
-        fi
-    done
-    if ! ((typo_spaces)); then
-        zenity --notification --text='Typing spaces is unnecessary.' $ICON
-        share="${share// /}"
-    fi
-fi
-
 if [[ "$data" == *'1'* ]]; then
     data="${data//1/l}"
     zenity --notification --text='Detected non-bech32 character "1" in data portion' $ICON
