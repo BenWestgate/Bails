@@ -124,7 +124,7 @@ display_confirm() {
         done
     done
     unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_array codex32_string share displayed x backup backups_made progress
-    zenity --info --title='Seed backup complete' --text='You will now restore your seed with your backup before your wallet is created.' $ICON --width=320 --icon-name=starred
+    zenity --info --title='Seed backup complete' --text='You will now restore your seed with your codex32 backup before your wallet is created.' $ICON --width=320 --icon-name=starred
 }
 
 
@@ -367,6 +367,7 @@ y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
     echo $xprv
     # TODO for L2 offline restores do not persist signing wallet /tmp/$tmp_dir/$name	# easiest Idea may be just symlink to any tmpfs as target, name it amnesia
+    zenity --notification --text="Codex32 seed backup restoration successful." $ICON
     [ ! "$passphrase" ] && set_passphrase 'Set passphrase for the wallet'
     chmod +w $DATA_DIR/wallets # writes enabled to create wallet
     until $CLI createwallet "$name" false true "$passphrase" false true $2; do
