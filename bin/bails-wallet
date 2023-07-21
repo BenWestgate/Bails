@@ -249,17 +249,17 @@ ms32.verify_checksum("'$share'")')
 
 get_codex32_secret() {
     printf '\033]2;Restore wallet\a'
-    if [[ ${index,,} = 's' ]]; then
-        codex32_secret="$share"
-        reset='your codex32 secret'
-        threshold=1
-        return 0
-    fi
-    unset secret_or
-    reset="$threshold shares"
     while ((${#share_list[*]} < threshold)); do
         progress="($((1+${#share_list[*]})) of $threshold)"
         get_share
+        if [[ ${index,,} = 's' ]]; then
+            codex32_secret="$share"
+            reset='your codex32 secret'
+            threshold=1
+            return 0
+        fi
+        unset secret_or
+        reset="$threshold shares"
         if ((${#share_list[*]} == threshold - 1)); then
             if zenity --title='Got seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
