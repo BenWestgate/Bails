@@ -62,7 +62,12 @@ until {
     zenity --info --title='Spaced repetition trainer' \
         --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
         --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize $ICON
-    tails-screen-locker &>/dev/null
+    python3 -c 'from bails import set_pass
+box = set_pass.SimplePassphraseDialog(None,"Enter the passphrase of your Persistent Storage")
+if box.passphrase:
+    print(box.passphrase+"\n"+box.passphrase)
+else:
+    print("\n")' 2>/dev/null | passwd
 }; do
     zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
         --ok-label='Try Again' --ellipsize
