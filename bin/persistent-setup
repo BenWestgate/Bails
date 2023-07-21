@@ -74,10 +74,7 @@ else:
 done
 
 # Spaced repetition training loop
-while true; do
-    sleep $((timeout *= 2))
-    tails-screen-locker &>/dev/null
-done &
+spaced-repetition &
 
 # Display memorization tips
 zenity --info --title='Tips for your new passphrase' \
