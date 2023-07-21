@@ -153,6 +153,7 @@ if [[ "$share" == *' '* ]]; then
         zenity --notification --text='Typing spaces is unnecessary.' $ICON
         share="${share// /}"
     fi
+    unset typo_spaces
 fi
 data="${share:3}"
 if [[ "$share" == *' '* ]]; then
