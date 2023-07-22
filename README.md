@@ -76,13 +76,13 @@ Why clone Bails?
 
 ## Advantages and Disadvantages
 
-For a comprehensive discussion on the advantages and disadvantages of using Bails as a Bitcoin solution, please refer to our [detailed document](Advantages_and_Disadvantages.md). It provides valuable insights into the unique features and potential limitations of the Bails platform.
+For a discussion on the pros and cons of using Bails, refer to our [detailed document](Advantages_and_Disadvantages.md). It has insights into the unique features and limitations of the Bails platform.
 
 # Support resources
 
 For support join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
 
-For more reading checkout our [FAQ](FAQ.md).
+For more reading checkout our [Frequently Asked Questions](FAQ.md).
 
 ## Source Code Headers
 
@@ -115,7 +115,7 @@ MIT header:
 
 
 
-### Bails is the World's First Codex32-enabled (BIP93) Wallet
+### Bails is the First Codex32-enabled (BIP93) Wallet
 
 Find more information on [Codex32](https://secretcodex32.com/index.html) and [BIP93](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki).
 
