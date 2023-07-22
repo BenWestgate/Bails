@@ -16,7 +16,7 @@ This would be appropriate for up to half a year's expenses. Life savings need mu
 
 No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command.
 
-#During Setup
+# During Setup
 
 ## What’s the deal with the "Do you trust this individual?"
 
