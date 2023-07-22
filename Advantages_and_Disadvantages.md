@@ -1,37 +1,53 @@
 # Bails Bitcoin Wallet and Cold Storage
 
-Bails is a script that installs Bitcoin Core on Tails and then walks the user through setup of an anonymous transaction and cold storage solution that has the following advantages:
+Bails is a script that installs Bitcoin Core on Tails. It then walks the user though setup of an anonymous transaction and cold storage solution offering several advantages:
 
-* Bails prioritizes privacy and safety over ease of use. For example hardware wallets should never be used with a daily use laptop, but because this requires about an hour of work it is not part of the instructions. Bails takes the opposite approach and requires users do what is needed for safe and secure bitcoin storage even when this requires slightly more time and effort - the first task in the Bails instructions is to setup a trustworthy operating system.
-* Bails encrypts the wallet AND Private keys. This prevents your use of Bitcoin from being snooped on if one of your backups gets compromised.
-* Bails is persistent, when you shutdown your Bails USB your wallet is restored the next time you boot from Tails and open its persistent storage. This saves considerable time in the long run.
-* Codex32 seed backups are used which offer privacy should 1-2 locations get compromised and redundancy so 1-2 backup can be lost without losing coins.
-* A codex32 share in your backup can be derived from knowing a memorized passphrase. This allows less backup locations needed for equal resistance to loss, less frequent access of backups and better privacy. The passphrase can be reset if forgotten by gathering a threshold of shares.
-* A 2 of 2 Codex-32 seed backup is used for low value bitcoin spending. Storing up to 2 months of expenses. This allows up to 1 share or passphrase to be lost without losing bitcoin and requires 2 locations or 1 location and passphrase to be compromised by an attacker to lose funds. This priorities ease of setup and recovery while still offering a basic level of privacy and redundancy as we believe accidental loss and privacy leaks are the most likely threats to Bitcoin users.  
-* A 3 of 4 Codex-32 seed backup is used for high value bitcoin spending. Storing up to 6 months of expenses. This allows up to 2 shares or any share plus your passphrase to be lost without losing bitcoin and requires 3 locations or 2 location and your passphrase to be compromised by an attacker to lose funds. This priorities backup privacy, security and redundancy while still offering a fairly easy setup and recovery process, as we believe privacy leaks and accidental loss are the most likely threats to Bitcoin users.  
-* A 2-of-2 Multi-sig is used for bitcoin savings up to 2 years of expenses. The multi-sig is between the 3 of 5 codex-32 online seed backup above and a new 3-of-3 offline seed backup stored across 7 locations. The high value hot wallet above is extended with an extra share and a dedicated always offline device generates a new seed. In addition to the passphrase, a hash of the hot wallet seed can derive a share to the offline backup. This offers the same loss and theft resistance as a 3-of-7 backup when the passphrase is known and performs like a 5 of 7 when the passphrase is unknown to an attacker. This multi-sig does not reveal that it is being used by the backup (except for 1 location storing 2 shares) and does not require storing the descriptor.
-* Unlike other multi-sig setups this one is designed to protect you against either device being compromised either at setup or during use. This is done by each private key never leaving the device it is created on and by using 2-of-2 between each signing device.
-* Your long-term saving should NOT be accessible without high-quality verification that you are safe! This means all 3 shares produced for the 2nd offline-only seed should be held by trusted heirs.
-* A 4-of-6 Multi-party multi-sig is used for bitcoin inheritances beyond 2 years of expenses. The multi-sig requires 2 heirs to collaborate by setting up a Bails bitcoin savings wallet and the 6 resulting public keys are used. This requires the cooperation of an heir to spend and allows them to recover your inheritance without accessing any of your backups. Threshold 4 is used to defend against an online only attack.
-* Offline Private keys are never on any device with a channel to an Internet connected device except through QR codes. The purpose of an "air gap" is to limit the amount of data that can be moved, limit the times data can be moved, and make it easy to verify the data is accurate "out of band" before sending.
-* HD wallets are used so that you can send funds to thousands of addresses, but recover all funds using only 2-3 shares or 1-2 shares and a passphrase.
-* Generic computing hardware is used. Hardware sold specifically for bitcoin storage requires trusting everyone from manufacturing to shipping to fail to realize the opportunity available to modify the hardware in order to steal bitcoin.
-* Minimal software beyond Bitcoin Core. Bitcoin Core is far and away the most trustworthy Bitcoin software. Unfortunately it does not yet provide a user friendly interface for establishing a multisig address or display and accept private keys in a human writable format. As bitcoin core adds these features we will reduce the Bails code that provides these features now. Eventually we hope Bails will be entirely unnecessary and only trusting Bitcoin Core will be required.
-* Open source and easily audited. One of the reasons Bitcoin Core is trustworthy is that it is the most scrutinized software. This makes it the least likely to contain a critical security flaw that has not been identified and fixed. Bails will never be as trustworthy, but by minimizing the amount of code and primarily using python and bash scripts and console commands the effort required to verify that Bails is performing as expected is minimized.
-* Additionally the Bails wallet complies with the Auditable Bitcoin Wallets proposal so that the wallet can prove it is not back-doored with less code review.
-* Usable for non-technical users. By following simple instructions users with minimal computer literacy can use Bails. This is important because trusting someone to help you establish your cold storage or anonymous transaction solution introduces considerable risk.
-* Private keys are stored in non-descript, tamper evident packaging and stored with people that do not know they contain private keys and/or are well-informed of their responsibilities and trusted.
-* Private. Unlike many popular hardware and software wallets that transmit your IP address (home address) and bitcoin balance to third party servers, Bails uses a Bitcoin Core full node. This means nothing is shared beyond what is required to create a bitcoin transaction. Bails also uses Tor.
-* Counterfeit prevention. The only way to be certain that your balance represents genuine bitcoin is to use a bitcoin full node - in fact that is the primary purpose of a bitcoin full node - to verify that the bitcoin balance is correct and full of only genuine bitcoins. Any solution that does not involve a full node requires you trust someone else to tell you if you have real bitcoin.
-* Minimal hardware. You only need access to one or two cheap computers. If you don't own a laptop you can buy one from a big box store and return it after setup is completed.
-* The process can be completed by non technologists with minimal effort.
-* Bitcoin private keys are stored on paper in multiple geographic locations with professionals that do not know they are storing bitcoin private keys or who are informed and paid for protecting them.
-* Private keys are written down using the codex32 format where the last 13 characters form a checksum that can correct 13 contiguous erases, 8 random erases and 4 random errors to reduce the possibility that a private key will be unreadable when needed.
-* Instructions for recovering the bitcoin are given to next-of-kin to reduce the likelihood of loss.
-* Bails installations can be cloned to save loved ones the time required to sync the blockchain. Clones also include an encrypted copy of your private data reducing the likelihood you will need to restore your wallet from seed in the event you lose all Bails USBs.
-* Bails creates backups of your Tails persistent storage so that you can lose your Bails USB without having to restore your seed and resync the blockchain saving hours or days in recovery.
-  
-While we believe Bails provides the best balance of privacy, security, ease of use and cost when storing privacy critical sums of bitcoin, it has the following disadvantages that might not be expected:
-* Time. To complete setup you will need to invest 1 hour spread over the course of a couple days. This time includes writing down security words and creating backup USBs. Because Bails runs exclusively off a USB drive and over Tor, it may take longer to sync than a less private option that used the internal drive. This is especially the case with small <64GB USB sticks and systems with <8GB RAM.
-* Redundancy. Privacy and easy setup are at odds with redundancy. Because the memorized passphrase is used to reduce the shares stored, the Bails backups have a higher risk of loss than other solutions if you forget your passphrase. It is expected that Bails will be used regularly enough to give an early alarm to a forgotten passphrase so it can be reset before access is lost. If you do not intend to use Bails weekly or bi-monthly it is recommended to increase the number of locations to prevent accidental loss from forgetting the passphrase.
-* Wallet privacy. While the threshold of backups can be set to 3 shares or higher, the Bails USBs will always decrypt with just the passphrase alone potentially revealing your transactions and balances were your passphrase and Bails USB both to be compromised. Besides keeping the USBs secure or destroying them, there are options to require additional authentication factors to watch wallets that need less acessibility and more confidentiality.
+## Advantages
+
+1. **Privacy and Safety Priority**: Bails prioritizes privacy and safety over ease of use, requiring users to take necessary steps for secure bitcoin storage and private usage. The first step is installing a trustworthy operating system, Tails to a USB.
+
+1. **Encrypted Wallet and Private Keys**: Bails encrypts both the wallet and private keys to prevent snooping on your Bitcoin use in case of compromised backups.
+
+1. **Persistent Wallet**: Bails is persistent, your wallet is saved and will load whenever you start Tails and unlock your Persistent Storage, saving time in the long run.
+
+1. **Codex32 Seed Backups**: Bails uses easy-to-write Codex32 seed backups, providing privacy and redundancy, tolerating loss or breach of 1-2 locations as well as loss of the passphrase.
+
+1. **Memorized Passphrase for Seed Backup**: A codex32 share to your backup is derived from a memorized passphrase, reducing the number of backup locations needed.
+
+1. **Multi-sig for High-Value Bitcoin Savings**: A 2-of-2 multi-sig is used between the online seed backup (3 of 5 Codex-32) and an offline seed backup (3-of-3 Codex-32) stored across 7 locations, ensuring redundancy. This protects against one of the 2 signing devices being compromised.
+
+1. **Multi-party Multi-sig for Inheritance Protection**: Bails uses a 4-of-6 multi-party multi-sig for bitcoin inheritances, requiring collaboration of at least 2+ parties to spend, ensuring long-term savings are inaccessible without high-quality verification.
+
+1. **Offline Private Keys**: Private keys to Savings wallets are never on an internet-connected device with data movement limited to QR codes, enhancing security. Spending wallets are online with keys protected only by encryption for more convenient spending.
+
+1. **HD Wallets**: Bails uses HD wallets to send funds to thousands of addresses and recover funds from the original paper seed backup, improving privacy and loss resistance.
+
+1. **Minimal Software Beyond Bitcoin Core**: Bails minimizes code, primarily using python and bash scripts making it easily auditable.
+
+1. **Open Source and Auditable**: Bails is open-source and auditable, minimizing code review efforts.
+
+1. **Usable for Non-Technical Users**: Bails provides simple instructions and an intuitive interface for users with minimal computer literacy.
+
+1. **Private Keys Protection**: Private keys are stored in non-descript, tamper-evident packaging and held by trusted individuals such as heirs and professionals.
+
+1. **Privacy Focus**: Bails uses a full node, giving perfect receiving privacy, while using the Tor-network hides and encrypts the source of any transaction you broadcast. Most other wallets ask a trusted third party to show your balance and broadcast your transactions who can sell your data.
+
+1. **Counterfeit Prevention**: Bails ensures your bitcoin balance is genuine by using a full node. Most wallets ask a trusted a third party who can lie to you. 
+
+1. **Minimal Hardware**: Bails requires access to one or two cheap computers, making it cost-effective. The computer does not need to be erased to use Bails as it runs from the USB stick.
+
+1. **Fast Setup**: Bails can be completed by non-technologists with minimal effort in under an hour.
+
+1. **Bails Cloning**: Bails installations can be cloned for friends and family, saving time required to sync the blockchain for the recipient and providing an additional encrypted wallet backup for the Bails cloned.
+
+1. **Bails Backup USBs**: Bails creates backup USB sticks of itself, saving time in case of USB loss or damage.
+
+## Disadvantages
+
+While Bails provides the best balance of privacy, security, ease of use, and cost when storing privacy-critical sums of bitcoin, it has the following disadvantages that might not be expected:
+
+1. **Setup Time**: Completing the setup requires investing approximately 45 minutes spread over a couple of days.
+
+1. **Reduced Redundancy if Passphrase Lost**: Privacy and fast setup conflict with redundancy. Forgetting the memorized passphrase increases the risk of loss.
+
+1. **Wallet Privacy**: Bails USBs will unlock with just the passphrase alone, potentially revealing transactions and balances if both the passphrase and USB are compromised.
