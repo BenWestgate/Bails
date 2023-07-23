@@ -7,6 +7,10 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="bin" />
+    <orderEntry type="module" module-name="config" />
+    <orderEntry type="module" module-name="docs" />
+    <orderEntry type="module" module-name="share" />
+    <orderEntry type="module" module-name="state" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />
