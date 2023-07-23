@@ -34,5 +34,12 @@ random write speed should be as high as possible if the USB stick capacity is be
 sequential read speed helps for rescanning wallets but not IBD.
 Two settings will be added to the menu to increase the speed of sync and reduce the wear on the USB
 
-# How reliable is my USB?
+## How reliable is my USB?
 For reliability, it SHOULD be a new USB, not a heavily used one, and it SHOULD be kept cool in use and in storage. And having more RAM on the PC and capacity on the USB (especially the XYZ amount above) stick helps reduce wear. As well as shutting down the node less often. And using either "sync faster" option.
+
+# After Setup
+
+## If I wanted to unplug Bails and use the computer for another task will the core download just restart where it left off on the next time I log in?
+If you shutdown bitcoin core safely, waiting for it to exit before shutting down Tails (from the menu in the upper right) it will resume where you left off the next time you Start on Tails, unlock its Persistent Storage, and connect to Tor.
+If you shutdown Tails without exiting Bitcoin core safely, or by yanking the USB stick out, it is possible to corrupt the blockchain database eventually and lose your progress. Only remove the USB to shutdown Tails in an Emergency.
+
