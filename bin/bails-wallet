@@ -78,7 +78,7 @@ ask_t_and_n () {
          --extra-button='Threshold' --switch --text="Location quantity is how many places you will store a codex32 $string.\n\nThreshold is how many shares are needed to steal or recover your seed.\n\nWhat would you like to change?" --ellipsize $ICON)"
         [ "$backup_choice" == 'Location Quantity' ] && locations=$(until zenity --scale --text="How many total locations do you want to store ${string}s at?\n\nMinimum $threshold is for low value data.\nUse $((threshold+2)) or more for high value data." --min-value=$threshold --value=$locations --max-value=$((locations+threshold*3 < 31 ? locations+threshold*3-1 : 30)) --title='Location quantity' $ICON; do :; done)
         [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data.\nUse 3 for high value data.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value=$threshold --title='Recovery threshold' $ICON; do :; done)
-        (( threshold < 2 )) && { zenity --question --icon-name=dialog-warning --title='Security warning' --text='<b>Caution</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your wallet passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel --width=400 $ICON || threshold=2; }
+        (( threshold < 2 )) && { zenity --question --icon-name=dialog-warning --title='Security warning' --text='<b>Caution</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel --width=400 $ICON || threshold=2; }
         (( threshold > 3 )) && { zenity --question --icon-name=dialog-warning --title='Safety warning' --text="<b>Caution</b>: Higher threshold values than <b>3</b>, in our view, are a bad trade-off between usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel --width=440 $ICON || threshold=3; }
         # reset the variables to sensible values if exited
         tn_grammar
@@ -421,7 +421,7 @@ if [ "$choice" == "Create a new seed" ]; then
     key="$(head -c64 /dev/urandom | base64 --wrap=0)"	# 64 byte wallet encryption key to crypto-shred the wallet
     $CLI createwallet $temp false false "$key"
     $CLI -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
-    $CLI -rpcwait # waits for the RPC server to respond to ensure we get a private masterkey
+    $CLI -rpcwait # waits for the RPC server to respond to ensure we get a private masterkey FIXME this needs to be used w/ the commands
     extended_private_masterkey="$($CLI -rpcwallet=$temp listdescriptors "true" | grep --max-count=1 -oP '(?<=tr\().*?(?=/)')"
     $CLI -rpcwallet=$temp walletlock
     $CLI -rpcwallet=$temp unloadwallet
