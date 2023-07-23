@@ -12,7 +12,11 @@ But it doesn't make the most secure setup possible yet, but that will come in th
 
 This would be appropriate for up to half a year's expenses. Life savings need multi-signature and offline signers.
 
-#During Setup
+## When I’m installing Tails, I should Create Persistent Storage, right?
+
+No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command.
+
+# During Setup
 
 ## What’s the deal with the "Do you trust this individual?"
 
