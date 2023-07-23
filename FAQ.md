@@ -12,6 +12,10 @@ But it doesn't make the most secure setup possible yet, but that will come in th
 
 This would be appropriate for up to half a year's expenses. Life savings need multi-signature and offline signers.
 
+## How much storage do I need on my test laptop?
+
+You don't need any storage free on your test laptop. You just need a 16+GB USB stick, the whole thing runs from that USB and leaves your laptop storage untouched.
+
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
 No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command.
