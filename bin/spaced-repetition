@@ -54,7 +54,7 @@ while true; do
     # Check if the entered passphrase matches the correct one
     if check_passphrase &>/dev/null <<< "$passphrase"; then
         unset passphrase temp_passw
-        interval=$((interval * ($RANDOM % 1000 + 500) / 2 ** exp / 500))
+        interval=$((interval * ($RANDOM % 2500 + 2000) / 2 ** exp / 1500))
         (( interval < min_interval )) && interval=$min_interval
         # Wait for the specified interval before showing the pinentry dialog again
         sleep $interval
