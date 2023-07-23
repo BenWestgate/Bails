@@ -266,7 +266,7 @@ printf '\033]2;Create wallet\a'
 # TODO if there are NO memory contention issues on 4GB PCs on real USB sticks switch to bitcoin-qt
 # TODO may be able to remove -prune here
 # TODO the bails-wallet command should shutdown bitcoin core (if running) and launch the server and then reload what they had afterwards
-bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2700)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
+bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2800)) -prune=$prune_MiB -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
 
 # Display info about IBD, keeping Tails private and reading material
 if ((versions < 2)); then
@@ -280,7 +280,7 @@ space=$(( ($(df --output=avail $DATA_DIR | tail -1) + $(du --summarize $DATA_DIR
 # TODO dialog should run every time a Bails wallet is created or restored. means bails-wallet should launch bitcoin-qt
 # TODO this dialog needs improvement
 text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by donating or contributing.\n\nEnjoy using Bails!" # TODO donation hyperlink
-bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2000)) -prune=$(( space > 1907 ? space : 1907)) -startupnotify="zenity --info --title='Setup Complete' --text=\"$text\" --width=600 --ok-label=Finish $ICON --icon-name=bails128" &
+bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2100)) -prune=$(( space > 1907 ? space : 1907)) -startupnotify="zenity --info --title='Setup Complete' --text=\"$text\" --width=600 --ok-label=Finish $ICON --icon-name=bails128" &
 
 # Clear notifications
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
