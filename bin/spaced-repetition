@@ -39,9 +39,10 @@ check_passphrase() {
 # Initialize variables
 # Set a minimum interval of 5 seconds
 min_interval=5
-interval=$min_interval
+interval=10 # initial value, chatGPT thinks 120 to 300 seconds is best
 exp=1
 enter='Enter'
+sleep $interval
 while true; do
     get_passphrase
     # Check if the passphrase is empty (user canceled) or not
