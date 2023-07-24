@@ -31,12 +31,11 @@ Bitcoin Core provides exclusive privacy features, making it challenging for anyo
 ## Required hardware
 
 Bails requires you to have the following:
-1. Computer with at least 4 gigabytes of RAM.
-1. USB stick or memory card with at least 16 GB of capacity.
+1. Any computer made in the last 15 years
+1. USB stick or memory card with at least 16 GB of capacity
 1. Pen or pencil
-1. Several pieces of paper about the size of an index card
+1. Several pieces of paper
 1. Hard surface to write on to avoid leaving an imprint of the secrets
-
 
 ## How to use this script
 
