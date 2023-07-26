@@ -145,8 +145,12 @@ def ms32_decode(bech):
         return (None, None, None, None, None)
     hrp = bech[:pos]
     k = bech[pos+1]
+    if k == "1" or not k.isdigit():
+        return (None, None, None, None, None)
     identifier = bech[pos+2:pos+6]
     share_index = bech[pos+6]
+    if k == "0" and share_index != "s":
+        return (None, None, None, None, None)
     data = [CHARSET.find(x) for x in bech[pos+1:]]
     checksum_length = 13 if len(data) < 95 else 15
     if not ms32_verify_checksum(data):
@@ -314,6 +318,8 @@ def rotate_shares(codex32_secret,k,n,passphrase=''):
     ms32_decoded[4] = (ms32_decoded[4] + 1) % 32
     new_id = ms32_encode('ms',ms32_decoded)[4:8]
     return existing_master_seed(bytes(master_seed),k,new_id,n,passphrase)
+
+
 
 
 
