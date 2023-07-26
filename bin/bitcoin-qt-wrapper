@@ -46,4 +46,4 @@ if ! (( RANDOM % 20 )); then
 fi
 cd $HOME/Persistent/.bitcoin
 space=$(( ($(df --output=avail . | tail -1) + $(du --summarize blocks | cut -f1))/1024 - 10240))
-/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2100)) -prune=$(( space > 1907 ? space : 1907)) $@
+/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2100)) -prune=$(( space > 1907 ? space : 1907)) "$@"
