@@ -40,6 +40,11 @@
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export CLI="bitcoin-cli -rpcport=17600"
+export SOURCE='/live/persistence/TailsData_unlocked'
+export DATA_DIR=$SOURCE/Persistent/.bitcoin
+export DOTFILES=$SOURCE/dotfiles
+export LOCAL_DIR=$DOTFILES/.local
+
 
 hrp='ms1'
 string='string'
@@ -395,12 +400,29 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     done
     kill $lock_if_slow
     pkill python3	# kills tails-screen-locker
+    # TODO dialog should run every time a Bails wallet is created or restored. means bails-wallet should launch bitcoin-qt
+    # TODO this dialog needs improvement
+    text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by donating or contributing.\n\nEnjoy using Bails!" # TODO donation hyperlink
+    bitcoin-qt-wrapper -startupnotify="zenity --info --title='Setup Complete' --text=\"$text\" --width=600 --ok-label=Finish $ICON --icon-name=bails128" &
     wait -f $encryption_info
     return 0
 }
 
 
 ### Begins Execution Here ###
+
+# Kill bitcoin if it is already running
+if pgrep bitcoin-qt; then
+    printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
+    while test -f $DATA_DIR/bitcoind.pid; do
+        kill "$(<$DATA_DIR/bitcoind.pid)"
+        pkill bitcoin
+        sleep 1
+    done
+fi
+if ! pgrep bitcoind; then
+    bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2800)) -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
+fi
 
 name=$(zenity --title='Create wallet' --entry --text='Wallet Name:' --entry-text='Wallet' $ICON)
 [ "$name" ] || name='Wallet'
@@ -462,6 +484,8 @@ else
 fi
 # Clear notifications
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
+# Exit by killing controlling terminal
+gnome-terminal -- pkill gnome-terminal &
 exit 0
 
 # the extended_private_masterkey + user_entropy go thru Scrypt and the output determines master seed
