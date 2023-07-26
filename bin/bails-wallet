@@ -307,7 +307,7 @@ get_share() {
         corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" 1)
         result=$?
         ((result == 0)) && displayed="$(echo "$corrected_string" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
-        ((result == 0)) && zenity --title="Confirm corrected codex32 $string $progress" --text="Typos were detected and automatically corrected!\nDoes this codex32 $string match what you have written down:\n\n<big><big>$displayed</big></big>" --question --no-wrap $ICON && { share="$corrected_string"; break; }
+        ((result == 0)) && zenity --title="Confirm corrected codex32 $string $progress" --text="A typo was detected and automatically corrected!\n\nConfirm this corrected codex32 $string matches what you have written down:\n\n<big><big>$displayed</big></big>" --question --ok-label='Yes, It Matches' --cancel-label="No, It's Wrong" --icon-name=dialog-warning --no-wrap $ICON && { share="$corrected_string"; break; }
         zenity --notification --text="Invalid checksum. Please correct all errors and try again." $ICON
     done
     if [[ " ${share_list[*]} " =~ " ${share,,} " ]]; then
