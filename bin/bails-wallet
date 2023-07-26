@@ -268,7 +268,7 @@ get_codex32_secret() {
         progress="($((1+${#share_list[*]})) of $threshold)"
         echo $progress
         if ((${#share_list[*]} > threshold - 2)); then
-            if zenity --title='Use seed backup passphrase?' --question --text="Do you know the passphrase of this seed backup?\n\nYes restores with the passphrase.\nNo restores with another share." --no-wrap $ICON; then	#TODO check dialog formatting
+            if zenity --title='Use seed backup passphrase?' --text="If you know this seed backup's passphrase click 'Passphrase'?\n\nChoose restore method:" --question $ICON --ok-label='Passphrase' --cancel-label='Another Share' --no-wrap; then
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
                     passphrase="$(python3 -c 'from bails import passphrase
 dialog = passphrase.PassphraseDialog(None, "Enter seed backup passphrase")
@@ -420,6 +420,9 @@ if pgrep bitcoin-qt; then
         sleep 1
     done
 fi
+printf '\033]2;Create wallet\a'
+# Start bitcoind, then launches bails-wallet
+# TODO if there are NO memory contention issues on 4GB PCs on real USB sticks switch to bitcoin-qt
 if ! pgrep bitcoind; then
     bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2800)) -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
 fi
