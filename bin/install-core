@@ -261,12 +261,7 @@ mv --force $BAILS_DIR $LOCAL_DIR/share/
 link_dotfiles
 rm --force "$destination_dir"/wget-log*
 
-printf '\033]2;Create wallet\a'
-# Start bitcoind, then launches bails-wallet
-# TODO if there are NO memory contention issues on 4GB PCs on real USB sticks switch to bitcoin-qt
-# TODO may be able to remove -prune here
-# TODO the bails-wallet command should shutdown bitcoin core (if running) and launch the server and then reload what they had afterwards
-bails-wallet || bitcoin-qt-wrapper
+bails-wallet || { bitcoin-qt-wrapper & }
 
 # Display info about IBD, keeping Tails private and reading material
 if ((versions < 2)); then
