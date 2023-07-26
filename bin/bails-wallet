@@ -108,7 +108,7 @@ tn_grammar() {
 display_confirm() {
     echo "$*"	# TODO remove after testing FIXME
     for codex32_string in ${codex32_array[*]}; do
-        displayed="$(echo "$codex32_string" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
+        displayed="$(echo "${codex32_string^^}" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
         x=$((backups_made++))
         ((x==1)) && backup=' Backup'
         ((x==2)) && backup=' second Backup'
