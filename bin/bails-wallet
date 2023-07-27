@@ -289,7 +289,7 @@ get_share() {
     threshold="${share:3:1}"
     unset share entry
     until input_share; do
-        displayed="$(echo "share" | sed 's/.\{4\}/& /g')"
+        displayed="$(echo "$share" | sed 's/.\{4\}/& /g')"
         zenity --warning --title="Invalid codex32 $string $progress" --text="Please correct the errors in this codex32 $string:\n\n<big><big>$displayed</big></big>." --no-wrap
         corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
