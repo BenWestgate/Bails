@@ -294,8 +294,8 @@ get_share() {
         corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
         pkill zenity
-        ((result == 0)) && displayed="$(echo "$corrected_string" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
-        ((result == 0)) && zenity --title="Confirm corrected codex32 $string $progress" --text="Typos were detected and automatically corrected!\n\nConfirm this corrected codex32 $string <b>exactly</b> matches what you have written down:\n\n<big><big>$displayed</big></big>" --question --ok-label='Yes, It Matches' --cancel-label="No, It's Wrong" --default-cancel --icon-name=dialog-warning --no-wrap $ICON && { share="$corrected_string"; break; }
+        ((result == 0)) && displayed="$(echo "${corrected_string^^}" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
+        ((result == 0)) && zenity --title="Confirm corrected codex32 $string $progress" --text="Typos were detected and automatically corrected!\n\nConfirm this corrected codex32 $string <b>exactly</b> matches what is written down on paper:\n\n<big><big>$displayed</big></big>" --question --ok-label='Yes, It Matches Exactly' --cancel-label="No, It's Wrong" --default-cancel --icon-name=dialog-warning --no-wrap $ICON && { share="$corrected_string"; break; }
         zenity --notification --text="Invalid checksum. Please correct all errors and try again." $ICON
     done
     VALID_IDENTIFIER=$threshold$identifier
