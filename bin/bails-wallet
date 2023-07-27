@@ -197,7 +197,7 @@ if [[ "$share" = "${share^^}" ]]; then
     hrp=${hrp^^}
     identifier="${identifier^^}"
 elif [[ "$share" != "${share,,}" ]]; then
-    zenity --title='Mixed case is not allowed' --error --text="A codex32 $string MUST be entirely uppercase or entirely lowercase." $ICON --ellipsize
+    zenity --title='Mixed case is not allowed' --error --text="A codex32 $string MUST be entirely uppercase or entirely lowercase." $ICON --ellipsize &
     return 1
 else
     hrp="${hrp,,}"
@@ -205,31 +205,31 @@ else
 fi
 
 if [[ "$share" =~ [^a-zA-Z0-9] ]]; then
-    zenity --title='Non-alphanumeric character in '$string --error --text="Codex32 ${string}s contain only letters and numbers." $ICON --ellipsize
+    zenity --title='Non-alphanumeric character in '$string --error --text="Codex32 ${string}s contain only letters and numbers." $ICON --ellipsize &
     return 1
 fi
 
 if [[ "$hrp_in" != "$hrp" ]] ; then
-    zenity --title='Wrong human-readable prefix' --error --text='Codex32 '$string's start with "'$hrp'".\n\nYou typed "'$hrp_in'".' $ICON --ellipsize
+    zenity --title='Wrong human-readable prefix' --error --text='Codex32 '$string's start with "'$hrp'".\n\nYou typed "'$hrp_in'".' $ICON --ellipsize &
     return 1
 fi
 if [[ $threshold = 0 ]]; then
     if [[ ${index,,} != 's' ]]; then
-        zenity --title='Bad share index' --error --text='Share index (9th character) must be "'${hrp:1:1}'" when threshold is "0".\n\nYou typed "'$index'".' $ICON --ellipsize
+        zenity --title='Bad share index' --error --text='Share index (9th character) must be "'${hrp:1:1}'" when threshold is "0".\n\nYou typed "'$index'".' $ICON --ellipsize &
         return 1
     fi
 elif (( threshold < 2 || threshold > 9 )) ; then
-    zenity --title='Bad threshold' --error --text='Threshold parameter (4th character) MUST be a single digit between "2" and "9", or the digit "0".\n\nYou typed "'$threshold'".' $ICON --ellipsize
+    zenity --title='Bad threshold' --error --text='Threshold parameter (4th character) MUST be a single digit between "2" and "9", or the digit "0".\n\nYou typed "'$threshold'".' $ICON --ellipsize &
     return 1
 fi
 if (( ${#share} < 48 )); then
-    zenity --title='Entry too short' --error --text="Codex32 ${string}s are at least 48 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize
+    zenity --title='Entry too short' --error --text="Codex32 ${string}s are at least 48 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize &
     return 1
 elif (( ${#share} > 93 && ${#share} < 96 )); then
-    zenity --title="Illegal codex32 ${string} length" --error --text="Codex32 ${string}s are 48 to 102 characters or 105 to 127 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize
+    zenity --title="Illegal codex32 ${string} length" --error --text="Codex32 ${string}s are 48 to 102 characters or 105 to 127 characters.\n\nYou typed ${#share} characters." $ICON --ellipsize &
     return 1
 elif (( ${#share} != 74 && ${#share} != 48 && ${#share} != 127 )); then
-    zenity --title='Unusual length' --warning --text="Codex32 ${string}s are usually 48, 74 or 127 characters long.\n\nYou typed ${#share} characters." $ICON --ellipsize
+    zenity --title='Unusual length' --warning --text="Codex32 ${string}s are usually 48, 74 or 127 characters long.\n\nYou typed ${#share} characters." $ICON --ellipsize &
 fi
 
 # call checksum verification function here
@@ -290,7 +290,7 @@ get_share() {
     unset share entry
     until input_share; do
         displayed="$(echo "share" | sed 's/.\{4\}/& /g')"
-        zenity --warning --title="Invalid codex32 $string $progress" --text="Please correct the errors in this codex32 $string:\n\n<big><big>$displayed</big></big>."
+        zenity --warning --title="Invalid codex32 $string $progress" --text="Please correct the errors in this codex32 $string:\n\n<big><big>$displayed</big></big>." --no-wrap
         corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
         pkill zenity
