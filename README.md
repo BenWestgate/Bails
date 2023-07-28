@@ -28,53 +28,58 @@ Bitcoin Core provides exclusive privacy features, making it challenging for anyo
 
 [Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
+## Required hardware
+
+Bails requires you to have the following:
+1. Any computer made in the last 15 years
+1. USB stick or memory card with at least 16 GB of capacity
+1. Pen or pencil
+1. Several pieces of paper
+1. Hard surface to write on to avoid leaving an imprint of the secrets
+
 ## How to use this script
 
-   - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
-
-First, open these instructions on another device
+First, open these instructions on another device. 
 
 ![image](https://user-images.githubusercontent.com/73506583/203773811-b157925d-404f-4b91-bd86-6d2e6b454a59.png)
 
-In the next step, you will shut down the computer. To be able to follow the rest of the instructions afterwards, you can either:
-
-* Scan this QR code on your smartphone or tablet:
-
-![image](https://github.com/BenWestgate/Bails/assets/73506583/72496200-fa4f-4ce3-94de-06cc88296e73)
-* Print these instructions on paper.
-
-* Take note of the URL of this page:
-```
-https://github.com/benwestgate/bails#install-steps
-```
+In the next steps, you will shut down the computer. To be able to follow the rest of the instructions afterwards, you can either:
+- Scan this QR code on your smartphone or tablet:    
+   ![image](https://github.com/BenWestgate/Bails/assets/73506583/72496200-fa4f-4ce3-94de-06cc88296e73)
+- Print these instructions on paper.
+- Take note of the URL of this page:
+   ```
+   https://github.com/benwestgate/bails#install-steps
+   ```
 
 ### Install steps
 
-1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or Memory Card (minimum 16 GB capacity).
-   - If you know someone you trust already uses Tails, you can [install Tails by cloning](https://tails.boum.org/install/clone/index.en.html) their Tails.
+1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 16 GB of capacity).
+   - If you someone you know and trust already uses Bails, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
+   - Alternatively, if you someone you know and trust already uses Tails, you can [install Tails by cloning](https://tails.boum.org/install/clone/index.en.html) their Tails.
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
-   - If you installed by cloning Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase.
-1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
-1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html).
+   - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), leave "Create Persistent Storage" disabled and click `Start Tails`. (Bails will help you set up Persistent Storage later with the required features enabled.)
+   - If you installed by cloning from another Bails user, a Persistent Storage will be detected. Enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase and click `Unlock Encryption`.
+1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1) with active internet.
+1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the window appears.
    - If you cloned Bails, skip to step 7.
-1. Open a terminal. Choose <b>Applications ▸ Utilities ▸ Terminal</b>.
+1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
 1.  Type or Paste the following in Terminal, then press Enter:
-```bash
-git clone https://github.com/benwestgate/bails; */b
-```
-![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
-
-7. Follow the Instructions on Screen.
+    ```bash
+    git clone https://github.com/benwestgate/bails; */b
+    ```
+    ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
+1. Follow the instructions on Screen.
 1. You're Done!
    
 #### Bails is [shareware](https://en.wikipedia.org/wiki/Samizdat).
 
-* To share this free open-source software with family and friends: Choose <b>Applications ▸ Office ▸ ₿ails ▸ Clone</b>.
+- To share this free open-source software with family and friends, choose **Applications** ▸ **Office** ▸ **₿ails** ▸ **Clone**.
 
-Why clone Bails?
+#### Why clone Bails?
 
-* Sharing hand-to-hand prevents censorship and surveillance.
-* Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
+- Sharing hand-to-hand prevents censorship and surveillance.
+- Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
 
 ## Advantages and Disadvantages
 
