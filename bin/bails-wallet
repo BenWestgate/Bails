@@ -253,7 +253,7 @@ get_codex32_secret() {
         progress="($((1+${#share_list[*]})) of $threshold)"
         echo $progress
         if ((${#share_list[*]} > threshold - 2)); then
-            if zenity --title='Use seed backup passphrase?' --text="If you know this seed backup's passphrase click 'Passphrase'?\n\nChoose restore method:" --question $ICON --ok-label='Passphrase' --cancel-label='Another Share' --no-wrap; then
+            if zenity --title='Use seed backup passphrase?' --text="If you know this seed backup's passphrase click 'Passphrase', otherwise use 'Another Share'.\n\nChoose restore method:" --question $ICON --ok-label='Passphrase' --cancel-label='Another Share' --no-wrap; then
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
                     passphrase="$(python3 -c 'from bails import passphrase
 dialog = passphrase.PassphraseDialog(None, "Enter seed backup passphrase")
@@ -427,7 +427,7 @@ name=$(zenity --title='Create wallet' --entry --text='Wallet Name:' --entry-text
 [ "$name" ] || name='Wallet'
 choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --column "Menu Item" \
   --text='Do you want to make a new seed, or use an existing seed?\n\nIf this is your first use select "Create a new seed".\n' \
-    TRUE "Create a new seed" FALSE "I already have a seed" FALSE "Import descriptors" $ICON --height=250)
+    TRUE "Create a new seed" FALSE "Recover with codex32 seed backup" FALSE "Import existing wallet descriptors" $ICON --height=250)
 if [ "$choice" == "Create a new seed" ]; then
     until zenity --warning --title='Important: Safeguard your bitcoin' --text='With Bails, you are in control of your bitcoin funds. No one else has access\nto your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks\nand the seed backup we help you create, your bitcoin cannot be recovered.\n\nWe strongly urge you to securely store your Bails USB sticks and backup.' --ok-label='I Understand' --no-wrap $ICON; do zenity --notification --text='You must understand these risks.'; done
     zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nIf a single backup location is compromised, your privacy is not jeopardized.' --width=515 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
