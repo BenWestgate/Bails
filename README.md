@@ -28,16 +28,18 @@ Bitcoin Core provides exclusive privacy features, making it challenging for anyo
 
 [Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
-## Required hardware
+# How to Install
 
-Bails requires you to have the following:
-1. Any computer made in the last 15 years
-1. USB stick or memory card with at least 16 GB of capacity
-1. Pen or pencil
-1. Several pieces of paper
-1. Hard surface to write on to avoid leaving an imprint of the secrets
+## You need
+- **1 USB stick** or memory card with 16 GB minimum capacity
+- **2 GB of RAM** computer made in the last 15 years
+- **A smartphone** to follow the instructions
+- **Pen or pencil**
+- **Couple pieces of paper**
+- **Hard surface** to write on
+- **1 hour in total** 1.3 GB to download, ½ hour to install Tails, ¼ hour to setup Bails
 
-## How to use this script
+## Your steps
 
 First, open these instructions on another device. 
 
@@ -55,12 +57,12 @@ In the next steps, you will shut down the computer. To be able to follow the res
 ### Install steps
 
 1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 16 GB of capacity).
-   - If you someone you know and trust already uses Bails, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
-   - Alternatively, if you someone you know and trust already uses Tails, you can [install Tails by cloning](https://tails.boum.org/install/clone/index.en.html) their Tails.
+   - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
-   - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), leave "Create Persistent Storage" disabled and click `Start Tails`. (Bails will help you set up Persistent Storage later with the required features enabled.)
-   - If you installed by cloning from another Bails user, a Persistent Storage will be detected. Enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase and click `Unlock Encryption`.
-1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1) with active internet.
+   - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), ignore "Create Persistent Storage" and click "Start Tails".
+     - Bails will help you set up Persistent Storage later.
+   - If you installed by cloning from another Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase, click "Unlock Encryption", and then click "Start Tails".
+1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the window appears.
    - If you cloned Bails, skip to step 7.
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
@@ -71,8 +73,9 @@ In the next steps, you will shut down the computer. To be able to follow the res
     ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
 1. Follow the instructions on Screen.
 1. You're Done!
+  - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make Bails even better!
    
-#### Bails is [shareware](https://en.wikipedia.org/wiki/Samizdat).
+### Bails is [shareware](https://en.wikipedia.org/wiki/Samizdat).
 
 - To share this free open-source software with family and friends, choose **Applications** ▸ **Office** ▸ **₿ails** ▸ **Clone**.
 
@@ -83,11 +86,11 @@ In the next steps, you will shut down the computer. To be able to follow the res
 
 ## Advantages and Disadvantages
 
-For a discussion on the pros and cons of using Bails, refer to our [detailed document](Advantages_and_Disadvantages.md). It has insights into the unique features and limitations of the Bails platform.
+For a discussion on the pros and cons of using Bails, refer to the [detailed document](Advantages_and_Disadvantages.md). It describes the unique features and limitations of the Bails platform.
 
 # Support resources
 
-For support join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
+For support and discussion join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
 
 For more reading checkout our [Frequently Asked Questions](FAQ.md).
 
@@ -128,5 +131,4 @@ Find more information on [Codex32](https://secretcodex32.com/index.html) and [BI
 
 ### Compliant with Auditable Bitcoin Wallets Standard
 
-Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md
-) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
+Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
