@@ -28,61 +28,69 @@ Bitcoin Core provides exclusive privacy features, making it challenging for anyo
 
 [Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
-## How to use this script
+# How to Install
 
-   - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
+## You need
+- **1 USB stick** or memory card with 16 GB minimum capacity
+- **2 GB of RAM** computer made in the last 15 years
+- **A smartphone** to follow the instructions
+- **Pen or pencil**
+- **Couple pieces of paper**
+- **Hard surface** to write on
+- **1 hour in total** 1.3 GB to download, ½ hour to install Tails, ¼ hour to setup Bails
 
-First, open these instructions on another device
+## Your steps
+
+First, open these instructions on another device. 
 
 ![image](https://user-images.githubusercontent.com/73506583/203773811-b157925d-404f-4b91-bd86-6d2e6b454a59.png)
 
-In the next step, you will shut down the computer. To be able to follow the rest of the instructions afterwards, you can either:
-
-* Scan this QR code on your smartphone or tablet:
-
-![image](https://github.com/BenWestgate/Bails/assets/73506583/72496200-fa4f-4ce3-94de-06cc88296e73)
-* Print these instructions on paper.
-
-* Take note of the URL of this page:
-```
-https://github.com/benwestgate/bails#install-steps
-```
+In the next steps, you will shut down the computer. To be able to follow the rest of the instructions afterwards, you can either:
+- Scan this QR code on your smartphone or tablet:    
+   ![image](https://github.com/BenWestgate/Bails/assets/73506583/72496200-fa4f-4ce3-94de-06cc88296e73)
+- Print these instructions on paper.
+- Take note of the URL of this page:
+   ```
+   https://github.com/benwestgate/bails#install-steps
+   ```
 
 ### Install steps
 
-1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or Memory Card (minimum 16 GB capacity).
-   - If you know someone you trust already uses Tails, you can [install Tails by cloning](https://tails.boum.org/install/clone/index.en.html) their Tails.
+1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 16 GB of capacity).
+   - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
-   - If you installed by cloning Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase.
+   - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), ignore "Create Persistent Storage" and click "Start Tails".
+     - Bails will help you set up Persistent Storage later.
+   - If you installed by cloning from another Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase, click "Unlock Encryption", and then click "Start Tails".
 1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
-1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html).
+1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the window appears.
    - If you cloned Bails, skip to step 7.
-1. Open a terminal. Choose <b>Applications ▸ Utilities ▸ Terminal</b>.
+1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
 1.  Type or Paste the following in Terminal, then press Enter:
-```bash
-git clone https://github.com/benwestgate/bails; */b
-```
-![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
-
-7. Follow the Instructions on Screen.
+    ```bash
+    git clone https://github.com/benwestgate/bails; */b
+    ```
+    ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
+1. Follow the instructions on Screen.
 1. You're Done!
+  - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make Bails even better!
    
-#### Bails is [shareware](https://en.wikipedia.org/wiki/Samizdat).
+### Bails is [shareware](https://en.wikipedia.org/wiki/Samizdat).
 
-* To share this free open-source software with family and friends: Choose <b>Applications ▸ Office ▸ ₿ails ▸ Clone</b>.
+- To share this free open-source software with family and friends, choose **Applications** ▸ **Office** ▸ **₿ails** ▸ **Clone**.
 
-Why clone Bails?
+#### Why clone Bails?
 
-* Sharing hand-to-hand prevents censorship and surveillance.
-* Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
+- Sharing hand-to-hand prevents censorship and surveillance.
+- Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
 
 ## Advantages and Disadvantages
 
-For a discussion on the pros and cons of using Bails, refer to our [detailed document](Advantages_and_Disadvantages.md). It has insights into the unique features and limitations of the Bails platform.
+For a discussion on the pros and cons of using Bails, refer to the [detailed document](Advantages_and_Disadvantages.md). It describes the unique features and limitations of the Bails platform.
 
 # Support resources
 
-For support join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
+For support and discussion join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
 
 For more reading checkout our [Frequently Asked Questions](FAQ.md).
 
@@ -123,5 +131,4 @@ Find more information on [Codex32](https://secretcodex32.com/index.html) and [BI
 
 ### Compliant with Auditable Bitcoin Wallets Standard
 
-Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md
-) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
+Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
