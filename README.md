@@ -92,6 +92,8 @@ For a discussion on the pros and cons of using Bails, refer to the [detailed doc
 
 For support and discussion join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
 
+Or join us on IRC (Libera) #bitcoin-core-on-tails, or contact Ben Westgate by email `benwestgate@protonmail.com`.
+
 For more reading checkout our [Frequently Asked Questions](FAQ.md).
 
 ## Source Code Headers
