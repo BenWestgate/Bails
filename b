@@ -31,5 +31,15 @@
 # Re-run will allow creating a new wallet and codex32 backup
 # Otherwise it mostly skips already completed tasks
 
+# Check for root.
+if [[ $(id -u) = "0" ]]; then
+  echo "
+YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
+YOU WILL BE PROMPTED FOR THE ADMIN PASS WHEN NEEDED.
+"
+  read -p "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS amnesia. "
+  exit 0
+fi
+
 export BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 $BAILS_DIR/bin/install-core
