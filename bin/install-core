@@ -135,7 +135,8 @@ wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accep
 clear -x
 
 # Setup Persistent Storage if it is not already
-[ -b '/dev/mapper/TailsData_unlocked' ] || { printf '\033]2;Setup the Persistent Storage\a'; persistent-setup; }
+printf '\033]2;Setup the Persistent Storage\a'
+persistent-setup
 
 # Installs Bails to Persistent Storage
 rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
