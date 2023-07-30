@@ -60,7 +60,7 @@ else:
             fi
             unset entropy
             # Change user account password to Persistent Storage passphrase for spaced repetition practice.
-            printf "$existing_passphrase\n$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
+            echo -e "$existing_passphrase\n$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
         fi
             zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase to continue." $ICON
     done
