@@ -45,6 +45,8 @@ export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 
+BITCOIN_ADDRESS_COMPLETED=	#TODO add these
+
 
 hrp='ms1'
 string='string'
@@ -150,7 +152,7 @@ entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your
 hrp_in="${entry:0:3}"
 data="${entry:3}"
 if [[ "$share" == *' '* ]]; then
-    zenity --warning --title="Important: Do not copy and paste" --text="WARNING: You <b>MUST</b> write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>\n\nPlease take this step seriously to ensure the safety of your funds.!" --no-wrap $ICON
+    zenity --warning --title="Important: Do not copy and paste" --text="WARNING: You MUST write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>\n\nTake this step seriously to ensure the safety of your funds." --no-wrap $ICON
     unset share data
     return 1
 fi
@@ -269,7 +271,7 @@ print(codex32_kdf_share)')
                 if (( $(python3 -c 'from codex32 import ms32
 ms32.identifier_verify_checksum("'$(recover_seed)'")') )); then
                     ((${#share_list[*]} > 2)) && plur='s'
-                    zenity --notification --text="The passphrase you entered does not match your share$plur.\nPlease double-check your passphrase and try again." "$ICON" --no-wrap
+                    zenity --notification --text="The passphrase you entered does not match your share$plur.\nDouble-check your passphrase and try again." "$ICON" --no-wrap
                     unset passphrase share_list[$(( threshold - 1 ))]
                 fi
             else
@@ -290,17 +292,17 @@ get_share() {
     unset share entry
     until input_share; do
         displayed="$(echo "$share" | sed 's/.\{4\}/& /g')"
-        zenity --warning --title="Invalid codex32 $string $progress" --text="Please correct the errors in your invalid codex32 $string:\n\n<big><big>$displayed</big></big>" --no-wrap &
+        zenity --warning --title="Invalid codex32 $string $progress" --text="Correct the errors in your invalid codex32 $string:\n\n<big><big>$displayed</big></big>" --no-wrap &
         corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
         pkill zenity
         ((result == 0)) && displayed="$(echo "${corrected_string^^}" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
         ((result == 0)) && zenity --title="Confirm corrected codex32 $string $progress" --text="Typos were detected and automatically corrected!\n\nConfirm this corrected codex32 $string <b>exactly</b> matches what is written down on paper:\n\n<big><big>$displayed</big></big>" --question --ok-label='Yes, It Matches Exactly' --cancel-label="No, It's Wrong" --default-cancel --icon-name=dialog-warning --no-wrap $ICON && { share="$corrected_string"; break; }
-        zenity --notification --text="Invalid checksum. Please correct all errors and try again." $ICON
+        zenity --notification --text="Invalid checksum. Correct all errors and try again." $ICON
     done
     VALID_IDENTIFIER=$threshold$identifier
     if [[ " ${share_list[*]} " =~ " ${share,,} " ]]; then
-        zenity --notification --text="You have input the same share twice.\nPlease input a unique share." $ICON
+        zenity --notification --text="You have input the same share twice.\nYou must input a unique share." $ICON
         get_share
     fi
     share_list+=(${share,,})
@@ -374,7 +376,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     } & encryption_info=$!
     {
         zenity --notification --text='Importing your wallet. This may take several minutes...\nLock the screen if you need to walk away from the PC.' $ICON
-        sleep 4
+        sleep 10
         tails-screen-locker
         # Clear notifications
         dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
@@ -395,7 +397,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     # TODO dialog should run every time a Bails wallet is created or restored. means bails-wallet should launch bitcoin-qt
     # TODO this dialog needs improvement
     stop_bitcoin "d"
-    text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by donating or contributing.\n\nEnjoy using Bails!" # TODO donation hyperlink
+    text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite in a secure and confidential locations, away from prying eyes and potential theft and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:'$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!" # TODO donation hyperlink
     bitcoin-qt-wrapper -startupnotify="zenity --info --title='Setup Complete' --text=\"$text\" --width=600 --ok-label=Finish $ICON --icon-name=bails128" &
     wait -f $encryption_info
     return 0
@@ -419,27 +421,29 @@ stop_bitcoin()
 
 # Kill bitcoin-qt if it is already running
 stop_bitcoin "-qt"
-printf '\033]2;Create wallet!\a'
+printf '\033]2;Create wallet\a'
 
 # Start bitcoind if it is not already running
 if ! pgrep bitcoind; then
     bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2800)) -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
     stop_bitcoin "d"
+    gtk-launch bitcoin-qt &
     exit 0
 fi
-
 
 choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --column "Menu Item" \
   --text='Do you want to make a new seed, or use an existing seed?\n\nIf this is your first use select "Create a new seed".\n' \
     TRUE "Create a new seed" FALSE "Recover with codex32 seed backup" FALSE "Import existing wallet descriptors" $ICON --height=250)
 if [ "$choice" == "Create a new seed" ]; then
-    until zenity --warning --title='Important: Safeguard your bitcoin' --text='With Bails, you are in control of your bitcoin funds. No one else has access\nto your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks\nand the seed backup we help you create, your bitcoin cannot be recovered.\n\nWe strongly urge you to securely store your Bails USB sticks and paper backup.' --ok-label='I Understand' --no-wrap $ICON; do zenity --notification --text='You must understand these risks.'; done
-    zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nIf a single backup location is compromised, your privacy is not jeopardized.' --width=515 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
+    until zenity --warning --title='Important: Safeguard your bitcoin' --text="With Bails, you are in control of your bitcoin funds. No one else has access to your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks and the paper seed backup we help you create, your bitcoin cannot be recovered.\n\nSafekeeping is your responsibility." --ok-label='I Understand' $ICON --width=515; do zenity --notification --text='You must understand these risks.'; done
+    user_entropy="$(if zenity --question --width=515 --title="Optional: Enhance seed randomness" \
+        --cancel-label='Skip' --ok-label='Add Randomness' --text="Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\nIf paranoid, you can provide additional randomness to your seed, though it is not required. This step protects your seed against a backdoored random number generator.\n\n\Do you want to add extra randomness to your seed?" $ICON;
+        then
+            until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-sided dice 50+ times or\nflip a coin 128+ times. A fast way is mashing the keyboard." $ICON; do : ; done;
+        fi)"
+    zenity --info --title='Create your paper seed backup' --text="Your seed has been created. Bails will now help you create a paper seed backup.\n\nYour paper backup acts as a lifeline, granting access to your funds if something happens to your digital devices." --width=515 --ok-label="Let's Begin" $ICON
+    zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nIf a single backup location is compromised, your privacy is not jeopardized.' --no-wrap --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     ask_t_and_n
-    user_entropy="$(if zenity --icon-name=die --question --width=400 --title="Help randomize new seed" \
-        --cancel-label='Skip' --ok-label='Add Randomness' --text="• Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\n• Bitcoin Core will generate a random seed, but it is good to provide extra randomness if paranoid.\n\n• This is unnecessary but it will protect against a backdoored random number generator.\n\n• You can not hurt your seed's randomness no matter what data you provide, it can only help." $ICON;
-        then until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-side dice 50+ times or\nflip a coin 128+ times.  A fast way is mashing the keyboard." $ICON; do : ; done; fi)"
-
     (( threshold > 1 )) && set_passphrase 'Set seed backup passphrase'
     user_entropy+="$threshold$locations$passphrase"
     zenity --notification --text="Generating your codex32 backup..." $ICON
@@ -449,8 +453,8 @@ if [ "$choice" == "Create a new seed" ]; then
     trap 'rm -rf -- "$temp"' EXIT
     shred --remove $temp	# delete file to make room for wallet
     key="$(head -c64 /dev/urandom | base64 --wrap=0)"	# 64 byte wallet encryption key to crypto-shred the wallet
-    $CLI createwallet $temp false false "$key"
-    $CLI -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
+    $CLI -rpcwait createwallet $temp false false "$key"
+    $CLI -rpcwait -rpcwallet=$temp walletpassphrase "$key" 60	# unlocks generator wallet for 1 minute
     $CLI -rpcwait # waits for the RPC server to respond to ensure we get a private masterkey FIXME this needs to be used w/ the commands
     extended_private_masterkey="$($CLI -rpcwallet=$temp listdescriptors "true" | grep --max-count=1 -oP '(?<=tr\().*?(?=/)')"
     $CLI -rpcwallet=$temp walletlock
