@@ -136,7 +136,7 @@ clear -x
 
 # Setup Persistent Storage if it is not already
 printf '\033]2;Setup the Persistent Storage\a'
-persistent-setup
+persistent-setup || systemctl reboot
 
 # Installs Bails to Persistent Storage
 rsync --recursive --remove-source-files $BAILS_DIR/{bin,lib,share,state} $LOCAL_DIR
