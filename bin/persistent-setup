@@ -36,11 +36,11 @@ if [ -b '/dev/mapper/TailsData_unlocked' ]; then
     # Check for existing Persistent Storage passphrase if setup never completed
     [ -f $HOME/.local/share/*/b ] || while true; do
         existing_passphrase="$(python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter your existing Persistent Storage passphrase")
-if box.passphrase:
-    print(box.passphrase)
-else:
-    print("")' 2>/dev/null)"
+    box = set_pass.SimplePassphraseDialog(None,"Enter your existing Persistent Storage passphrase")
+    if box.passphrase:
+        print(box.passphrase)
+    else:
+        print("")' 2>/dev/null)"
         if [ -z "$existing_passphrase" ]; then
             zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." $ICON
         else
