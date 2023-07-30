@@ -150,7 +150,7 @@ entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your
 hrp_in="${entry:0:3}"
 data="${entry:3}"
 if [[ "$share" == *' '* ]]; then
-    zenity --warning --title="Do not copy and paste" --text="You MUST write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>!" --no-wrap $ICON
+    zenity --warning --title="Warning: Do not copy and paste" --text="You <b>MUST</b> write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>!" --no-wrap $ICON
     unset share data
     return 1
 fi
@@ -290,7 +290,7 @@ get_share() {
     unset share entry
     until input_share; do
         displayed="$(echo "$share" | sed 's/.\{4\}/& /g')"
-        zenity --warning --title="Invalid codex32 $string $progress" --text="Please correct the errors in this codex32 $string:\n\n<big><big>$displayed</big></big>" --no-wrap &
+        zenity --warning --title="Invalid codex32 $string $progress" --text="Please correct the errors in your invalid codex32 $string:\n\n<big><big>$displayed</big></big>" --no-wrap &
         corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
         pkill zenity
