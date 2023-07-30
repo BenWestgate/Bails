@@ -256,10 +256,10 @@ fi
 ) &> /dev/null
 
 # Cleanup
-rm -Rf $BAILS_DIR/{bin,lib,share,state,config} "$destination_dir"/{download,*.tmp}
-mv --force $BAILS_DIR $LOCAL_DIR/share/
+rm -Rf $BAILS_DIR/{bin,lib,share,state,config} "$destination_dir"/{download,*.tmp,wget-log*}
+rsync -r --remove-source-files $BAILS_DIR $LOCAL_DIR/share/
+rm -rf $BAILS_DIR
 link_dotfiles
-rm --force "$destination_dir"/wget-log*
 
 bails-wallet || { bitcoin-qt-wrapper & }
 
