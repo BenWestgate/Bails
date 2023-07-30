@@ -150,7 +150,7 @@ entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your
 hrp_in="${entry:0:3}"
 data="${entry:3}"
 if [[ "$share" == *' '* ]]; then
-    zenity --warning --title="Warning: Do not copy and paste" --text="You <b>MUST</b> write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>!" --no-wrap $ICON
+    zenity --warning --title="Important: Do not copy and paste" --text="WARNING: You <b>MUST</b> write down your codex32 $string on paper!\n\nFailure to create a paper backup may result in <b>LOSING ALL YOUR BITCOINS</b>\n\nPlease take this step seriously to ensure the safety of your funds.!" --no-wrap $ICON
     unset share data
     return 1
 fi
@@ -429,7 +429,7 @@ choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --c
   --text='Do you want to make a new seed, or use an existing seed?\n\nIf this is your first use select "Create a new seed".\n' \
     TRUE "Create a new seed" FALSE "Recover with codex32 seed backup" FALSE "Import existing wallet descriptors" $ICON --height=250)
 if [ "$choice" == "Create a new seed" ]; then
-    until zenity --warning --title='Important: Safeguard your bitcoin' --text='With Bails, you are in control of your bitcoin funds. No one else has access\nto your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks\nand the seed backup we help you create, your bitcoin cannot be recovered.\n\nWe strongly urge you to securely store your Bails USB sticks and backup.' --ok-label='I Understand' --no-wrap $ICON; do zenity --notification --text='You must understand these risks.'; done
+    until zenity --warning --title='Important: Safeguard your bitcoin' --text='With Bails, you are in control of your bitcoin funds. No one else has access\nto your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks\nand the seed backup we help you create, your bitcoin cannot be recovered.\n\nWe strongly urge you to securely store your Bails USB sticks and paper backup.' --ok-label='I Understand' --no-wrap $ICON; do zenity --notification --text='You must understand these risks.'; done
     zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nIf a single backup location is compromised, your privacy is not jeopardized.' --width=515 --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     ask_t_and_n
     user_entropy="$(if zenity --icon-name=die --question --width=400 --title="Help randomize new seed" \
