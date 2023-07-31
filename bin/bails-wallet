@@ -480,7 +480,7 @@ else:
         # warn: this was not a $string you wrote down earlier! and reject the share for recovery
     #fi	#TODO this should be an until loop so they can fail repeatedly and re-call get_codex32_secret.
     restore_wallet '"now"' true		# scans blockchain from current time
-elif [ "$choice" == "I already have a seed" ]; then
+elif [ "$choice" == "Recover with codex32 seed backup" ]; then
     get_codex32_secret
     restore_wallet 1689105447 true	# scans blockchain from Jul 11, 2023 for transactions
 elif [ "$choice" == "Import descriptors" ]; then
