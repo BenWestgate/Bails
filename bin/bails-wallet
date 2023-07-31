@@ -398,8 +398,9 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     # TODO this dialog needs improvement
     wait -f $encryption_info
     stop_bitcoin "d"
-    text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite in a secure and confidential locations, away from prying eyes and potential theft and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:'$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!" # TODO donation hyperlink
+    text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite in a secure and confidential locations, away from prying eyes and potential theft and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
     bitcoin-qt-wrapper -startupnotify="zenity --info --title='Wallet setup complete' --text=\"$text\" --width=600 --ok-label=Finish $ICON --icon-name=bails128" &
+
     return 0
 }
 
