@@ -16,9 +16,31 @@ This would be appropriate for up to half a year's expenses. Life savings need mu
 
 You don't need any storage free on your test laptop. You just need a 16+GB USB stick, the whole thing runs from that USB and leaves your laptop storage untouched.
 
+## What type of flash drive should I get?
+
+Bails should work ok with any flash drive if your computer has 8+ GB of memory, however Tails will start up and Bitcoin Core will sync much faster if the drive has high random read performance. And Bitcoin Core can flush and shutdown much faster if the drive has high random write performance. This performance is not commonly advertised on the package so here are some models that are top performers, using one of these could easily reduce your startup and initial sync time by 50-90%:
+
+- [Corsair Flash Voyager GTX USB](https://amzn.to/47joyLm)
+- [SanDisc Extreme Pro USB](https://amzn.to/3KngiA0)
+- [Samsung FIT Plus USB](https://amzn.to/3OjRmdY)
+- [Samsung Type-C USB](https://amzn.to/3rTpQfM)
+- [Samsung BAR Plus USB](https://amzn.to/45hxyyR)
+- [Transcend Jetflash 920 USB](https://amzn.to/3KqNh6z)
+- [Transcend Jetflash 930C USB](https://amzn.to/3q8pu4B)
+- [SanDisc Extreme microSD](https://amzn.to/3KraGF7)
+- [SAMSUNG PRO Plus microSD](https://amzn.to/3Qn9INK)
+- [SAMSUNG EVO Select microSD](https://amzn.to/3Km8sXd)
+- [Silicon Power Superior microSD](https://amzn.to/3OHoBZZ)
+- [Transcend ESD310C Portable SSD](https://amzn.to/44U2OUv)
+
+1 TB of storage is needed to not prune the block chain. This allows your node to fully support the network serving all historical blocks, but it doesn't personally help you unless you have a 10 year old wallet to restore.
+Choosing 16GB especially and 32GB capacity may reduce performance on 8+ GB RAM machines. What USB capacity optimizes performance for a given computer memory size is an open issue, bigger capacity equals faster if your machine has high RAM. 512GB will prune once, but should cause no significant slowdown as the blockchain is 540GB currently. 256GB will prune a couple times which will Not hurt performance at all on 4GB and 8GB laptops, but possibly slow down 16GB. 128GB will probably not hurt performance any on 4GB laptops. 8GB laptops are known to sync on budget 64GB USB drives in under half a week if that helps you choose. Once you are synced, every size will perform equally well. Although 16GB are close to running out of space and may need to be upgraded in the future.
+
+The links above are Amazon Affiliate links so purchasing thru one helps fund Bails development.
+
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
-No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command.
+No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you must restart, delete your persistent storage and start over.
 
 # During Setup
 
