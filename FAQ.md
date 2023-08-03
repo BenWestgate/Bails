@@ -22,9 +22,9 @@ Bails should work ok with any flash drive if your computer has 8+ GB of memory, 
 
 - [Corsair Flash Voyager GTX USB](https://amzn.to/47joyLm)
 - [SanDisc Extreme Pro USB](https://amzn.to/3KngiA0)
-- [Samsung FIT Plus USB](https://amzn.to/3OjRmdY)
-- [Samsung Type-C USB](https://amzn.to/3rTpQfM)
-- [Samsung BAR Plus USB](https://amzn.to/45hxyyR)
+- [SAMSUNG FIT Plus USB](https://amzn.to/3OjRmdY)
+- [SAMSUNG Type-C USB](https://amzn.to/3rTpQfM)
+- [SAMSUNG BAR Plus USB](https://amzn.to/45hxyyR)
 - [Transcend Jetflash 920 USB](https://amzn.to/3KqNh6z)
 - [Transcend Jetflash 930C USB](https://amzn.to/3q8pu4B)
 - [SanDisc Extreme microSD](https://amzn.to/3KraGF7)
@@ -32,6 +32,7 @@ Bails should work ok with any flash drive if your computer has 8+ GB of memory, 
 - [SAMSUNG EVO Select microSD](https://amzn.to/3Km8sXd)
 - [Silicon Power Superior microSD](https://amzn.to/3OHoBZZ)
 - [Transcend ESD310C Portable SSD](https://amzn.to/44U2OUv)
+- [SSK SSD Solid State Flash Drive](https://amzn.to/3Qpgoer)
 
 1 TB of storage is needed to not prune the block chain. This allows your node to fully support the network serving all historical blocks, but it doesn't personally help you unless you have a 10 year old wallet to restore.
 Choosing 16GB especially and 32GB capacity may reduce performance on 8+ GB RAM machines. What USB capacity optimizes performance for a given computer memory size is an open issue, bigger capacity equals faster if your machine has high RAM. 512GB will prune once, but should cause no significant slowdown as the blockchain is 540GB currently. 256GB will prune a couple times which will Not hurt performance at all on 4GB and 8GB laptops, but possibly slow down 16GB. 128GB will probably not hurt performance any on 4GB laptops. 8GB laptops are known to sync on budget 64GB USB drives in under half a week if that helps you choose. Once you are synced, every size will perform equally well. Although 16GB are close to running out of space and may need to be upgraded in the future.
