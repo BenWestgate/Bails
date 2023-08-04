@@ -22,6 +22,7 @@ Bails should work ok with any flash drive if your computer has 8+ GB of memory, 
 
 - [Kingston DataTraveler Max Type-C USB](https://amzn.to/3OpMELw)
 - [Kingston DataTraveler Max Type-A USB](https://amzn.to/3Yie7DL)
+- [PNY PRO Elite V2 USB](https://amzn.to/43QbJ8p)
 - [Corsair Flash Voyager GTX USB](https://amzn.to/47joyLm)
 - [SanDisc Extreme Pro USB](https://amzn.to/3KngiA0)
 - [SAMSUNG FIT Plus USB](https://amzn.to/3OjRmdY)
