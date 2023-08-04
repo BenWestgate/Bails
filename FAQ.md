@@ -21,7 +21,7 @@ You don't need any storage free on your test laptop. You just need a 16+GB USB s
 Bails should work ok with any flash drive if your computer has 8+ GB of memory, however Tails will start up and Bitcoin Core will sync much faster if the drive has high random read performance. And Bitcoin Core can flush and shutdown much faster if the drive has high random write performance. This performance is not commonly advertised on the package so here are some models that are top performers, using one of these could easily reduce your startup and initial sync time by 50-90%:
 
 - [Kingston DataTraveler Max Type-C USB](https://amzn.to/3OpMELw)
-- [Kingston DataTraveler Max Type-A USB]((https://amzn.to/3Yie7DL))
+- [Kingston DataTraveler Max Type-A USB]((https://amzn.to/3Yie7DL)
 - [Corsair Flash Voyager GTX USB](https://amzn.to/47joyLm)
 - [SanDisc Extreme Pro USB](https://amzn.to/3KngiA0)
 - [SAMSUNG FIT Plus USB](https://amzn.to/3OjRmdY)
