@@ -20,22 +20,33 @@ You don't need any storage free on your test laptop. You just need a 16+GB USB s
 
 Bails should work ok with any flash drive if your computer has 8+ GB of memory, however Tails will start up and Bitcoin Core will sync much faster if the drive has high random read performance. And Bitcoin Core can flush and shutdown much faster if the drive has high random write performance. This performance is not commonly advertised on the package so here are some models that are top performers, using one of these could easily reduce your startup and initial sync time by 50-90%:
 
+Flash drives with SSD-like performance:
 - [Kingston DataTraveler Max Type-C USB](https://amzn.to/3OpMELw)
 - [Kingston DataTraveler Max Type-A USB](https://amzn.to/3Yie7DL)
 - [PNY PRO Elite V2 USB](https://amzn.to/43QbJ8p)
 - [Corsair Flash Voyager GTX USB](https://amzn.to/47joyLm)
+- [HP x796w USB](https://amzn.to/3Qq7SeU)
+- [Lexar JumpDrive P30 USB](https://amzn.to/3KnHNcz)
+
+Portable SSDs aka Flash drives with SSD-like performance:
+- [Transcend ESD310C Portable SSD](https://amzn.to/44U2OUv)
+- [Netac Portable SSD Dual Interface](https://amzn.to/3DOD4wR)
+- [SSK SSD Solid State Flash Drive](https://amzn.to/3Qpgoer)
+
+Flash drives with at least double the typical random read & write performance (may be cheaper)
 - [SanDisc Extreme Pro USB](https://amzn.to/3KngiA0)
 - [SAMSUNG FIT Plus USB](https://amzn.to/3OjRmdY)
 - [SAMSUNG Type-C USB](https://amzn.to/3rTpQfM)
 - [SAMSUNG BAR Plus USB](https://amzn.to/45hxyyR)
 - [Transcend Jetflash 920 USB](https://amzn.to/3KqNh6z)
 - [Transcend Jetflash 930C USB](https://amzn.to/3q8pu4B)
+
+MicroSD memory cards with at least double the typical USB stick's random read performance (cheaper)
 - [SanDisc Extreme microSD](https://amzn.to/3KraGF7)
 - [SAMSUNG PRO Plus microSD](https://amzn.to/3Qn9INK)
 - [SAMSUNG EVO Select microSD](https://amzn.to/3Km8sXd)
 - [Silicon Power Superior microSD](https://amzn.to/3OHoBZZ)
-- [Transcend ESD310C Portable SSD](https://amzn.to/44U2OUv)
-- [SSK SSD Solid State Flash Drive](https://amzn.to/3Qpgoer)
+
 
 1 TB of storage is needed to not prune the block chain. This allows your node to fully support the network serving all historical blocks, but it doesn't personally help you unless you have a 10 year old wallet to restore.
 Choosing 16GB especially and 32GB capacity may reduce performance on 8+ GB RAM machines. What USB capacity optimizes performance for a given computer memory size is an open issue, bigger capacity equals faster if your machine has high RAM. 512GB will prune once, but should cause no significant slowdown as the blockchain is 540GB currently. 256GB will prune a couple times which will Not hurt performance at all on 4GB and 8GB laptops, but possibly slow down 16GB. 128GB will probably not hurt performance any on 4GB laptops. 8GB laptops are known to sync on budget 64GB USB drives in under half a week if that helps you choose. Once you are synced, every size will perform equally well. Although 16GB are close to running out of space and may need to be upgraded in the future.
