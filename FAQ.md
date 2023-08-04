@@ -55,7 +55,7 @@ The links above are Amazon Affiliate links so purchasing thru one helps fund Bai
 
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
-No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you must restart, delete your persistent storage and start over.
+No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
 
 # During Setup
 
