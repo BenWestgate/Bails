@@ -423,13 +423,21 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     done
     kill $lock_if_slow
     pkill python3	# kills tails-screen-locker
-    # TODO dialog should run every time a Bails wallet is created or restored. means bails-wallet should launch bitcoin-qt
-    # TODO this dialog needs improvement
+    python3 -c "
+import subprocess
+import json
+wallets = json.loads(subprocess.run(['bitcoin-cli','listwallets'], capture_output=True).stdout)
+for wallet in wallets:
+    balance = subprocess.run(['bitcoin-cli','-rpcwallet='+wallet,'getbalance'], capture_output=True).stdout
+    if balance != b'0.00000000\n':
+        exit(1)"
+    funded=$?
     wait -f $encryption_info
+    # TODO this dialog needs improvement
     zenity --info --title='Wallet setup complete' --width=600 --ok-label=Finish $ICON --icon-name=bails128 \
         --text="Congratulations! You have created a wallet.\n\nBe sure to distribute your backups offsite in a secure and confidential locations, away from prying eyes and potential theft and destroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
     stop_bitcoin "d"
-    bitcoin-qt-wrapper
+    ((funded)) && bitcoin-qt-wrapper || gtk-launch bitcoin-qt # don't ask for donations if no wallets are funded.
 
     return 0
 }
