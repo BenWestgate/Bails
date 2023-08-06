@@ -332,7 +332,7 @@ get_share() {
         ((result == 0)) && zenity --title="Confirm corrected codex32 $string $progress" --text="Typos were detected and automatically corrected!\n\nConfirm this corrected codex32 $string <b>exactly</b> matches what is written down on paper:\n\n<big><big>$displayed</big></big>" --question --ok-label='Yes, It Matches Exactly' --cancel-label="No, It's Wrong" --default-cancel --icon-name=dialog-warning --no-wrap $ICON && { share="$corrected_string"; break; }
         zenity --notification --text="Invalid checksum. Correct all errors and try again." $ICON
     done
-    VALID_IDENTIFIER=$threshold$identifier
+    VALID_IDENTIFIER=${share:3:5}
     if [[ " ${share_list[*]} " =~ " ${share,,} " ]]; then
         zenity --notification --text="You have input the same share twice.\nYou must input a unique share." $ICON
         get_share
