@@ -123,11 +123,6 @@ display_confirm() {
         until [ "$codex32_string" == "$share" ]; do
             zenity --title="Create new a seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
             choice="Create a new seed"
-            if [ "$codex32_string" == $codex32_array ]; then
-                zenity --info --title="Codex32 $string entry instructions"\
-                       --text="You may have written down your codex32 $string in 4 character blocks to make it easier to read, but don't include spaces when entering the $string now." \
-                       --ok-label="Got it, Proceed" $ICON --width=631
-            fi
             input_share
             if [ "$codex32_string" == "$share" ]; then
                 zenity --info --title="Confirmed $string ${progress:1:-1}" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." $ICON --width=400 --icon-name=checkbox-checked
@@ -137,7 +132,7 @@ display_confirm() {
             fi
         done
     done
-    unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_array codex32_string share displayed x backup backups_made progress string
+    unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_array codex32_string share displayed x backup backups_made progress string warned
     zenity --info --title='Seed backup complete' --text='You will now restore your new seed with your codex32 backup before your wallet is created.' --ok-label='Restore Seed' $ICON --width=320 --icon-name=starred
 }
 
@@ -175,6 +170,9 @@ else
     [ "$string" ] || string="string"
 fi
 unset corr
+[ "$warned" ] || zenity --info --title="Codex32 $string entry instructions"\
+   --text="You may have written down your codex32 $string in 4 character blocks to make it easier to read, but don't include spaces when entering the $string now." \
+   --ok-label="Got it, Proceed" $ICON --width=631 && warned=true
 [ "$share" ] && { title="Re-enter your codex32 $string"; corr=' corrected'; }
 entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
 [ "$entry" ] || return 1
@@ -282,7 +280,6 @@ get_codex32_secret() {
     while ((${#share_list[*]} < threshold)); do
         echo ${#share_list[*]} $threshold
         progress="($((1+${#share_list[*]})) of $threshold)"
-        echo $progress
         if ((${#share_list[*]} > threshold - 2)); then
             if zenity --title='Use seed backup passphrase?' --text="If you know this seed backup's passphrase click 'Passphrase',\notherwise use 'Another Share'.\n\nChoose restore method:" --question $ICON --ok-label='Passphrase' --cancel-label='Another Share' --no-wrap; then
                 until [ "$passphrase" ]; do # TODO FIXME this can easily be written in one python3 block
