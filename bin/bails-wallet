@@ -121,7 +121,7 @@ display_confirm() {
         progress="($backups_made of $locations)"
         unset share
         until [ "$codex32_string" == "$share" ]; do
-            zenity --title="Create wallet: Seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
+            zenity --title="Create new a seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
             choice="Create a new seed"
             if [ "$codex32_string" == $codex32_array ]; then
                 zenity --info --title="Codex32 $string entry instructions"\
@@ -246,7 +246,7 @@ ms32.verify_checksum("'$share'")')
 }
 
 get_codex32_secret() {
-    printf '\033]2;Restore wallet\a'
+    printf '\033]2;Recover with codex32 seed backup\a'
     [ "$threshold" ] || get_share
     if [[ ${index,,} = 's' ]]; then
         codex32_secret="$share"
@@ -441,12 +441,14 @@ choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --c
   --text='Do you want to make a new seed, or use an existing seed?\n\nIf this is your first use select "Create a new seed".\n' \
     TRUE "Create a new seed" FALSE "Recover with codex32 seed backup" FALSE "Import existing wallet descriptors" $ICON --height=250)
 if [ "$choice" == "Create a new seed" ]; then
+    printf '\033]2;Create a new seed\a'
     until zenity --warning --title='Important: Safeguard your bitcoin' --text="With Bails, you are in control of your bitcoin funds. No one else has access to your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks and the paper seed backup we help you create, your bitcoin cannot be recovered.\n\nSafekeeping is your responsibility." --ok-label='I Understand' $ICON --width=515; do zenity --notification --text='You must understand these risks.'; done
     user_entropy="$(if zenity --question --width=515 --title="Optional: Enhance seed randomness" \
         --cancel-label='Skip' --ok-label='Add Randomness' --text="Your seed is a secret that allows spending your bitcoin as long as you have access to it.\n\nIf paranoid, you can provide additional randomness to your seed, though it is not required. This step protects your seed against a backdoored random number generator.\n\n\Do you want to add extra randomness to your seed?" $ICON;
         then
             until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-sided dice 50+ times or\nflip a coin 128+ times. A fast way is mashing the keyboard." $ICON; do : ; done;
         fi)"
+    printf '\033]2;Create a new seed backup\a'
     zenity --info --title='Create your paper seed backup' --text="Your seed has been created. Bails will now help you create a paper seed backup.\n\nYour paper backup acts as a lifeline, granting access to your funds if something happens to your digital devices." --width=515 --ok-label="Let's Begin" $ICON
     zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and transacting amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and transacting amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be lost or found by a bad actor.\nIf a single backup location is compromised, your privacy is not jeopardized.' --no-wrap --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && { locations=4; threshold=3; } || { locations=2; threshold=2; }
     ask_t_and_n
