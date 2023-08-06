@@ -22,8 +22,8 @@
 ###############################################################################
 # wraps bitcoin-qt to sometimes ask for donations.
 ###############################################################################
-BITCOIN_ADDRESS_BENEVOLENT=	#TODO add these
-BITCOIN_ADDRESS_SELFISH=	#TODO add these
+BITCOIN_ADDRESS_BENEVOLENT=	# TODO add these
+BITCOIN_ADDRESS_SELFISH=	# TODO add these
 export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 
