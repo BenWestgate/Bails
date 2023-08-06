@@ -133,7 +133,7 @@ display_confirm() {
                 zenity --info --title="Confirmed $string ${progress:1:-1}" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." $ICON --width=400 --icon-name=checkbox-checked
                 unset entry
             else
-                zenity zenity --warning --title="Try again" --text="The supplied $string does not match $string ${progress:1: -1}." --ellipsize --timeout=3 $ICON
+                display_errors_dialog "$share" "$codex32_string"
             fi
         done
     done
@@ -141,6 +141,29 @@ display_confirm() {
     zenity --info --title='Seed backup complete' --text='You will now restore your new seed with your codex32 backup before your wallet is created.' --ok-label='Restore Seed' $ICON --width=320 --icon-name=starred
 }
 
+
+display_errors_dialog() {
+  entered="$1"
+  correct="$2"
+
+  # Build the formatted strings
+  formatted_entered=$(echo "$entered" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')
+  formatted_correct=$(echo "$correct" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')
+
+  # Identify error locations and highlight them in red using Zenity markup
+  highlighted_entered=""
+  for ((i=0; i<${#formatted_entered}; i++)); do
+    if [[ "${formatted_entered:$i:1}" != "${formatted_correct:$i:1}" ]]; then
+      highlighted_entered+="<span foreground='red'>${formatted_entered:$i:1}</span>"
+    else
+      highlighted_entered+="${formatted_entered:$i:1}"
+    fi
+  done
+
+  zenity --warning --title="Error in entered codex32 $string" \
+    --text="The entered codex32 $string contains errors:\n\n<big><big>$highlighted_entered</big></big>" \
+    --no-wrap --timeout=5
+}
 
 # Accepts and processes user share input, performs error correction
 input_share() {	# TODO FIXME refactor at 100 lines, this may be better as a separate file
