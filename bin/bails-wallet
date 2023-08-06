@@ -126,7 +126,7 @@ display_confirm() {
             if [ "$codex32_string" == $codex32_array ]; then
                 zenity --info --title="Codex32 $string entry instructions"\
                        --text="You may have written down your codex32 $string in 4 character blocks to make it easier to read, but don't include spaces when entering the $string now." \
-                       --ok-label="Got it, Proceed" $ICON
+                       --ok-label="Got it, Proceed" $ICON --width=631
             fi
             input_share
             if [ "$codex32_string" == "$share" ]; then
