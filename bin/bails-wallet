@@ -111,7 +111,8 @@ tn_grammar() {
 display_confirm() {
     echo "$*"	# TODO remove after testing FIXME
     for codex32_string in ${codex32_array[*]}; do
-        displayed="$(echo "${codex32_string^^}" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
+        # adds 3per em space every 4 chars and in the center (two groups of six groups of 4 characters
+        displayed="$(echo "${codex32_string^^}" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')"
         x=$((backups_made++))
         ((x==1)) && backup=' Backup'
         ((x==2)) && backup=' second Backup'
@@ -122,6 +123,10 @@ display_confirm() {
         until [ "$codex32_string" == "$share" ]; do
             zenity --title="Create wallet: Seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
             choice="Create a new seed"
+            if [ "$codex32_string" == $codex32_array ]; then
+                zenity --info --title="Codex32 $string entry instructions"\
+                       --text="You may have written down your codex32 $string in 4 character blocks to make it easier to read, but don't include spaces when entering the $string now." \
+                       --ok-label="Got it, Proceed" $ICON
             input_share
             if [ "$codex32_string" == "$share" ]; then
                 zenity --info --title="Confirmed $string ${progress:1:-1}" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." $ICON --width=400 --icon-name=checkbox-checked
@@ -291,12 +296,12 @@ get_share() {
     threshold="${share:3:1}"
     unset share entry
     until input_share; do
-        displayed="$(echo "$share" | sed 's/.\{4\}/& /g')"
+        displayed="$(echo "$share" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')"
         zenity --warning --title="Invalid codex32 $string $progress" --text="Correct the errors in your invalid codex32 $string:\n\n<big><big>$displayed</big></big>" --no-wrap &
         corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
         pkill zenity
-        ((result == 0)) && displayed="$(echo "${corrected_string^^}" | sed 's/.\{4\}/& /g')"	# adds 3per em space every 4 chars
+        ((result == 0)) && displayed="$(echo "${corrected_string^^}" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')"
         ((result == 0)) && zenity --title="Confirm corrected codex32 $string $progress" --text="Typos were detected and automatically corrected!\n\nConfirm this corrected codex32 $string <b>exactly</b> matches what is written down on paper:\n\n<big><big>$displayed</big></big>" --question --ok-label='Yes, It Matches Exactly' --cancel-label="No, It's Wrong" --default-cancel --icon-name=dialog-warning --no-wrap $ICON && { share="$corrected_string"; break; }
         zenity --notification --text="Invalid checksum. Correct all errors and try again." $ICON
     done
