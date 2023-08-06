@@ -157,7 +157,7 @@ display_errors_dialog() {
 
   zenity --warning --title="Error in entered codex32 $string" \
     --text="The entered codex32 $string contains errors:\n\n<big><big>$highlighted_entered</big></big>" \
-    --no-wrap --timeout=5
+    --no-wrap --timeout=5 --ok-label='Try Again'
 }
 
 # Accepts and processes user share input, performs error correction
