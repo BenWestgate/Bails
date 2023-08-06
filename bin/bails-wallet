@@ -127,6 +127,7 @@ display_confirm() {
                 zenity --info --title="Codex32 $string entry instructions"\
                        --text="You may have written down your codex32 $string in 4 character blocks to make it easier to read, but don't include spaces when entering the $string now." \
                        --ok-label="Got it, Proceed" $ICON
+            fi
             input_share
             if [ "$codex32_string" == "$share" ]; then
                 zenity --info --title="Confirmed $string ${progress:1:-1}" --text="Codex32 $string $backups_made of $locations successfully confirmed.\n\nYou will store this paper $string in a secure place near your$backup Bails USB: either under lock and key or hidden where only you or heirs will find." $ICON --width=400 --icon-name=checkbox-checked
