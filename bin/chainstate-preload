@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 #
 #################################################
-# autostart: Preloads the chainstate into memory while waiting to connect to Tor.
+# autostart: Preloads the chainstate into memory while waiting to connect to peers.
 # quits as soon as progress is made, RAM is full or chainstate is loaded.
 #################################################
 
@@ -29,9 +29,9 @@ total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 
 cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin
 if ! grep 'progress=0.999' debug.log; then
-    sleep 10
+    sleep 30
     notify-send --urgency=low 'Lock your screen before stepping away from the PC.' 'Synchronizing Bitcoin Core may take a while...' --icon=system-lock-screen
-    tails-screen-locker &>/dev/null
+    tails-screen-locker
     # Clear notifications
     dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 else
@@ -39,26 +39,28 @@ else
     notify-send --urgency=low 'Always lock your screen before stepping away from the PC.' --icon=system-lock-screen
     tails-screen-locker
     dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
-fi &>/dev/null & 
-{
+fi &>/dev/null &
 
 until grep 'progress=0.999' debug.log; do
     cat chainstate/* &> /dev/null & full_speed=$!
     # exit when free memory <10% total memory
-    (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )) && {
+    if (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )); then
+        kill $full_speed &>/dev/null
         {
-            zenity --notification --text='Your computer is low on memory.\nAdditional RAM might signficantly improve sync performance.' $ICON
+            zenity --notification --text='Your computer is low on memory.\nAdditional RAM might significantly improve sync performance.' $ICON
             sleep 60
             # Clear notifications
             dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
         } &
-    }
+        exit 1
+    fi
     sleep $((++i))
-    # exit if cat command finishes and can't be killed. Means entire chainstate is preloaded.
-    kill $full_speed &>/dev/null || {
+    # exit if cat command finishes and can't be killed. Means entire chainstate was preloaded.
+    if ! kill $full_speed &>/dev/null; then
         zenity --notification --text='Bitcoin chainstate preloaded to RAM' $ICON
         sleep 20
         # Clear notifications
         dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
-    }
+        exit 0
+    fi
 done
