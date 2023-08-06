@@ -39,7 +39,7 @@
 
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
-export CLI="bitcoin-cli -rpcport=17600"
+export CLI="bitcoin-cli"    # rpcport=17600 must be set in bitcoin.conf for Tails
 export SOURCE='/live/persistence/TailsData_unlocked'
 export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export DOTFILES=$SOURCE/dotfiles
@@ -47,11 +47,9 @@ export LOCAL_DIR=$DOTFILES/.local
 
 BITCOIN_ADDRESS_COMPLETED=	#TODO add these
 
-
 hrp='ms1'
 string='string'
 secret_or=' secret or'
-
 
 ###################
 # Sets or Resets passphrase with confirmation
@@ -384,8 +382,7 @@ modify_backup() {
 #######################################
 
 restore_wallet() {
-    echo $codex32_secret	#TODO remove after testing
-    identifier=[${codex32_secret:3:5}]
+    identifier=[${codex32_secret:4:4}]
     xprv=$(python3 -c 'from codex32 import ms32
 from electrum import bip32
 y = bip32.BIP32Node
@@ -429,9 +426,10 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     # TODO dialog should run every time a Bails wallet is created or restored. means bails-wallet should launch bitcoin-qt
     # TODO this dialog needs improvement
     wait -f $encryption_info
+    zenity --info --title='Wallet setup complete' --width=600 --ok-label=Finish $ICON --icon-name=bails128 \
+        --text="Congratulations! You have created a wallet.\n\nBe sure to distribute your backups offsite in a secure and confidential locations, away from prying eyes and potential theft and destroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
     stop_bitcoin "d"
-    text="Congratulations! You have completed the initial setup process for Bails.\n\nBe sure to distribute your backups offsite in a secure and confidential locations, away from prying eyes and potential theft and destroy any written copies of your passphrase before storing significant funds.\n\nYou are now ready to start managing your Bitcoin securely and independently.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
-    bitcoin-qt-wrapper -startupnotify="zenity --info --title='Wallet setup complete' --text=\"$text\" --width=600 --ok-label=Finish $ICON --icon-name=bails128" &
+    bitcoin-qt-wrapper
 
     return 0
 }
@@ -458,7 +456,7 @@ printf '\033]2;Create wallet\a'
 
 # Start bitcoind if it is not already running
 if ! pgrep bitcoind; then
-    bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2800)) -maxmempool=5 -rpcport=17600 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
+    bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2800)) -maxmempool=5 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
     stop_bitcoin "d"
     exit 0
 fi
