@@ -167,12 +167,12 @@ if [ "$choice" == "Create a new seed" ]; then
     warning="You may have written down your codex32 $string"
 else
     title="Enter a codex32$secret_or share $progress"
-    warning="A codex32$secret_or share may have been written down"
+    warning="A codex32 $string may have been written down"
     [ "$entry" ] || entry="$hrp$threshold$identifier"
     [ "$string" ] || string="string"
 fi
 unset corr
-[ "$warned" ] || zenity --info --title="Codex32 $string entry instructions" \
+[ "$warned" ] || zenity --info --title="Codex32 entry instructions" \
     --text="$warning in 4 character blocks\nto make it easier to read, but don't include spaces when entering it now." \
     --ok-label="Got it, Proceed" $ICON --no-wrap && warned=true
 [ "$share" ] && { title="Re-enter your codex32 $string"; corr=' corrected'; }
