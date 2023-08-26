@@ -75,7 +75,7 @@ In the next steps, you will shut down the computer. To be able to follow the res
     ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
 1. Follow the instructions on Screen.
 1. You're Done!
-  - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make Bails even better!
+   - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make Bails even better!
    
 ### Bails is [shareware](https://en.wikipedia.org/wiki/Samizdat).
 
@@ -92,9 +92,9 @@ For a discussion on the pros and cons of using Bails, refer to the [detailed doc
 
 # Support resources
 
-For support and discussion join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA).
+For support and discussion join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA) or [telegram channel](https://t.me/bails_support).
 
-Or join us on IRC (Libera) #bitcoin-core-on-tails, or contact Ben Westgate by email `benwestgate@protonmail.com`.
+To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 For more reading checkout our [Frequently Asked Questions](FAQ.md).
 
