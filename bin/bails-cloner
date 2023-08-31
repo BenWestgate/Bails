@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# clones will: tar everything private: .bitcoin/wallets, .electrum, gpg
+# priv keys, everything in ~/Persistent Bails didn't put there. After
+# tar, it will assymmetrically encrypt with a random key with the
+# public key dervived from the user's passphrase+share, this must be
+# stretched as well as the original luks encryption was. Then the
+# public key and original files are moved to /tmp, a
+# first-run-clone.desktop is added to autostart, the device is backed
+# up using a temporary random password creating a clone, then the
+# originals are restored and the temporary password is displayed for
+# the clone's owner to photograph or write down. Files then restored.
+
+gnome-terminal --wait --title="Log of Persistent Storage Clone" --hide-menubar \
+        -- tails-installer --clone
