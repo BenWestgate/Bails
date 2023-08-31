@@ -26,48 +26,74 @@
 
 #################################################
 
+# Set environment variables
 export WAYLAND_DISPLAY=""
-export LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local/
-export BAILS_DIR=$LOCAL_DIR
-#device=$(lsblk --inverse --path --raw --output=NAME /dev/mapper/TailsData_unlocked | sed -n 3p)
-#USB=$(lsblk --inverse --path --raw --output=NAME /dev/mapper/TailsData_unlocked | tail -1)
-response=$(zenity --question --window-icon=$LOCAL_DIR/share/icons/bails128.png --icon-name=media-removable --title='Bails menu' --text='Clone - Create a blank Bails node for a friend.\n\nBackup - Duplicate your Bails node.' --extra-button='Clone' --extra-button='Backup' --extra-button='Settings' --extra-button='Help' --switch --width=350)
-[ "$response" == '' ] && exit
-# TODO clones will: tar everything private: .bitcoin/wallets, .electrum, gpg priv keys, everything
-# TODO in ~/Persistent Bails didn't put there. After tar, it will assymmetrically encrypt with a
-# TODO public key dervived from the user's passphrase+share, this must be stretched as well as the
-# TODO original luks encryption was. Then the public key and original files are moved to /tmp, a
-# TODO first-run-clone.desktop is added to autostart, the device is backed up using a temporary
-# TODO random password creating a clone, then the originals are restored and the temporary password
-# TODO is displayed for the clone's owner to photograph or write down. Then restore the originals.
-[ "$response" == 'Clone' ] && zenity --info --text='Coming soon'
-[ "$response" == 'Backup' ] && /usr/bin/gnome-terminal --wait --title 'Log of Persistent Storage Backup' --hide-menubar -- tails-installer --clone
-[ "$response" == 'Help' ] && help=$(zenity --window-icon=$LOCAL/share/icons/bails128.png --question --icon-name=help-faq-symbolic --title='Help Menu' --text='' --extra-button='Online Help' --extra-button='Donate' --extra-button='Report a Bug' --extra-button='About' --switch)
-[ "$help" == 'Donate' ] && exit # xdg-open bitcoin:BC1Q9KYUJH8NRRJ2VWW3MA8TERWCRM9WUA24MH7TU3?label=Donation%20to%20Bitcoin%20Core%20on%20Tails #FIXME change address
-[ "$help" == 'Report a Bug' ] && tor-browser https://github.com/BenWestgate/Bails/issues
-[ "$help" == 'About' ] && zenity --info --window-icon=$LOCAL_DIR/share/icons/bails128.png --title='About Bails' --icon-name=bails128 --text='Bails version v0.3.0\n\nCopyright (C) 2023 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href="https://twitter.com/BenWestgate_">https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href="https://github.com/BenWestgate/Bails">https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href="https://opensource.org/licenses/MIT">https://opensource.org/licenses/MIT</a>' --width=650
-[ "$help" == 'Online Help' ] && xdg-open https://bitcoin-core-on-tails.slack.com/ && xdg-open
-[ "$response" == 'Settings' ] && setting=$(zenity --window-icon=$LOCAL_DIR/share/icons/bails128.png --question --icon-name=org.gnome.Settings --title=Settings --text='Coming soon\n\nConfigure Bitcoin Core on Tails' --extra-button='Update Bitcoin Core' --extra-button='Update Bails' --extra-button='Passphrase' --extra-button='Sync Faster' --switch --width=300)
-[ "$setting" == 'Update Bitcoin Core' ] && /usr/bin/gnome-terminal --title 'Updating Bitcoin Core...' --hide-menubar -- $LOCAL_DIR/bin/install-core
-[ "$setting" == 'Update Bails' ] && /usr/bin/gnome-terminal --title 'Updating Bails...' --hide-menubar -- rm -rf bails
-git clone https://github.com/benwestgate/bails --depth=1
-bails/b
-[ "$setting" == 'Passphrase' ] && pass_mgmt=$(zenity --window-icon=$LOCAL_DIR/share/icons/bails128.png --question --icon-name=dialog-password --title='Passphrase settings' --text='Coming soon\n\n<b>WARNING:</b> <span foreground="red">The most secure way to change or remove a compromised or weak passphrase is to erase the device AND use physical destruction. This includes all backups. The old password may still be around, potentially for a very long time and can be used to access your bitcoin data with forensic tools.</span>\n\nBefore erasing and destroying, you should create a new backup set using a new stronger password, such as one from KeePassXC.\n\nIf you fear fallback commands have been stolen, but not enough to learn your passphrase, you can make a new set and destroy the old.' --extra-button='New Fallback' --extra-button='Change Passphrase' --switch --width=500)
-[ "$pass_mgmt" == 'Change Passphrase' ] && {
-    tps-frontend-wrapper &
-    zenity --notification --text='You must click Change Passphrase... to change passphrase'
-}
-[ "$setting" == 'Sync Faster' ] && zenity --window-icon=$LOCAL_DIR/share/icons/bails128.png --title='Sync Faster' --list --text='Coming soon - placeholder.' --column='' --column='Method' --checklist FALSE 'Aggressive pruning (Use more RAM on small storage)' FALSE 'RAM Sync (Fastest but unsafe shutdown loses progress)' --width=433 --height=210
+export LOCAL_DIR="/live/persistence/TailsData_unlocked/dotfiles/.local/"
+export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
+export BAILS_DIR="$LOCAL_DIR"
 
-# TODO verify that this actually does something, and self-edit this file to have the box "checked" TRUE if it succeeds.
-[ "$sync" == 'RAM Sync (Fastest but unsafe shutdown loses progress)' ] && {
-    rsync -a --verbose --progress $HOME/Persistent/.bitcoin/chainstate /tmp/.bitcoin
-    bitcoin-qt --nodebuglog --datadir=/tmp/.bitcoin --blocksdir=$HOME/Persistent/.bitcoin/blocks --walletdir=$HOME/Persistent/.bitcoin/wallets
-    # utilization of the tmpfs
-    # df --output=pcent /tmp | tail -1
-    # utilization of the memory overall
-    # echo $((100*$(grep Available /proc/meminfo | sed s/[^0-9]//g) / $(grep MemTotal /proc/meminfo | sed s/[^0-9]//g) ))
-    # have a terminal window titled RAMSync that displays ram and tmpfs used, and that when closed. Closes bitcoin core and copies the RAMdisk contents back to persistent storage.
-    rsync -a --del --verbose --progress /tmp/.bitcoin $HOME/Persistent/.bitcoin/chainstate
+onlynet_onion() {
+zenity --question --title='Network Privacy' --width=420 --text='Bails offers different settings for connecting to the Bitcoin network. By default, Bails connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
+
+Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity and can be less stable if you have limited Tor peers.' --icon-name=tor-connection --default-cancel
+
+if [ $? = 0 ]; then
+    # User chose to enable -onlynet=onion
+    sed --in-place 's/#onlynet=<net>/onlynet=onion/' $DATA_DIR/bitcoin.conf
+    zenity --info --title='Network settings updated' --text='You have chosen to connect exclusively to Tor (onion) peers.
+
+Your network settings have been updated.' --width=420 --icon-name=tor-connected-symbolic
+
+else
+    # User chose default network settings
+    sed --in-place 's/onlynet=onion/#onlynet=<net>/' $DATA_DIR/bitcoin.conf
+    zenity --info --title='Default network settings' --text='You have chosen to keep the default network settings.
+Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.' --width=420 --icon-name=tor-disconnected-symbolic
+
+fi
 }
-gtk-launch bails.desktop
+
+
+# Display menu and get user response
+response=$(zenity --question --window-icon="$LOCAL_DIR/share/icons/bails128.png" \
+    --icon-name="bails128" --title="Bails menu" \
+    --text="Wallet - Create a new seed backup or recover an existing seed.
+
+Clone - Create a synchronized Bails node for a friend.
+
+Backup - Duplicate your Bails node to protect data." \
+    --extra-button="Wallet" --extra-button="Clone" --extra-button="Backup" --extra-button="Settings" --extra-button="Help" \
+    --switch --width=350)
+
+# Menu options handling
+case "$response" in
+"Wallet") bails-wallet ;;
+"Clone") bails-clone ;;
+"Backup") bails-backup ;;
+"Settings") setting=$(zenity --window-icon="$LOCAL_DIR/share/icons/bails128.png" --question \
+        --icon-name=org.gnome.Settings --title=Settings --text="Coming soon\n\nConfigure Bitcoin Core on Tails" \
+        --extra-button="Update Bitcoin Core" --extra-button="Update Bails" --extra-button="Network Privacy" \
+        --switch --width=300) ;;
+"Help") help=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
+        --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
+        --extra-button="Online Help" --extra-button="Donate" --extra-button="Report a Bug" \
+        --extra-button="About" --switch) ;;
+"") exit ;;
+esac
+
+case "$help" in
+    "Donate") xdg-open bitcoin: ;; # FIXME change address
+    "Report a Bug") tor-browser https://github.com/BenWestgate/Bails/issues ;;
+    "About") zenity --info --window-icon="$LOCAL_DIR/share/icons/bails128.png" \
+        --title="About Bails" --icon-name=bails128 --text="Bails version v0.5.0\n\nCopyright (C) 2023 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>" --width=650 ;;
+    "Online Help") xdg-open https://bitcoin-core-on-tails.slack.com/ && \
+        xdg-open https://t.me/bails_support ;;
+esac
+
+case "$setting" in
+        "Update Bitcoin Core") /usr/bin/gnome-terminal --title="Updating Bitcoin Core..." --hide-menubar \
+            -- "$LOCAL_DIR/bin/install-core" ;;
+        "Update Bails") /usr/bin/gnome-terminal --title="Updating Bails..." --hide-menubar \
+            -- rm -rf bails && git clone https://github.com/benwestgate/bails --depth=1 && bails/b ;;
+        "Network Privacy") onlynet_onion ;;
+esac
