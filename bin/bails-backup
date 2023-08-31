@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Backup is simply a tails-backup command but it adds a file to the
+# autostart directory that welcomes the user to their backup. Asks if
+# they are testing the backup or recovering. If recovering, it will
+# delete the autostart and prompt to update with the cloud. If testing
+# it will keep the autostart and warn for backups older than a year
+# that they should be tested at least once a year, ideally twice or
+# quarterly. The file is removed after backup is complete.
+
+
+
+gnome-terminal --wait --title="Log of Persistent Storage Backup" --hide-menubar \
+        -- tails-installer --clone
