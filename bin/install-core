@@ -244,8 +244,6 @@ rsync --remove-source-files -recursive "$BAILS_DIR"/config/ $DOTFILES/.config
     "prune": "'$prune_MiB'"
 }' > $DATA_DIR/settings.json
 
-# Add $HOME/.local/bin to PATH at startup	https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-#TODO Raise Tails Issue: "Distributions should ensure this directory shows up in the UNIX $PATH environment variable, at an appropriate place."
 (
 grep --count 'export PATH="${PATH}:${HOME}/.local/bin"' $HOME/.bashrc &> /dev/null || \
   echo 'export PATH="${PATH}:${HOME}/.local/bin"' | tee -a $HOME/.bashrc
@@ -263,7 +261,13 @@ rsync -r --remove-source-files $BAILS_DIR $LOCAL_DIR/share/
 rm -rf $BAILS_DIR
 link_dotfiles
 
-bails-wallet || { bitcoin-qt-wrapper & }
+if [ -z "$(ls -A $DATA_DIR/wallets)" ]; then
+    bails-wallet
+fi
+bitcoin-qt-wrapper &
+
+# Clear notifications
+dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 
 # Display info about IBD, keeping Tails private and reading material
 if ((versions < 2)); then
@@ -272,9 +276,6 @@ if ((versions < 2)); then
     zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --width=552 --text='Bitcoin Core will begin syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
     zenity --info --title='Bitcoin Core info' --icon-name=bitcoin128 "$ICON" --width=552 --text="<b>Setup</b>\n---------------------\nBitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently $assumed_blockchain_size gigabytes.\n\nDepending on your computer and network speed, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronization is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)"
 fi &>/dev/null &
-
-# Clear notifications
-dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 
 # Exit by killing controlling terminal
 gnome-terminal -- pkill gnome-terminal &
