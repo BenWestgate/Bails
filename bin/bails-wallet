@@ -199,7 +199,7 @@ input_share() { # TODO FIXME refactor at 100 lines, this may be better as a sepa
     }
     entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
     if [ "$?" -ne 0 ]; then
-        if ((${#share_list[*]} > 0)); then
+        if ((${#share_list[*]} > 0)) || [ "$choice" == "Create a new seed" ]; then
             zenity --question --title="Warning: Progress will be lost" \
                 --text="All progress will be lost, are you sure you want to quit?" \
                 --ok-label="Quit" --cancel-label="Continue" --icon-name=dialog-warning $ICON
