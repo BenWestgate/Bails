@@ -192,11 +192,13 @@ input_share() { # TODO FIXME refactor at 100 lines, this may be better as a sepa
     [ "$warned" ] || zenity --info --title="Codex32 entry instructions" \
         --text="$warning in 4 character blocks\nto make it easier to read, but don't include spaces when entering it now." \
         --ok-label="Got it, Proceed" $ICON --no-wrap && warned=true
+    [ "$?" -ne 0 ] && exit 1
     [ "$share" ] && {
         title="Re-enter your codex32 $string"
         corr=' corrected'
     }
     entry="$(zenity --title="$title" --entry --entry-text="$entry" --text="Type your$corr codex32 $string:" --width=650 $ICON)"
+    [ "$?" -ne 0 ] && exit 1
     [ "$entry" ] || return 1
     hrp_in="${entry:0:3}"
     data="${entry:3}"
