@@ -53,7 +53,9 @@ Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers, pr
 fi
 }
 
-
+if [ -d "$HOME/.local/bin" ] ; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
 # Display menu and get user response
 response=$(zenity --question --window-icon="$LOCAL_DIR/share/icons/bails128.png" \
     --icon-name="bails128" --title="Bails menu" \
