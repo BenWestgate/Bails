@@ -1,0 +1,62 @@
+#!/bin/bash
+# decrypt-vault: Decrypt image file and load wallets inside
+
+set -eu
+set -o pipefail
+
+export TEXTDOMAIN='tails'
+wallet=
+
+
+pinentry_auth() {
+    # For consistency, let's use the same text in our prompt as GVFS
+    # when unlocking volumes from e.g. nautilus.
+    # shellcheck disable=SC3037
+    dialog="$(/bin/echo -en 'Enter a passphrase to unlock the volume\nThe passphrase is needed to access encrypted data on %s.\n')"
+    gettext --domain gvfs -s "${dialog}" | (
+        read -r title
+        desc="$(cat)"
+        # shellcheck disable=SC2059
+        ( pinentry-gnome3 | sed -n 's/^D //p' ) <<EOF
+SETPROMPT ${title}
+SETDESC $(printf "${desc}" "${your_device}")
+GETPIN
+EOF
+    )
+}
+
+
+your_device=$1
+loop_device=$(udisksctl loop-setup -f "$your_device" | grep -o '/dev/loop[0-9]*')
+uuid="$(udisksctl info -b "$loop_device" | awk '/IdUUID/ {print $2}')"
+sleep 0.5
+for _ in 1 2 3; do
+    if ! mount | grep "$uuid on /media/amnesia" &>/dev/null; then
+        res="$(
+            pinentry_auth | \
+            LANG=C gio mount --device "$loop_device" 2>&1 || :
+        )"
+    fi
+    if mnt_point="$(mount | grep "$uuid on /media/amnesia" | cut -d' ' -f3)"; then
+        wallet=${mnt_point/'/media/amnesia/'/}
+        # TODO fix bitcoin.conf so -datadir and -rpcport aren't needed
+        # TODO make sure as much works as possible if Persistent disabled
+        bitcoin-cli -datadir=/home/amnesia/Persistent/.bitcoin loadwallet "$wallet" false || \
+        if pgrep bitcoin-qt &>/dev/null; then
+            notify-send 'ERROR: Wallet "'"$wallet"'" is already loaded.' --icon=error
+            break
+        else
+            bitcoin-qt-wrapper -wallet="$wallet" &
+        fi
+        notify-send 'Wallet "'"$wallet"'" has been loaded.' --icon=bitcoin128
+        break
+    elif echo "${res}" | grep -q 'Password dialog aborted'; then
+        break
+    fi
+done
+
+if (($(lsblk $loop_device | wc -l) < 3)); then
+    udisksctl loop-delete -b $loop_device
+fi
+[ -z "$wallet" ] && exit 0
+exit 1
