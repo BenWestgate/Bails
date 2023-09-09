@@ -457,7 +457,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
             checksum=$($CLI getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
             # unlocks wallet 1 minute
             $CLI -rpcwallet="$name" walletpassphrase "$passphrase" 60
-            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc #${checksum:1:8}'", "active": true, "timestamp": '$1', "internal": '$internal' }]'
+            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc'#'${checksum:1:8}'", "active": true, "timestamp": '$1', "internal": '$internal' }]'
             $CLI -rpcwallet="$name" walletlock
         done
     done
@@ -475,7 +475,7 @@ for wallet in wallets:
     wait -f $encryption_info
     # TODO this dialog needs improvement
     zenity --info --title='Wallet setup complete' --width=500 --ok-label=Finish $ICON --icon-name=bails128 \
-        --text="Congratulations! You have created a wallet.\n\nBe sure to distribute your backups offsite in a secure and confidential locations, away from prying eyes and potential theft. Also, destroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
+        --text="Congratulations! You have created a wallet.\n\nBe sure to distribute your backups offsite in secure and confidential locations, away from prying eyes and potential theft. Also, destroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
     stop_bitcoin "d"
     ((funded)) && bitcoin-qt-wrapper || gtk-launch bitcoin-qt # don't ask for donations if no wallets are funded.
 
