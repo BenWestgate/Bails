@@ -25,16 +25,18 @@
 ###############################################################################
 
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
+DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
+INSTALL_DIR="$DOTFILES/.local/share/bitcoin-core"
 
 # Display welcome message
-[ -f $HOME/.local/share/*/b ] || zenity --title='Welcome to Bails' --info \
+[ -d $INSTALL_DIR ] || zenity --title='Welcome to Bails' --info \
     --text="Thank you for choosing Bails, a self-custodial Bitcoin Core wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' $ICON --icon-name=bails128
 
 # check for already unlocked Persistent Storage
 if [ -b '/dev/mapper/TailsData_unlocked' ]; then
     # Check for existing Persistent Storage passphrase if setup never completed
-    [ -f $HOME/.local/share/*/b ] || while true; do
+    [ -d $INSTALL_DIR ] || while true; do
         existing_passphrase="$(python3 -c 'from bails import set_pass
 box = set_pass.SimplePassphraseDialog(None,"Enter your existing Persistent Storage passphrase")
 if box.passphrase:
@@ -106,7 +108,7 @@ else:
     done
 
 fi
-[ -f $HOME/.local/share/*/b ] || {
+[ -d $INSTALL_DIR ] || {
     # Spaced repetition training loop
     spaced-repetition &
 
