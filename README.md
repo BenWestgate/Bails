@@ -65,7 +65,7 @@ In the next steps, you will shut down the computer. To be able to follow the res
      - Bails will help you set up Persistent Storage later.
    - If you installed by cloning from another Bails, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase, click "Unlock Encryption", and then click "Start Tails".
 1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
-1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the window appears.
+1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the _Tor Connection_ window appears.
    - If you cloned Bails, skip to step 7.
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
 1.  Type or Paste the following in Terminal, then press Enter:
