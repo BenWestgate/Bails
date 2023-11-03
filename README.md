@@ -31,7 +31,7 @@ Bitcoin Core provides exclusive privacy features, making it challenging for anyo
 # How to Install
 
 ## You need
-- **1 USB stick** or memory card, 16 GB minimum
+- **1 USB stick** or memory card, 32 GB minimum
     - If you need a flash drive, see our [recommended flash drives](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#what-type-of-flash-drive-should-i-get) for top speed
 - **2 GB of RAM** computer made in the last 15 years
     - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save time
@@ -58,7 +58,7 @@ In the next steps, you will shut down the computer. To be able to follow the res
 
 ### Install steps
 
-1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 16 GB of capacity).
+1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 32 GB of capacity).
    - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
    - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), ignore "Create Persistent Storage" and click "Start Tails".
