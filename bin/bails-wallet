@@ -452,7 +452,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     lock_if_slow=$!
     for change in 0 1; do
         ((change)) && internal=true || internal=false
-        path="'/0'/0'/$change/*)"
+        path="h/0h/0h/$change/*)"
         for desc in "pkh($xprv/44$path" "sh(wpkh($xprv/49$path)" "wpkh($xprv/84$path" "tr($xprv/86$path"; do
             checksum=$($CLI getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
             # unlocks wallet 1 minute
