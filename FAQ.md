@@ -14,7 +14,7 @@ This would be appropriate for up to half a year's expenses. Life savings need mu
 
 ## How much storage do I need on my test laptop?
 
-You don't need any storage free on your test laptop. You just need a 16+ GB USB stick, the whole thing runs from that USB and leaves your laptop storage untouched.
+You don't need any storage free on your test laptop. You just need a 32+ GB USB stick, the whole thing runs from that USB and leaves your laptop storage untouched.
 
 ## What type of USB stick should I get?
 
@@ -49,7 +49,7 @@ MicroSD memory cards with at least double the typical USB stick's random read pe
 
 
 1 TB of storage is needed to not prune the block chain. This allows your node to fully support the network serving all historical blocks, but it doesn't personally help you unless you have a 10 year old wallet to restore.
-Choosing 16 GB especially and 32 GB capacity may reduce performance on 8+ GB RAM machines. What USB stick capacity optimizes performance for a given computer memory size is an open issue, bigger capacity equals faster if your machine has high RAM. 512GB will prune once, but should cause no significant slowdown as the blockchain is 540GB currently. 256GB will prune a couple times which will Not hurt performance at all on 4GB and 8GB laptops, but possibly slow down 16GB. 128GB will probably not hurt performance any on 4GB laptops. 8GB laptops are known to sync on budget 64 GB USB sticks in under half a week if that helps you choose. Once you are synced, every size will perform equally well. Although 16GB are close to running out of space and may need to be upgraded in the future.
+Choosing 32 GB capacity may reduce performance on 8+ GB RAM machines. What USB stick capacity optimizes performance for a given computer memory size is an open issue, bigger capacity equals faster if your machine has high RAM. 512GB will prune once, but should cause no significant slowdown as the blockchain is 540GB currently. 256GB will prune a couple times which will Not hurt performance at all on 4GB and 8GB laptops, but may slow down 16GB RAM. 128GB will probably not hurt performance any on 4GB laptops. 8GB laptops are known to sync on budget 64 GB USB sticks in under half a week if that helps you choose. Once you are synced, every size will perform equally well.
 
 The links above are Amazon Affiliate links so purchasing through one helps fund Bails development.
 
@@ -59,7 +59,7 @@ Here are some tips for selecting a computer to buy, buy and return, rent or borr
 
 1. **Avoid computers with 4 GB of RAM or less**, they will force your USB stick to work much harder, wearing it out prematurely. On 4 GB RAM, without one of the "SSD-like" drives above, the initial synchronization could take weeks instead of days. 8 GB RAM is better and 16 GB RAM is best. In 16GB RAM computers *most* USB sticks will complete initial sync in hours, rather than days in 8 GB RAM computers.
 
-2. **Storage drive type and capacity don't matter.** Tails never uses your computer's storage. You're free to use this computer for other purposes or return it, after removing your Bails USB stick. Tails would even work with a used PC that has no internal disk.
+2. **Storage drive type and capacity don't matter.** Tails never uses your computer's storage. You're free to use this computer for other purposes or return it, after removing your Bails USB stick. Bails would even work with a used PC that has no internal disk.
 
 3. **Choose Windows, MacOS or Linux.** While Chromebooks may work, most have 4 GB of RAM and there are [extra steps](https://www.reddit.com/r/tails/comments/pd56ha/cheap_chromebook_for_tails_setup_guide/) to make them run Tails. It is easier to start Tails from MacOS and Linux and easiest from Windows.
 
