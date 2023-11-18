@@ -104,7 +104,9 @@ If you shutdown bitcoin core safely, waiting for it to exit before shutting down
 If you shutdown Tails without exiting Bitcoin core safely, or by yanking the USB stick out, it is possible to corrupt the blockchain database eventually and lose your progress. Only remove the USB to shutdown Tails in an Emergency.
 
 ## How can I copy the blockchain from a Bitcoin node I already have?
-By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location).
-External drive: you can plug it in while Tails is running. Use the _Files_ browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin_.
-Internal drive: you must restart and set an administration password on the Welcome Screen. Then you can access the internal drive in the Files browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin/_.
-If you don't trust this node is not compromised, do not do this, wait for Bails to synchronize.
+By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do not do this, wait for Bails to synchronize.
+
+**External drive**: Plug it in while Tails is running. Use the _Files_ browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin_.
+
+**Internal drive**: Read [Accessing the internal hard disk](https://tails.net/doc/advanced_topics/internal_hard_disk/index.en.html). You must restart and set an administration password on the Welcome Screen. Then you can access the internal drive in the Files browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin/_.
+
