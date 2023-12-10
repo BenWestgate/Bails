@@ -74,7 +74,7 @@ The links above are Amazon Affiliate links so purchasing through one helps fund 
 
 In addition to [Tails' recommendations](https://tails.net/doc/about/requirements/index.en.html), here are some Bails specific tips for selecting a computer to buy, buy and return, rent or borrow to complete the initial sync as fast as possible:
 
-1. **Avoid computers with 4 GB of RAM or less**, they will force your USB stick to work much harder, wearing it out prematurely. On 4 GB RAM, without one of the "SSD-like" drives above, the initial synchronization could take weeks instead of days. 8 GB RAM is better and 16 GB RAM is best. In 16GB RAM computers *most* USB sticks will complete initial sync in hours, rather than days in 8 GB RAM computers.
+1. **Avoid computers with 4 GB of RAM or less**, they will force your USB stick to work much harder, wearing it out prematurely. On 4 GB RAM, without one of the "SSD-like" drives above, the initial synchronization could take weeks instead of days. 8 GB RAM is better and 16 GB RAM is best. In 16GB RAM computers *most* USB sticks will complete initial sync in hours, rather than days on 8 GB RAM computers.
 
 2. **Storage drive type and capacity don't matter.** Tails never uses your computer's storage. You're free to use this computer for other purposes or return it, after removing your Bails USB stick. Bails would even work with a used PC that has no internal disk.
 
@@ -92,7 +92,7 @@ Once you are synced, nearly any computer will be fast enough to stay caught up a
 
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
-No, Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
+**No!** Bails will Create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails; */b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
 
 # During Setup
 
