@@ -47,15 +47,32 @@ MicroSD memory cards with at least double the typical USB stick's random read pe
 - [SAMSUNG EVO Select microSD](https://amzn.to/3Km8sXd)
 - [Silicon Power Superior microSD](https://amzn.to/3OHoBZZ)
 
-
 1 TB of storage is needed to not prune the block chain. This allows your node to fully support the network serving all historical blocks, but it doesn't personally help you unless you have a 10 year old wallet to restore.
 Choosing 32 GB capacity may reduce performance on 8+ GB RAM machines. What USB stick capacity optimizes performance for a given computer memory size is an open issue, bigger capacity equals faster if your machine has high RAM. 512GB will prune once, but should cause no significant slowdown as the blockchain is 540GB currently. 256GB will prune a couple times which will Not hurt performance at all on 4GB and 8GB laptops, but may slow down 16GB RAM. 128GB will probably not hurt performance any on 4GB laptops. 8GB laptops are known to sync on budget 64 GB USB sticks in under half a week if that helps you choose. Once you are synced, every size will perform equally well.
 
 The links above are Amazon Affiliate links so purchasing through one helps fund Bails development.
 
+## What type of backup USB stick should I get?
+
+2. Equal size to your primary Bails USB helps avoid pruning.
+3. A fast write speed makes backup go faster.
+4. Industrial SD cards and may retain data longer than "MLC" or "TLC" USB sticks.
+6. Your backup USBs won't need fast read performance and can be cheaper models.
+
+## How should I handle my backup Bails USB stick?
+4. Keep it under lock and key or hidden and ideally in a tamper evident manner.
+5. If someone skilled tampers with your Bails USB stick and you use it without noticing they could steal your bitcoins or monitor your activity.
+6. Keep it cool, high temperatures can cause premature data loss.
+7. Make your backup Bails USB stick look different from your current Bails USB stick.
+8. We recommend using the same passphrase as your current Tails so it is easier to remember
+9. Update or create a new backup Bails USB stick at least every 6 months, more often without A/C.
+10. You can use a third USB stick to create a new backup Bails to quickly replace an off-site backup.
+
+
+
 ## I don't have a computer, what type should I get?
 
-Here are some tips for selecting a computer to buy, buy and return, rent or borrow to complete the initial sync as fast as possible:
+In addition to [Tails' recommendations](https://tails.net/doc/about/requirements/index.en.html), here are some Bails specific tips for selecting a computer to buy, buy and return, rent or borrow to complete the initial sync as fast as possible:
 
 1. **Avoid computers with 4 GB of RAM or less**, they will force your USB stick to work much harder, wearing it out prematurely. On 4 GB RAM, without one of the "SSD-like" drives above, the initial synchronization could take weeks instead of days. 8 GB RAM is better and 16 GB RAM is best. In 16GB RAM computers *most* USB sticks will complete initial sync in hours, rather than days in 8 GB RAM computers.
 
