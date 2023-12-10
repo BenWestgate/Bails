@@ -2,29 +2,31 @@
 
 # Bails
 
-Bails is the most private way to transact and store bitcoin. It ensures your money is protected from surveillance, censorship, and confiscation, leaving no trace of your Bitcoin use on the computer or the Internet. Combining Bitcoin Core and Tails, Bails offers strong anonymity for transactions and secure encrypted storage.
+BAILS is the most private way to transact and store bitcoin. It ensures your money is protected from surveillance, censorship, and confiscation, leaving no trace of your Bitcoin use on the computer or the Internet. Combining Bitcoin Core and Tails, Bails offers strong anonymity for transactions and secure encrypted storage.
 
 ## Bitcoin Core on Tails
 
 Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails and create a Bails wallet.
 
-Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet. Tails is a portable operating system that defends against surveillance and censorship, exclusively utilizing the Tor anonymity network.
-
-See Also:
+Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet.
 - [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
+
+
+Tails is a portable operating system that defends against surveillance and censorship, exclusively utilizing the Tor anonymity network.
 - [Tails - How Tails works](https://tails.net/about/index.en.html)
+
 
 ## Why use Bitcoin Core?
 
 ### Full Validation
 
-Bitcoin Core ensures the validity of every block and transaction, enhancing your security and preventing miners and banks from seizing control of Bitcoin.
+Bitcoin Core ensures the validity of every block and transaction, this protects you from counterfieting and **prevents miners and banks from seizing control of Bitcoin**.
 
 [Learn about full validation](https://bitcoin.org/en/bitcoin-core/features/validation)
 
 ### Excellent Privacy
 
-Bitcoin Core provides exclusive privacy features, making it challenging for anyone to link your transactions to you.
+Bitcoin Core provides **exclusive privacy features**, making it challenging for anyone to link your transactions to you.
 
 [Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
