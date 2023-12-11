@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in our  |
+We as members, contributors, and leaders pledge to make participation in our
 community a harassment-free experience for everyone, regardless of age,
 ethnicity, level of experience, education, socio-economic status, nationality,
 personal appearance, race or religion.
@@ -15,7 +15,7 @@ inclusive, and healthy community.
 Examples of behavior that contributes to a positive environment for our
 community include:
 
-* Demonstrating empathy and kindness toward other people
+* Demonstrating empathy, patience and kindness toward other people
 * Being respectful of differing opinions, viewpoints, and experiences
 * Giving and gracefully accepting constructive feedback
 * Accepting responsibility and apologizing to those affected by our mistakes,
@@ -48,8 +48,10 @@ decisions when appropriate.
 
 ## Scope
 
-This Code of Conduct applies within all community spaces, and also applies when
-an individual is officially representing the community in public spaces.
+This Code of Conduct applies to all spaces used by the project. This includes
+telegram, slack, the mailing lists, the issue tracker, the website, events, and
+any other forums which the community uses for communication, and also applies
+when an individual is officially representing the community in public spaces.
 Examples of representing our community include using an official e-mail address,
 posting via an official social media account, or acting as an appointed
 representative at an online or offline event.
