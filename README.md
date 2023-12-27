@@ -88,10 +88,6 @@ In the next steps, you will shut down the computer. To be able to follow the res
 - Sharing hand-to-hand prevents censorship and surveillance.
 - Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
 
-## Advantages and Disadvantages
-
-For a discussion on the pros and cons of using Bails, refer to the [detailed document](Advantages_and_Disadvantages.md). It describes the unique features and limitations of the Bails platform.
-
 # Support resources
 
 For support and discussion join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA) or [telegram channel](https://t.me/bails_support).
@@ -99,6 +95,10 @@ For support and discussion join our [slack channel](https://join.slack.com/t/bit
 To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 For more reading checkout our [Frequently Asked Questions](FAQ.md).
+
+## Advantages and Disadvantages
+
+For a discussion on the pros and cons of using Bails, refer to the [detailed document](Advantages_and_Disadvantages.md). It describes the unique features and limitations of the Bails platform.
 
 ## Source Code Headers
 
