@@ -36,7 +36,7 @@ Bitcoin Core provides **exclusive privacy features**, making it challenging for 
 - **1 USB stick** or memory card, 32 GB minimum
     - If you need a flash drive, see our [recommended flash drives](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#what-type-of-flash-drive-should-i-get) for top speed
 - **2 GB of RAM** computer made in the last 15 years
-    - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save time
+    - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save money
 - **A smartphone** to follow the instructions
 - **Pen or pencil**
 - **Couple pieces of paper**
