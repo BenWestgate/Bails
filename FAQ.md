@@ -1,19 +1,19 @@
 # Before use
 ## What is Bails?
 
-It's first and foremost easy to use, free, easy to setup and very private.
+It's first and foremost easy to use, free, quick to setup and very private.
 
 Bails grew from the question:
 > How could everyone keep using Bitcoin easily and safely were it banned?
 
-Because projects like **Bails** exist and work, the more people who are aware of them, the less likely Bitcoin bans will ever be attempted.
+Because projects like **Bails** exist and work, the more people who use them, the less likely Bitcoin bans will ever be attempted.
 
 I believe it's extremely secure in relation to the effort it takes to setup and use.
-Nothing comes close since you get: isolated security focused free open-source OS, strong encyption, Tor, verified signatures, Bitcoin Core full node, and a shamir secret sharing paper backup done all in under an hour. And it doesn't need a dedicated PC, just a dedicated USB stick.
+Nothing comes close, you get: isolated security focused free open-source OS, strong encyption, Tor, verified signatures, Bitcoin Core full node, and a shamir secret sharing backup done in under an hour. And it doesn't need a dedicated PC, just a dedicated USB stick.
 
-The only options that approach the overall privacy in similar setup time span either aren't free, are more error prone and/or give weaker security assurances. 
+The only options approaching the overall privacy in similar setup time span either aren't free, are more error prone and/or give weaker security. 
 
-Bails does not make the most secure setup possible yet: offline multi-sig airgapped signing, it is meant for fast, easy, extremely private transacting not storing National Treasures but that will come after Beta testers give me feedback and tell me what they want to see most next.
+Bails does not make the most secure setup possible yet: offline multi-sig airgapped signing, it is meant for frequent, extremely private transacting not storing National Treasures but a savings cold storage wallet will come after Beta testers give me feedback what they want to see most next.
 
 This would be appropriate for up to half a year's expenses. Life savings need multi-signature and offline, airgapped, stateless signers.
 
