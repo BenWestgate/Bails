@@ -21,9 +21,9 @@ This would be appropriate for up to half a year's expenses. Life savings need mu
 
 You don't need any storage free on your test laptop. You just need a 32+ GB USB stick, the whole thing runs from that USB and leaves your laptop storage untouched.
 
-## What type of USB stick should I get?
+## I don't have a USB stick, what one should I get?
 
-Bails should work ok with any USB stick if your computer has 8+ GB of memory, however Tails will start up and Bitcoin Core will sync much faster if the drive has high random read performance. And Bitcoin Core can flush and shutdown much faster if the drive has high random write performance. This performance is not commonly advertised on the package so here are some models that are top performers, using one of these could easily reduce your startup and initial sync time by 50-90%:
+Bails will work well on most USB sticks if your computer has at least 8 GB of memory. Tails will start and Bitcoin Core will sync and shutdown much faster if the drive has high IOPS. This performance is not commonly advertised on the package so here are some models that are top performers, using one of these will reduce your startup and initial sync time by 50-90%:
 
 USB sticks with SSD-like performance:
 - [Kingston DataTraveler Max Type-C USB](https://amzn.to/3OpMELw)
@@ -38,7 +38,7 @@ Portable SSDs aka USB sticks with SSD-like performance:
 - [Netac Portable SSD Dual Interface](https://amzn.to/3DOD4wR)
 - [SSK SSD Solid State Flash Drive](https://amzn.to/3Qpgoer)
 
-USB sticks with at least double the typical random read & write performance (may be cheaper)
+USB sticks with at least double the typical IOPS performance (may be cheaper)
 - [SanDisc Extreme Pro USB](https://amzn.to/3KngiA0)
 - [SAMSUNG FIT Plus USB](https://amzn.to/3OjRmdY)
 - [SAMSUNG Type-C USB](https://amzn.to/3rTpQfM)
@@ -46,51 +46,51 @@ USB sticks with at least double the typical random read & write performance (may
 - [Transcend Jetflash 920 USB](https://amzn.to/3KqNh6z)
 - [Transcend Jetflash 930C USB](https://amzn.to/3q8pu4B)
 
-MicroSD memory cards with at least double the typical USB stick's random read performance (cheaper)
+MicroSD memory cards with at least double the typical USB stick's IOPS performance (cheaper)
 - [SanDisc Extreme microSD](https://amzn.to/3KraGF7)
 - [SAMSUNG PRO Plus microSD](https://amzn.to/3Qn9INK)
 - [SAMSUNG EVO Select microSD](https://amzn.to/3Km8sXd)
 - [Silicon Power Superior microSD](https://amzn.to/3OHoBZZ)
 
 1 TB of storage is needed to not prune the block chain. This allows your node to fully support the network serving all historical blocks, but it doesn't personally help you unless you have a 10 year old wallet to restore.
-Choosing 32 GB capacity may reduce performance on 8+ GB RAM machines. What USB stick capacity optimizes performance for a given computer memory size is an open issue, bigger capacity equals faster if your machine has high RAM. 512GB will prune once, but should cause no significant slowdown as the blockchain is 540GB currently. 256GB will prune a couple times which will Not hurt performance at all on 4GB and 8GB laptops, but may slow down 16GB RAM. 128GB will probably not hurt performance any on 4GB laptops. 8GB laptops are known to sync on budget 64 GB USB sticks in under half a week if that helps you choose. Once you are synced, every size will perform equally well.
-
-## What type of backup USB stick should I get?
-
-2. Equal size to your primary Bails USB helps avoid pruning.
-3. A fast write speed makes backup go faster.
-4. Industrial SD cards and may retain data longer than "MLC" or "TLC" USB sticks.
-6. Your backup USBs won't need fast read performance and can be cheaper models.
-
-## How should I handle my backup Bails USB stick?
-4. Keep it under lock and key and/or hidden and ideally in a tamper evident way.
-5. If someone skilled tampers with your Bails USB stick and you use it without noticing they could steal your bitcoins or monitor your activity.
-6. Keep it cool, high temperatures can cause premature data loss.
-7. Make your backup Bails USB stick look different from your current Bails USB stick.
-8. We recommend using the same passphrase as your current Tails so it is easier to remember
-9. Update or create a new backup Bails USB stick at least every 6 months, more often without A/C.
-10. You can use a third USB stick to create a new backup Bails to quickly replace an off-site backup.
-
+Picking a USB stick 8 to 16+ times larger than your computer's RAM maximizes performance but isn't necessary. 8 GB laptops are known to sync on budget 64 GB USB sticks in under 4 days if that helps you choose. While 4 GB Laptops are able to sync in 4 days on SSD-like USB sticks. Once you are synced, every USB stick and computer will perform well.
 
 ## I don't have a computer, what type should I get?
 
 In addition to [Tails' recommendations](https://tails.net/doc/about/requirements/index.en.html), here are some Bails specific tips for selecting a computer to buy, buy and return, rent or borrow to complete the initial sync as fast as possible:
 
-1. **Avoid computers with 4 GB of RAM or less**, they will force your USB stick to work much harder, wearing it out prematurely. On 4 GB RAM, without one of the "SSD-like" drives above, the initial synchronization could take weeks instead of days. 8 GB RAM is better and 16 GB RAM is best. In 16GB RAM computers *most* USB sticks will complete initial sync in hours, rather than days on 8 GB RAM computers.
+1. **Avoid computers with 4 GB of RAM or less**, they will force your USB stick to work much harder, wearing it out prematurely. On 4GB RAM, without one of the "SSD-like" drives above, the initial synchronization could take weeks instead of days. 8GB RAM is better and 16GB RAM is best. With 16GB RAM computers *most* USB sticks will complete initial sync in hours, rather than days on 8GB RAM computers.
 
-2. **Storage drive type and capacity don't matter.** Tails never uses your computer's storage. You're free to use this computer for other purposes or return it, after removing your Bails USB stick. Bails would even work with a used PC that has no internal disk.
+2. **Storage drive type and capacity don't matter.** Tails never uses your computer's storage. You're free to use this computer for other purposes or return it, after removing your Bails USB stick. Bails would even work with a used PC from eBay that has no internal disk!
 
 3. **Choose Windows, MacOS or Linux.** While Chromebooks may work, most have 4 GB of RAM and there are [extra steps](https://www.reddit.com/r/tails/comments/pd56ha/cheap_chromebook_for_tails_setup_guide/) to make them run Tails. It is easier to start Tails from MacOS and Linux and easiest from Windows.
 
 4. **Screen size and resolution don't matter.** With laptops or all-in-one desktops you can save money buying a smaller size or lower resolution screen. HD or 720p is plenty of space for Bitcoin Core and Bails windows. Almost any laptop or monitor will suffice.
 
-5. **New computers could be better if paranoid.** There are more opportunities in the supply chain to compromise a used, renewed, open-box or refurbished computer. But these options are still reasonably safe if the seller does not know you intend to use the computer for Bitcoin. Paying with cash is another step to prevent linking your identity to this computer.
+5. **New computers may be better if paranoid.** There are more opportunities in the supply chain to compromise a used, renewed, open-box or refurbished computer. But these options are still reasonably safe if the seller does not know you intend to use the computer for Bitcoin. Paying with cash is another step to prevent linking your identity to this computer.
 
 **Enough already**, just show me a cheap and fast computer to get:
-- [Desktops with 16GB of RAM](https://amzn.to/3OkLaSR)
-- [Laptops with 16GB of RAM](https://amzn.to/3YiM2MB)
+- [Desktops with 16GB RAM](https://amzn.to/3OkLaSR)
+- [Laptops with 16GB RAM](https://amzn.to/3YiM2MB)
 
-Once you are synced, nearly any computer will be fast enough to stay caught up as long as you use Bails regularly and have a [recommended USB stick](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#what-type-of-USB-stick-should-i-get)
+Once you are synced, nearly any computer will be fast enough to stay caught up as long as you use Bails regularly, especially if you have a [recommended USB stick](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#what-type-of-USB-stick-should-i-get)
+
+## What type of backup USB stick should I get?
+
+1. Equal size to your primary Bails USB helps avoid pruning.
+2. A fast write speed makes backing up faster.
+3. Industrial SD cards and may retain data longer than "MLC" or "TLC" USB sticks.
+4. Your backup USBs won't need fast read performance and can be cheaper models.
+
+## How should I handle my backup Bails USB stick?
+1. Keep it under lock and key and/or hidden and ideally in a tamper evident way.
+   - If someone skilled tampers with your Bails USB stick _**and** you use it without noticing_ they could monitor your activity or steal your bitcoins.
+   - This is true of all Bitcoin wallet hardware, I am just honest, unlike some marketers. 
+2. Keep it cool, high temperatures can cause premature data loss.
+3. Make your backup Bails USB stick look different from your current Bails USB stick.
+4. We recommend using the same passphrase as your current Tails so it is easier to remember.
+5. Update or create a new backup Bails USB stick at least every 6 months, more often without A/C.
+6. You can use a third USB stick to create a new backup Bails to quickly replace an off-site backup.
 
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
@@ -111,10 +111,9 @@ No. But right now, you do have to keep your laptop on until you’ve reached a t
 3. If it's niether of those check if you had bad luck and connected through an unusually slow onion circuit and disconnect that peer.
 ![image](https://github.com/BenWestgate/Bails/assets/73506583/7d89fbdb-64f6-4d25-93c7-26a900488c5e)
 4. USB stick random read speed should be over 10 MB/s (Check [USB Benchmark](http://usb.benchmark.com) 4k random read rankings) if your PC has 8GB of RAM or less.
-5. USB capacity should be at least 4-8 times your system's RAM to make full use of your memory
-6. Random write speed should be over 10 MB/s if you have 8 GB of RAM or less or a USB stick capacity that is only double your RAM.
-sequential read speed helps for rescanning wallets but not IBD.
-7. Stop restarting your Bails computer and avoid using lots of bandwidth until it completes.
+5. USB capacity should be at least 8 times your system's RAM to make full use of your memory
+6. Random write speed should be over 10 MB/s if you have 8 GB of RAM or less or a USB stick capacity that is only 2x or 4x your RAM. Sequential read speed helps for rescanning wallets but not IBD.
+7. Avoid restarting your Bails computer and using lots of bandwidth on other devices until it completes.
 
 NOTE: New versions of Bails will sync in minutes instead of hours or days thanks to a beta feature called [AssumeUTXO](https://river.com/learn/terms/a/assume-utxo/). For extra high value transactions you should wait for the background initial block download to sync.
 
@@ -127,6 +126,13 @@ For reliability, it SHOULD be a new USB stick, not a heavily used one, and it SH
 If you shutdown Bitcoin Core safely, waiting for it to exit before shutting down Tails (from the menu in the upper right) it will resume where you left off the next time you Start on Tails, unlock its Persistent Storage, and connect to Tor.
 If you shutdown Tails without exiting Bitcoin core safely, or by yanking the USB stick out, it is possible to corrupt the blockchain database and lose your progress. Only remove the USB to shutdown Tails in an Emergency.
 
+## How can I copy the blockchain from a Bitcoin node I already have?
+By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do NOT do this, wait for Bails to synchronize.
+
+**External drive**: Plug it in while Tails is running. Use the _Files_ browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin_.
+
+**Internal drive**: Read [Accessing the internal hard disk](https://tails.net/doc/advanced_topics/internal_hard_disk/index.en.html) first. You must restart and set an administration password on the Welcome Screen. Then you can access the internal drive in the Files browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin/_.
+
 ## How do I make a backup Bails USB stick?
 Get a USB stick at least the same size  as your current Bails then:
 
@@ -138,16 +144,9 @@ Get a USB stick at least the same size  as your current Bails then:
 6. You will be prompted for a passphrase
   - We recommend using the same one as the current Persistent Storage so that it is easier to remember
   - You could use an off-site codex32 share as the passphrase if you're worried about forgetting your passphrase
-    - Just don't store the share in the same place as the backup USB stick!! 
+    - Just don't store that share in the same place as the backup USB stick!! 
 7. The device will be turned into an exact copy of your current Bails.
 8. Test it if you'd like then store it some place cool and safe from tampering
 
 If you want to use a smaller USB stick for the backup you may have to prune your current Bails first so that it will fit. You can find this setting in Bitcoin Core > Options.
 ![image](https://github.com/BenWestgate/Bails/assets/73506583/0eca8bfb-1ea5-466c-bdb2-929936c7347e)
-
-## How can I copy the blockchain from a Bitcoin node I already have?
-By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do NOT do this, wait for Bails to synchronize.
-
-**External drive**: Plug it in while Tails is running. Use the _Files_ browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin_.
-
-**Internal drive**: Read [Accessing the internal hard disk](https://tails.net/doc/advanced_topics/internal_hard_disk/index.en.html) first. You must restart and set an administration password on the Welcome Screen. Then you can access the internal drive in the Files browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin/_.
