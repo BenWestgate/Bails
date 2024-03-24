@@ -39,8 +39,8 @@ export LOCAL_DIR=$DOTFILES/.local
 link_dotfiles() {
     ( # runs in subshell to preserve current directory
         cd $DOTFILES
-        for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-        for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
+        find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
+        find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
     ) &>/dev/null
 }
 
