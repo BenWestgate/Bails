@@ -50,7 +50,7 @@ onlynet_onion() {
         # User chose default network settings
         sed --in-place 's/onlynet=onion/#onlynet=<net>/' $DATA_DIR/bitcoin.conf
         zenity --info --title='Default network settings' --text='You have chosen to keep the default network settings.
-    Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.' --width=420 --icon-name=tor-disconnected-symbolic
+    Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' --width=420 --icon-name=tor-disconnected-symbolic
 
     fi
 }
