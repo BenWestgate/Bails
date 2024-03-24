@@ -36,7 +36,7 @@ if [[ $(id -u) = "0" ]]; then
   echo "
 YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
 "
-  read -p "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
+  read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
   exit 0
 fi
 
