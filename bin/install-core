@@ -37,8 +37,10 @@ export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 
 DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
-SOURCE_CLEARNET_DOMAIN="bitcoincore.org"
-SOURCE_TOR_DOMAIN="6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion"
+BITCOIN_CORE_SOURCE_DOMAIN=(
+    "6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion" #tor
+    "bitcoincore.org" #clearnet
+)
 SECURITY_IN_A_BOX_TOR_DOMAIN="lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion"
 
 link_dotfiles() {
@@ -122,15 +124,14 @@ mkdir -p "$DOWNLOAD_DIR"
 
 # TODO: uncomment the downloads when done testing other things
 # Download Bitcoin core checksums and signatures in background
-# TODO: these are messy make them legible.
 (
     cd "$DOWNLOAD_DIR"
     wget --tries=1 --no-host-directories --cut-dirs=1 --recursive \
         #--level=1 --accept=SHA256SUMS* --include-directories=bin \
-        #"https://${SOURCE_TOR_DOMAIN}/en/download/" ||
+        #"https://${BITCOIN_CORE_SOURCE_DOMAIN[0]}/en/download/" ||
     wget --no-host-directories --cut-dirs=1 --recursive \
         --level=1 --accept=SHA256SUMS* --include-directories=bin \
-        "https://${SOURCE_CLEARNET_DOMAIN}/en/download/"
+        "https://${BITCOIN_CORE_SOURCE_DOMAIN[1]}/en/download/"
 ) & sig_dl=$!
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
@@ -142,10 +143,10 @@ mkdir -p "$DOWNLOAD_DIR"
     cd "$DOWNLOAD_DIR"
     #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive \
         #--level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
-        #"http://${SOURCE_TOR_DOMAIN}/en/download/" ||
+        #"http://${BITCOIN_CORE_SOURCE_DOMAIN[0]}/en/download/" ||
     wget --continue --no-host-directories --cut-dirs=1 --recursive \
         --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
-        https://${SOURCE_CLEARNET_DOMAIN}/en/download/
+        https://${BITCOIN_CORE_SOURCE_DOMAIN[1]}/en/download/
 ) & core_download=$!
 
 # Download chain parameters in background
