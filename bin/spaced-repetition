@@ -30,7 +30,7 @@ get_passphrase() {
 }
 
 check_passphrase() {
-    read -s passphrase
+    read -rs passphrase
     temp_passw="$(head -c16 /dev/urandom | xxd -p)"
     printf "$passphrase\n$temp_passw\n$temp_passw" | passwd && \
     printf "$temp_passw\n$passphrase\n$passphrase" | passwd
