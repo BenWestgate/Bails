@@ -33,7 +33,7 @@ export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
 export BAILS_DIR="$LOCAL_DIR"
 
 onlynet_onion() {
-    zenity --question --title='Network Privacy' --width=420 --text='Bails offers different settings for connecting to the Bitcoin network. By default, Bails connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
+    zenity --question --title='Network Privacy' --width=420 --text='Bails offers different settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
 
     Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity and can be less stable if you have limited Tor peers.' --icon-name=tor-connection --default-cancel
 
