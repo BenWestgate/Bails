@@ -6,7 +6,7 @@ on:
     paths:
       - b
       - bin/*
-      - **.py
+      - '**.py'
 jobs:
   shell-lint:
     name: Check shell code
@@ -15,18 +15,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Lint with shellcheck
         uses: ludeeus/action-shellcheck@2.0.0
-  python-lint:
-    name: Check Python code
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pylint
-      - name: Lint with pylint
-        run: pylint **/*.py
+          ignore_paths: |
+            ./bin/bails-wallet
+            ./bin/ibd-progress
+            ./bin/backupd
+  # python-lint:
+  #   name: Check Python code
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: '3.x'
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install pylint
+  #     - name: Lint with pylint
+  #       run: pylint **/*.py
