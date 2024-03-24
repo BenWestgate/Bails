@@ -37,7 +37,9 @@ onlynet_onion() {
 
     Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity and can be less stable if you have limited Tor peers.' --icon-name=tor-connection --default-cancel
 
-    if [ $? = 0 ]; then
+    zenity_exit_status=$?
+    
+    if [ $zenity_exit_status = 0 ]; then
         # User chose to enable -onlynet=onion
         sed --in-place 's/#onlynet=<net>/onlynet=onion/' $DATA_DIR/bitcoin.conf
         zenity --info --title='Network settings updated' --text='You have chosen to connect exclusively to Tor (onion) peers.
