@@ -40,5 +40,6 @@ YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
   exit 0
 fi
 
-export BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export BAILS_DIR
 $BAILS_DIR/bin/install-core
