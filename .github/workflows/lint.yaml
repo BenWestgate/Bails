@@ -16,9 +16,7 @@ jobs:
       - name: Lint with shellcheck
         uses: ludeeus/action-shellcheck@2.0.0
         env:
-          SHELLCHECK_OPTS: |
-            -e SC2046
-            -e SC2086
+          SHELLCHECK_OPTS: -e SC2046 -e SC2086
         with:
           ignore_paths: |
             ./bin/bails-wallet
