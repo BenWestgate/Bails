@@ -133,7 +133,7 @@ mkdir -p "$DOWNLOAD_DIR"
     done
 
     if [ $? -ne 0 ]; then
-        echo "Both wget commands failed."
+        echo "Failed to download the required verification files."
         exit 1
     fi
 ) & sig_dl=$!
@@ -152,7 +152,7 @@ mkdir -p "$DOWNLOAD_DIR"
     done
 
     if [ $? -ne 0 ]; then
-        echo "Both wget commands failed."
+        echo "Failed to download the Bitcoin Core package."
         exit 1
     fi
 ) & core_download=$!
