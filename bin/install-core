@@ -245,7 +245,7 @@ rsync --remove-source-files -recursive "$BAILS_DIR"/config/ $DOTFILES/.config
 }' > $DATA_DIR/settings.json
 
 # Cleanup
-rm -Rf $BAILS_DIR/{bin,lib,share,state,config} "$destination_dir"/{download,*.tmp,wget-log*}
+rm -Rf ${BAILS_DIR:?}/{bin,lib,share,state,config} "$destination_dir"/{download,*.tmp,wget-log*}
 rsync -r --remove-source-files $BAILS_DIR $LOCAL_DIR/share/
 rm -rf $BAILS_DIR
 link_dotfiles
