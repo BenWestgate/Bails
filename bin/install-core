@@ -38,8 +38,8 @@ export LOCAL_DIR=$DOTFILES/.local
 
 DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
 BITCOIN_CORE_SOURCE_DOMAINS=(
-    "6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion" # Tor onion service
     "bitcoincore.org" # Clearnet
+    "6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion" # Tor onion service
 )
 SECURITY_IN_A_BOX_TOR_URL="https://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/"
 
