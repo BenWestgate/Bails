@@ -123,12 +123,30 @@ mkdir -p "$DOWNLOAD_DIR"
 # TODO: uncomment the downloads when done testing other things
 # Download Bitcoin core checksums and signatures in background
 # TODO: these are messy make them legible.
-( cd "$DOWNLOAD_DIR"; #wget --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin "https://${SOURCE_TOR_DOMAIN}/en/download/" ||
-wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin "https://${SOURCE_CLEARNET_DOMAIN}/en/download/"; ) & sig_dl=$!
+(
+    cd "$DOWNLOAD_DIR"
+    wget --tries=1 --no-host-directories --cut-dirs=1 --recursive \
+        #--level=1 --accept=SHA256SUMS* --include-directories=bin \
+        #"https://${SOURCE_TOR_DOMAIN}/en/download/" ||
+    wget --no-host-directories --cut-dirs=1 --recursive \
+        --level=1 --accept=SHA256SUMS* --include-directories=bin \
+        "https://${SOURCE_CLEARNET_DOMAIN}/en/download/"
+) & sig_dl=$!
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
-( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; cd "$DOWNLOAD_DIR"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin "http://${SOURCE_TOR_DOMAIN}/en/download/" ||
-wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://${SOURCE_CLEARNET_DOMAIN}/en/download/; ) & core_download=$!
+(
+    sleep 1
+    while pgrep wget &>/dev/null; do
+        sleep 1
+    done
+    cd "$DOWNLOAD_DIR"
+    #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive \
+        #--level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
+        #"http://${SOURCE_TOR_DOMAIN}/en/download/" ||
+    wget --continue --no-host-directories --cut-dirs=1 --recursive \
+        --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
+        https://${SOURCE_CLEARNET_DOMAIN}/en/download/
+) & core_download=$!
 
 # Download chain parameters in background
 ( cd $DOWNLOAD_DIR; wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp ) & get_size=$!
