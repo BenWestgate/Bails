@@ -85,7 +85,7 @@ search_key() {
         else
             gpg --batch --yes --delete-keys $key &>/dev/null
         fi
-    elif [ ! -z "$1" ]; then
+    elif [ -n "$1" ]; then
         echo "$key not found."
         return 1
     else
