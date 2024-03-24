@@ -145,7 +145,7 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 # Switch into latest bitcoin-core directory
-cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || {
+cd "$(ls -dt $destination_dir/bitcoin-core-* | head -1)" || {
     zenity --warning --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize $ICON &&
     sleep 5
     install-core	# launch this script again
