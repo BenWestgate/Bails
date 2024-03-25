@@ -11,20 +11,27 @@
 
 ### The Bails MVP is COMPLETED.
 
-## Bails L1 Scope ([Manual Backup](https://bitcoin.design/guide/how-it-works/private-key-management/manual-backup/) [Daily](https://bitcoin.design/guide/daily-spending-wallet/) or [Monthly Spending Wallet](https://bitcoin.design/guide/designing-products/personal-finance/#monthly-budgeting))
+## In-Progress: Bails L1 Scope ([Manual Backup](https://bitcoin.design/guide/how-it-works/private-key-management/manual-backup/) [Daily](https://bitcoin.design/guide/daily-spending-wallet/) or [Monthly Spending Wallet](https://bitcoin.design/guide/designing-products/personal-finance/#monthly-budgeting))
 
-- Create backups of the Bails USB for recovery without rescanning blockchain or downloading Bails
-- Create clones of the Bails USB with all private data encrypted to give to friends & family to decentralize distribution, bypass download wait, user gets private data redundancy
-- Give periodic reminders to create new USB backups to replace the old ones before they die
-- Drawable compact 21x21 QR Codes of threshold 2 and 3 codex32 shares
-- Rotate shares to reset Forgotten passphrases w/o sweeping funds
-- Rotate shares to change thresholds w/o sweeping funds
-- Generate extra shares w/o rotating or replacing existing shares [function not yet written]
-- Automatic Cloud backups aka [Seedless setup](https://bitcoin.design/guide/how-it-works/private-key-management/cloud-backup/)  [function not yet written]
+- Scan Codex32 25x25 QR codes that encode the codex32 string, these directly encode the codex32 string alphanumerically
+- Create backups of the Bails USB stick for recovery without rescanning blockchain or downloading Bails
+- Create clones of the Bails USB stick with all private data encrypted to give to friends & family to decentralize distribution, bypass download wait, improve user private data redundancy [mostly written]
+- Give reminders at 100% IBD to create a backup Bails USB stick to avoid repeating IBD [mostly written]
+- Use AssumeUTXO to drastically shorten time to usefulness [partly written]
+- Create DEMO and Promo videos [partly written]
+- Rotate shares to reset Forgotten passphrases w/o sweeping funds [partly written]
+- Rotate shares to change thresholds w/o sweeping funds [partly written]
+- Watch encrypted wallets and panic mode wallets [partly written]
+- Draw Codex32 QR codes optionally instead of writing strings during codex32 backup creation [not yet written]
+- Add extra shares w/o rotating or replacing existing shares [not yet written]
 
 ## Bails L2 Scope ([External Signer](https://bitcoin.design/guide/how-it-works/private-key-management/external-signers/) [Savings Wallet](https://bitcoin.design/guide/designing-products/personal-finance/#savings)) 
-_No code has been written for any of the following and unclear scope or value-proposition of features. Insufficiently different from L3, suggest to prioritize and combine._
+- Will feature [Offline Signing](https://github.com/bitcoin/bitcoin/blame/master/doc/offline-signing-tutorial.md) for higher security
+- Offline Bails will be an amnesic / stateless signer that recovers the signing wallet from Codex32 shares and forgets the private key on shutdown.
+- Drawable compact 21x21 QR Codes of threshold 2 and 3 codex32 shares, uses base45, drops ID, truncates checksum, 1-bit for threshold
 
+_No code has been written for any of the following and unclear scope or value-proposition of features. Insufficiently different from L3, suggest to prioritize and combine._
+- Automatic Cloud backups aka [Seedless setup](https://bitcoin.design/guide/how-it-works/private-key-management/cloud-backup/)  [function not yet written]
 - Restore codex32 seed backups either <i>Persistently</i> creating the encrypted wallet in `$HOME/Persistent/.bitcoin/wallets` or <i>Offline</i> in RAM `/tmp/wallets` RAM (for cold storage)
   - This is also known as a Stateless signer or Amnesic Wallet, CodexQR strongly reccomended for fast spending recovery
 - Option to store a persistent watch-only wallet when restored to RAM (for a savings account that keeps the seed & private keys offline on paper)
