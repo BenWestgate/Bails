@@ -86,15 +86,15 @@ In the next steps, you will shut down the computer. To be able to follow the res
 #### Why clone Bails?
 
 - Sharing hand-to-hand prevents censorship and surveillance.
-- Cloning Bails saves them considerable setup time and makes your backup safer. A win-win situation!
+- Cloning Bails saves them considerable setup time and boosts your backup resillience. A win-win situation!
 
 # Support resources
 
-For support and discussion join our [slack channel](https://join.slack.com/t/bitcoin-core-on-tails/shared_invite/zt-1zkivlojk-boiVT8gtM~kSzdBLqZrhRA) or [telegram channel](https://t.me/bails_support).
-
-To contact Ben Westgate by email `benwestgate@protonmail.com`.
+For support and discussion join our [telegram channel](https://t.me/bails_support).
 
 For more reading checkout our [Frequently Asked Questions](FAQ.md).
+
+To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 ## Advantages and Disadvantages
 
