@@ -114,7 +114,7 @@ fi
 
     # Display memorization tips
     zenity --info --title='Tips for your new passphrase' \
-        --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering the passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe and not use it for any other accounts. If you wrote it down, store it in a secure location away from your Bails USBs and destroy it once you memorize it." \
+        --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe. Do not re-use it for any other accounts. If you wrote it down, store it out of sight, in a secured location, away from your Bails USB sticks and destroy it once you memorize it." \
         --ok-label='I Will Destroy It Once Memorized' --width=640 $ICON
 }
 # Checking features of the Persistent Storage
