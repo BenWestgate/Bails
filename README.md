@@ -61,7 +61,7 @@ In the next steps, you will shut down the computer. To be able to follow the res
 ### Install steps
 
 1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 32 GB of capacity).
-   - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails:
+   - If you know someone you trust who uses Bails already, you can [install Bails by cloning](https://github.com/BenWestgate/Bails/tree/master#bails-is-shareware) their Bails.
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
    - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), ignore "Create Persistent Storage" and click "Start Tails".
      - Bails will help you set up Persistent Storage later.
