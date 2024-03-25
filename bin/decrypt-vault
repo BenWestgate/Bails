@@ -5,7 +5,6 @@ set -eu
 set -o pipefail
 
 export TEXTDOMAIN='tails'
-export PATH="$HOME/.local/bin:$PATH"
 wallet=
 
 
