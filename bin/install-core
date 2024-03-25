@@ -41,7 +41,7 @@ BITCOIN_CORE_SOURCE_DOMAINS=(
     "bitcoincore.org" # Clearnet
     "6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion" # Tor onion service
 )
-SECURITY_IN_A_BOX_TOR_URL="https://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/"
+SECURITY_IN_A_BOX_TOR_URL="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/"
 
 link_dotfiles() {
     ( # Runs in subshell to preserve current directory
