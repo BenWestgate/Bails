@@ -74,7 +74,7 @@ else
         --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage --no-wrap $ICON
     zenity --warning --title='Write your passphrase down' \
         --text='It is impossible to recover your passphrase if you forget it!\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in a sealed envelope in your wallet for a few days, and destroy it once you know it well. Write on a hard surface to avoid leaving an imprint of the secret.' \
-        --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.gedit --width=530 $ICON
+        --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor --width=530 $ICON
 
     # Persistent storage creation
     until [ -b '/dev/mapper/TailsData_unlocked' ]; do
