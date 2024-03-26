@@ -135,7 +135,6 @@ wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accep
 clear -x
 
 # Setup Persistent Storage if it is not already
-printf '\033]2;Setup the Persistent Storage\a'
 persistent-setup || systemctl reboot
 
 # Installs Bails to Persistent Storage
