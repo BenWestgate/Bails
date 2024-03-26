@@ -17,6 +17,10 @@ Bails does not make the most secure setup possible yet: offline multi-sig airgap
 
 This would be appropriate for up to half a year's expenses. Life savings need multi-signature and offline, airgapped, stateless signers.
 
+## What is the difference between Codex32, Shamir Secret Sharing and Multisig?
+
+[Andrew Polestra: What is Shamir Secret Sharing and how does it compare to Multisig?](https://youtu.be/jDjEEX0ASxY?si=vooa8JA858EmRME6&t=1209)
+
 ## How much storage do I need on my test laptop?
 
 You don't need any storage free on your test laptop. You just need a 32+ GB USB stick, the whole thing runs from that USB and leaves your laptop storage untouched.
