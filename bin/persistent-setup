@@ -70,9 +70,8 @@ else:
 else
     # Choose passphrase
     zenity --warning --title='Choose a strong passphrase' --no-wrap $ICON \
-        --text='It is important to select a strong passphrase to protect your Bitcoin data.
-        
-        We recommend using a suggested passphrase from the Persistent Storage dialog.' \
+        --text='It is important to select a strong passphrase to protect your Bitcoin data.\n
+We recommend using a suggested passphrase from the Persistent Storage dialog.' \
         --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage
     zenity --warning --title='Write your passphrase down' $ICON \
         --text='It is impossible to recover your passphrase if you forget it!\n
