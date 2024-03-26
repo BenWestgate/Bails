@@ -109,7 +109,7 @@ doesn't comply with the license.)
 
 MIT header:
 
-    Copyright (c) 2023 Ben Westgate
+    Copyright (c) 2024 Ben Westgate
     
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
