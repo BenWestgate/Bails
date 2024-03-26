@@ -355,7 +355,7 @@ get_share() {
     until input_share; do
         displayed="$(echo "$share" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')"
         zenity --warning --title="Invalid codex32 $string $progress" --text="Correct the errors in your invalid codex32 $string:\n\n<big><big>$displayed</big></big>" --no-wrap &
-        corrected_string=$(python3 $LOCAL_DIR/lib/python3.9/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
+        corrected_string=$(python3 $LOCAL_DIR/lib/python3.11/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
         pkill zenity
         ((result == 0)) && displayed="$(echo "${corrected_string^^}" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')"
