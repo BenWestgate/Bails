@@ -254,6 +254,9 @@ link_dotfiles
 if [ -z "$(ls -A $DATA_DIR/wallets)" ]; then
     bails-wallet
 fi
+
+printf '\033]2;Bitcoin Core installation complete!\a'
+
 bitcoin-qt-wrapper &
 
 # Clear notifications
@@ -268,4 +271,18 @@ if ((versions < 2)); then
 fi &>/dev/null &
 
 # Exit by killing controlling terminal
-gnome-terminal -- pkill gnome-terminal &
+echo "Bitcoin Core installation complete! 
+
+Closing this window in 10 seconds, press any key to abort.
+"
+
+for ((i = 10; i >= 1; i--)); do
+    echo -n "$i "
+    read -t 1 -n 1 && { echo "\nAborted."; exit 0; }
+done
+
+echo "
+Closing terminal window..."
+sleep 3
+PARENT_PID=$(ps -o ppid= -p $$)
+kill -9 $PARENT_PID
