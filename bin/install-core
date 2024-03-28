@@ -277,7 +277,7 @@ Closing this window in 10 seconds, press any key to abort.
 
 for ((i = 10; i >= 1; i--)); do
     echo -n "$i "
-    read -t 1 -n 1 && { echo "\nAborted."; exit 0; }
+    read -r -t 1 -n 1 && { printf '\n%s\n' "Aborted."; exit 0; }
 done
 
 echo "
