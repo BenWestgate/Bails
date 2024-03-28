@@ -222,7 +222,7 @@ tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
 mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
 sed --in-place 's/#rpcport=<port>/rpcport=17600/' $DATA_DIR/bitcoin.conf   # set -rpcport for Tails
-sed --in-place "s/#datadir=<dir>/datadir=$DATA_DIR/"
+sed --in-place "s/#datadir=<dir>/datadir=$DATA_DIR/" $DATA_DIR/bitcoin.conf  # set -datadir for Tails
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets	# TODO see what permissions bitcoin-core would have made its folders at.
 ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so logs won't persist restart
