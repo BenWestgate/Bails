@@ -126,7 +126,7 @@ mkdir -p "$DOWNLOAD_DIR"
 # Download Bitcoin core checksums and signatures in background
 (
     cd "$DOWNLOAD_DIR"
-    # shellcheck disable=SC2066
+    # shellcheck disable=SC2048
     for domain in ${BITCOIN_CORE_SOURCE_DOMAINS[*]}; do
         wget --tries=1 --no-host-directories --cut-dirs=1 --recursive \
             --level=1 --accept=SHA256SUMS* --include-directories=bin \
@@ -141,7 +141,7 @@ mkdir -p "$DOWNLOAD_DIR"
         sleep 1
     done
     cd "$DOWNLOAD_DIR"
-    # shellcheck disable=SC2066
+    # shellcheck disable=SC2048
     for domain in ${BITCOIN_CORE_SOURCE_DOMAINS[*]}; do
         wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive \
             --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
