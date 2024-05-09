@@ -145,11 +145,6 @@ mkdir -p "$DOWNLOAD_DIR"
             --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
             "http://${domain}/en/download/" && break
     done
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to download the Bitcoin Core package."
-        exit 1
-    fi
 ) & core_download=$!
 
 # Download chain parameters in background
