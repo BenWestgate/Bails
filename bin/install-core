@@ -131,11 +131,6 @@ mkdir -p "$DOWNLOAD_DIR"
             --level=1 --accept=SHA256SUMS* --include-directories=bin \
             "https://${domain}/en/download/" && break
     done
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to download Bitcoin Core verification files."
-        exit 1
-    fi
 ) & sig_dl=$!
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
