@@ -291,5 +291,16 @@ if ((versions < 2)); then
     zenity --info --title='Bitcoin Core info' --icon-name=bitcoin128 "$ICON" --width=552 --text="<b>Setup</b>\n---------------------\nBitcoin Core is the original Bitcoin client and it builds the backbone of the network. It will download and process the entire history of Bitcoin transactions, currently $assumed_blockchain_size gigabytes.\n\nDepending on your computer and network speed, the synchronization process can take anywhere from a few hours to a day or more.\n\nThis initial synchronization is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.\n\nLimiting block chain storage to $prune_GB GB (<b>sufficient to restore backups $backup_days days old</b>)"
 fi &>/dev/null &
 `
-# Exit by killing controlling terminal TODO: #73 replace this with something safer like `clear; echo "Installation Complete, you may now close this window."`
-gnome-terminal -- pkill gnome-terminal &
+# Exit by killing controlling terminal
+echo "Bitcoin Core installation complete! 
+Closing this window in 10 seconds, press any key to abort.
+"
+for ((i = 10; i >= 1; i--)); do
+    echo -n "$i "
+    read -t 1 -n 1 && { echo "\nAborted."; exit 0; }
+done
+echo "
+Closing terminal window..."
+sleep 3
+PARENT_PID=$(ps -o ppid= -p $$)
+kill -9 $PARENT_PID
