@@ -250,6 +250,9 @@ rsync -r --remove-source-files $BAILS_DIR/ $LOCAL_DIR/share/bails
 rm -rf $BAILS_DIR
 link_dotfiles
 
+# Update $PATH enironment variable to include new user bin
+. $HOME/.profile
+
 if [ -z "$(ls -A $DATA_DIR/wallets)" ]; then
     bails-wallet
 fi
