@@ -109,8 +109,6 @@ pkill tca &>/dev/null
 # enables job control so background downloads can be foregrounded to show progress while user waits
 set -m
 
-# Set the destination directory for the download
-
 # Checks for existing Bitcoin Core versions
 old_versions=$(ls -d $DOWNLOAD_DIR/bitcoin-core-* | wc --lines)
 
