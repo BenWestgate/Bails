@@ -30,10 +30,10 @@ get_passphrase() {
 }
 
 check_passphrase() {
-    read -s passphrase
+    read -rs passphrase
     temp_passw="$(head -c16 /dev/urandom | xxd -p)"
-    printf "$passphrase\n$temp_passw\n$temp_passw" | passwd && \
-    printf "$temp_passw\n$passphrase\n$passphrase" | passwd
+    printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
+    printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd
 }
 
 # Initialize variables
@@ -55,7 +55,7 @@ while true; do
     # Check if the entered passphrase matches the correct one
     if check_passphrase &>/dev/null <<< "$passphrase"; then
         unset passphrase temp_passw
-        interval=$((interval * ($RANDOM % 2500 + 2000) / 2 ** exp / 1500))
+        interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
         (( interval < min_interval )) && interval=$min_interval
         # Wait for the specified interval before showing the pinentry dialog again
         sleep $interval

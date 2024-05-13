@@ -41,9 +41,9 @@ readonly DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
 
 link_dotfiles() {
     ( # runs in subshell to preserve current directory
-      cd $DOTFILES
-      for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-      for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
+        cd $DOTFILES
+        find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
+        find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
     ) &>/dev/null
 }
 
@@ -63,7 +63,7 @@ check_sigs() {
             (( good_sig >= $1 )) && { type=info; break; }
         done
     fi
-    zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap $ICON --timeout=10 & next_dialog=$!	#TODO use this to prevent multiple dialogs showing if unintended install
+    zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap $ICON --timeout=10 # & next_dialog=$!	# TODO: use next_dialog to prevent multiple dialogs showing during an unattended install
     (( good_sig < $1 )) && { sleep 2; check_sigs $1; }
 }
 
@@ -88,7 +88,7 @@ search_key() {
         else
             gpg --batch --yes --delete-keys $key &>/dev/null
         fi
-    elif [ ! -z "$1" ]; then
+    elif [ -n "$1" ]; then
         echo "$key not found."
         return 1
     else
@@ -247,7 +247,7 @@ rsync --remove-source-files -recursive "$BAILS_DIR"/config/ $DOTFILES/.config
 }' > $DATA_DIR/settings.json
 
 # Cleanup
-rm -Rf $BAILS_DIR/{bin,lib,share,state,config} "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
+rm -Rf ${BAILS_DIR:?}/{bin,lib,share,state,config} "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
 rsync -r --remove-source-files $BAILS_DIR/ $LOCAL_DIR/share/bails
 rm -rf $BAILS_DIR
 link_dotfiles
@@ -279,7 +279,7 @@ Closing this window in 10 seconds, press any key to abort.
 
 for ((i = 10; i >= 1; i--)); do
     echo -n "$i "
-    read -t 1 -n 1 && { echo "\nAborted."; exit 0; }
+    read -r -t 1 -n 1 && { printf '\n%s\n' "Aborted."; exit 0; }
 done
 
 echo "
