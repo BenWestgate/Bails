@@ -30,7 +30,7 @@ INSTALL_DIR="$DOTFILES/.local/share/bitcoin-core"
 
 # Display welcome message
 [ -d $INSTALL_DIR ] || zenity --title='Welcome to Bails' --info \
-    --text="Thank you for choosing Bails, a self-custodial Bitcoin Core wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
+    --text="Thank you for choosing Bails, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' $ICON --icon-name=bails128
 printf '\033]2;Setup the Persistent Storage\a'
 
