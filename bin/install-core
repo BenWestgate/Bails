@@ -251,6 +251,7 @@ rm -rf $BAILS_DIR
 link_dotfiles
 
 # Update $PATH enironment variable to include new user bin
+# shellcheck source=/dev/null
 . $HOME/.profile
 
 if [ -z "$(ls -A $DATA_DIR/wallets)" ]; then
