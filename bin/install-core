@@ -181,7 +181,7 @@ ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | 
 assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $destination_dir/chainparams.cpp | sed 's/[^0-9]*//g')
 
 # Display information about pruning and initial block download while user waits for download
-space=$(($(df --output=size $SOURCE | tail -1)/1024 + - ( assumed_chain_state_size + 10 )*1024))
+space=$(($(df --output=size $SOURCE | tail -1) / 1024 - ( assumed_chain_state_size + 10 ) * 1024))
 prune_MiB=$((space > 1907 ? space : 1907 ))
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
@@ -220,6 +220,7 @@ mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
 mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
 sed --in-place 's/#rpcport=<port>/rpcport=17600/' $DATA_DIR/bitcoin.conf   # set -rpcport for Tails
 sed --in-place "s/#datadir=<dir>/datadir=$DATA_DIR/" $DATA_DIR/bitcoin.conf  # set -datadir for Tails
+sed -i "s/#prune=<n>/prune=$prune_MiB/" $DATA_DIR/bitcoin.conf # set -prune for Tails
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets	# TODO see what permissions bitcoin-core would have made its folders at.
 ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so logs won't persist restart
