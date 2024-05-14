@@ -28,6 +28,9 @@ export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
+# Symlink default datadir to our custom datadir
+ln -s $DATA_DIR $HOME
+
 if ! (( RANDOM % 20 )); then
         # 1 out of 20 start-ups show donation message
     if (( RANDOM % 2 )); then
@@ -45,6 +48,22 @@ if ! (( RANDOM % 20 )); then
         exit 0
     fi
 fi
-space=$(( ($(df --output=avail ${DATA_DIR} | tail -1) + \
-  $(du --summarize ${DATA_DIR}/blocks | cut -f1))/1024 - 10240))
-bitcoin-qt -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024-2100)) -prune=$(( space > 1907 ? space : 1907)) "$@"
+
+space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
+  $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
+space=$(( space > 1907 ? space : 1907 ))
+old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
+
+# If set, reduce prune when needed to not run out of space
+if ((space < old_prune)); then
+    sed -i "s/\"prune\": \"$old_prune\"/\"prune\": \"$space\"/" "$DATA_DIR/settings.json"
+fi
+
+# If set, change dbcache to available memory minus 2100 MiB
+old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
+if $old_dbcache; then
+    new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2100 ))
+    sed -i "s/\"dbcache\": \"$old_dbcache\"/\"dbcache\": \"$new_dbcache\"/" "$DATA_DIR/settings.json"
+fi
+
+bitcoin-qt "$@"
