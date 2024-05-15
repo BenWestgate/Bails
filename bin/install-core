@@ -36,11 +36,14 @@ export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 
+readonly DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
+
+
 link_dotfiles() {
     ( # runs in subshell to preserve current directory
-      cd $DOTFILES
-      for dir in $(find . -type d); do mkdir --parents $HOME${dir:1}; done
-      for file in $(find . -type f); do ln --symbolic --force $PWD${file:1} $HOME${file:1}; done
+        cd $DOTFILES
+        find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
+        find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
     ) &>/dev/null
 }
 
@@ -54,13 +57,13 @@ check_sigs() {
     good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
     if (( good_sig < $1 )); then
         type=warning
-        keys="$(grep fingerprint $destination_dir/show-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
+        keys="$(grep fingerprint $DOWNLOAD_DIR/show-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
         for key in $keys; do
             search_key
             (( good_sig >= $1 )) && { type=info; break; }
         done
     fi
-    zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap $ICON --timeout=10 & next_dialog=$!	#TODO use this to prevent multiple dialogs showing if unintended install
+    zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap $ICON --timeout=10 # & next_dialog=$!	# TODO: use next_dialog to prevent multiple dialogs showing during an unattended install
     (( good_sig < $1 )) && { sleep 2; check_sigs $1; }
 }
 
@@ -85,7 +88,7 @@ search_key() {
         else
             gpg --batch --yes --delete-keys $key &>/dev/null
         fi
-    elif [ ! -z "$1" ]; then
+    elif [ -n "$1" ]; then
         echo "$key not found."
         return 1
     else
@@ -106,30 +109,27 @@ pkill tca &>/dev/null
 # enables job control so background downloads can be foregrounded to show progress while user waits
 set -m
 
-# Set the destination directory for the download
-destination_dir=$HOME/.local/share/bitcoin-core
-
 # Checks for existing Bitcoin Core versions
-old_versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
+old_versions=$(ls -d $DOWNLOAD_DIR/bitcoin-core-* | wc --lines)
 
 # Installs Bails to tmpfs
 rsync --recursive $BAILS_DIR/{bin,lib,share,state} $HOME/.local/
 
 # Create the destination directory if it doesn't exist
-mkdir -p "$destination_dir"
+mkdir -p "$DOWNLOAD_DIR"
 
 # TODO uncomment the downloads when done testing other things
 # Download Bitcoin core checksums and signatures in background
 
-( cd "$destination_dir"; #wget --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
+( cd "$DOWNLOAD_DIR"; #wget --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
 wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; ) & sig_dl=$!
 # TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
-( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; cd "$destination_dir"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
+( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; cd "$DOWNLOAD_DIR"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
 wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; ) & core_download=$!
 
 # Download chain parameters in background
-( cd $destination_dir; wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp ) & get_size=$!
+( cd $DOWNLOAD_DIR; wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp ) & get_size=$!
 
 # clear the terminal
 clear -x
@@ -145,14 +145,14 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 # Switch into latest bitcoin-core directory
-cd "$(ls -dt "$destination_dir"/bitcoin-core-* | head -1)" || {
+cd "$(ls -dt "$DOWNLOAD_DIR"/bitcoin-core-* | head -1)" || {
     zenity --warning --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize $ICON &&
     sleep 5
     install-core	# launch this script again
     exit 1
 }
 
-versions=$(ls -d $destination_dir/bitcoin-core-* | wc --lines)
+versions=$(ls -d $DOWNLOAD_DIR/bitcoin-core-* | wc --lines)
 
 if (( old_versions != versions )) || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
     if zenity --question --title='Verify Bitcoin Core download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify' --width=610 $ICON --icon-name=gtk-dialog-authentication; then
@@ -166,7 +166,7 @@ if (( old_versions != versions )) || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
         fi
         zenity --info --title="Trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. In order to recognize the validity of signatures, you will choose a few individuals who you find trustworthy. Their keys will be used to check the signature attesting to the validity of your download." --width=620 $ICON --icon-name=security-high & understood=$!
         printf '\033]2;Getting Bitcoin Core builder keys...\a'
-        ( cd $destination_dir
+        ( cd $DOWNLOAD_DIR
         [ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
         gpg --show-keys guix.sigs/builder-keys/*.gpg > show-keys )
         (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
@@ -178,18 +178,20 @@ fi
 
 # Bring chainparams.cpp download to foreground then set assumed chainstate & blockchain size
 ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
-assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $destination_dir/chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size $DOWNLOAD_DIR/chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $DOWNLOAD_DIR/chainparams.cpp | sed 's/[^0-9]*//g')
 
-# Display information about pruning and initial block download while user waits for download
 space=$(($(df --output=size $SOURCE | tail -1) / 1024 - ( assumed_chain_state_size + 10 ) * 1024))
 prune_MiB=$((space > 1907 ? space : 1907 ))
+# Disable pruning if USB stick is large enough
+prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_MiB))
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 # Move completed download to persistent storage
-rsync --remove-source-files --recursive $destination_dir $LOCAL_DIR/share/
+rsync --remove-source-files --recursive $DOWNLOAD_DIR $LOCAL_DIR/share/
 link_dotfiles
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
@@ -217,10 +219,9 @@ fi
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
-mv --force $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
-sed --in-place 's/#rpcport=<port>/rpcport=17600/' $DATA_DIR/bitcoin.conf   # set -rpcport for Tails
-sed --in-place "s/#datadir=<dir>/datadir=$DATA_DIR/" $DATA_DIR/bitcoin.conf  # set -datadir for Tails
-sed -i "s/#prune=<n>/prune=$prune_MiB/" $DATA_DIR/bitcoin.conf # set -prune for Tails
+mv -vbu $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+sed -i 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # set -rpcport for Tails
+sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # set -datadir for Tails
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets
 ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so logs won't persist restart
@@ -243,10 +244,14 @@ rsync --remove-source-files -recursive "$BAILS_DIR"/config/ $DOTFILES/.config
 }' > $DATA_DIR/settings.json
 
 # Cleanup
-rm -Rf $BAILS_DIR/{bin,lib,share,state,config} "$destination_dir"/{download,*.tmp,wget-log*}
-rsync -r --remove-source-files $BAILS_DIR $LOCAL_DIR/share/
+rm -Rf ${BAILS_DIR:?}/{bin,lib,share,state,config} "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
+rsync -r --remove-source-files $BAILS_DIR/ $LOCAL_DIR/share/bails
 rm -rf $BAILS_DIR
 link_dotfiles
+
+# Update $PATH enironment variable to include new user bin
+# shellcheck source=/dev/null
+. $HOME/.profile
 
 if [ -z "$(ls -A $DATA_DIR/wallets)" ]; then
     bails-wallet
@@ -254,27 +259,36 @@ fi
 
 printf '\033]2;Bitcoin Core installation complete!\a'
 
-bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB &
-
 # Clear notifications
 dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 
 # Display info about IBD, keeping Tails private and reading material
 if ((versions < 2)); then
+    (
+    # Temporarily change $HOME directory make Bail's datadir the default 
+    HOME+=/Persistent
+    # Symlink .configand .cache to dotfiles so settings persist
+    ln -s $DOTFILES/.{config,cache} $HOME &>/dev/null
+    zenity -notification "Use the default data directory."
+    bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB
+    link_dotfiles
+    ) &
     # TODO Make it easier to read. and dont run on reinstalls!
     sleep 5 # wait so the dialogs open on top of bitcoin core.
     zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --width=552 --text='Bitcoin Core will begin syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
+else
+    bitcoin-qt-wrapper &
 fi &>/dev/null &
 
 # Exit by killing controlling terminal
 echo "Bitcoin Core installation complete! 
 
-Closing this window in 10 seconds, press any key to abort.
+Closing this window in 30 seconds, press any key to abort.
 "
 
-for ((i = 10; i >= 1; i--)); do
+for ((i = 30; i >= 1; i--)); do
     echo -n "$i "
-    read -t 1 -n 1 && { echo "\nAborted."; exit 0; }
+    read -r -t 1 -n 1 && { printf '\n%s\n' "Aborted."; exit 0; }
 done
 
 echo "
