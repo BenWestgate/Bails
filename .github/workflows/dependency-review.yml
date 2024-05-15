@@ -21,7 +21,7 @@ on:
 permissions:
   contents: read
   # Write permissions for pull-requests are required for using the `comment-summary-in-pr` option, comment out if you aren't using this option
-  pull-requests: write
+  #pull-requests: write
 
 jobs:
   dependency-review:
@@ -33,7 +33,7 @@ jobs:
         uses: actions/dependency-review-action@v4
         # Commonly enabled options, see https://github.com/actions/dependency-review-action#configuration-options for all available options.
         with:
-          comment-summary-in-pr: always
-        #   fail-on-severity: moderate
+        #  comment-summary-in-pr: always
+            fail-on-severity: moderate
         #   deny-licenses: GPL-1.0-or-later, LGPL-2.0-or-later
         #   retry-on-snapshot-warnings: true
