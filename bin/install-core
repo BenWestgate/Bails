@@ -29,7 +29,7 @@
 export SOURCE='/live/persistence/TailsData_unlocked'
 
 # Set environment variables
-export PATH="${PATH}:${HOME}/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=$SOURCE/Persistent/.bitcoin
@@ -249,9 +249,9 @@ rsync -r --remove-source-files $BAILS_DIR/ $LOCAL_DIR/share/bails
 rm -rf $BAILS_DIR
 link_dotfiles
 
-# Update $PATH enironment variable to include new user bin
-# shellcheck source=/dev/null
-. $HOME/.profile
+# # Update $PATH enironment variable to include new user bin
+# # shellcheck source=/dev/null
+# . $HOME/.profile
 
 if [ -z "$(ls -A $DATA_DIR/wallets)" ]; then
     bails-wallet
