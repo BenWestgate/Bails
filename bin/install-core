@@ -267,7 +267,7 @@ if ((versions < 2)); then
     (
     # Temporarily change $HOME directory make Bail's datadir the default 
     HOME+=/Persistent
-    # Symlink .configand .cache to dotfiles so settings persist
+    # Symlink .config and .cache to dotfiles so changed GUI settings persist
     ln -s $DOTFILES/.{config,cache} $HOME &>/dev/null
     zenity -notification "Use the default data directory."
     bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB
