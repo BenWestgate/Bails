@@ -241,8 +241,8 @@ sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$XDG_DATA_
 [ -f $DATA_DIR/settings.json ] || echo '{
     "onion": "127.0.0.1:9050",
     "proxy": "127.0.0.1:9050",
-    "prune": "'$prune_MiB'"
-    "dbcache": "'450'"
+    "prune": "'$prune_MiB'",
+    "dbcache": "450"
 }' > $DATA_DIR/settings.json
 
 # Cleanup
