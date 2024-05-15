@@ -19,9 +19,9 @@ jobs:
           SHELLCHECK_OPTS: -e 2012 -e SC2046 -e SC2086 -e SC2164
         with:
           ignore_paths: |
-            ./local/bin/bails-wallet
-            ./local/bin/ibd-progress
-            ./local/bin/backupd
+            ./.local/bin/bails-wallet
+            ./.local/bin/ibd-progress
+            ./.local/bin/backupd
   # python-lint:
   #   name: Check Python code
   #   runs-on: ubuntu-latest
