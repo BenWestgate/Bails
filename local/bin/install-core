@@ -117,7 +117,7 @@ set -m
 old_versions=$(ls -d $DOWNLOAD_DIR/bitcoin-core-* | wc --lines)
 
 # Installs Bails to tmpfs
-rsync --recursive $BAILS_DIR/.local $HOME/
+rsync --recursive $BAILS_DIR/.local $HOME
 
 # Create the destination directory if it doesn't exist
 mkdir -p "$DOWNLOAD_DIR"
@@ -142,7 +142,7 @@ clear -x
 persistent-setup || systemctl reboot
 
 # Installs Bails to Persistent Storage
-rsync --recursive --remove-source-files $BAILS_DIR/.{local,config} $DOTFILES
+rsync -r --remove-source-files $BAILS_DIR/.{local,config} $DOTFILES
 link_dotfiles	# Clobbers the tmpfs installation
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
@@ -266,7 +266,7 @@ dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell o
 # Display info about IBD, keeping Tails private and reading material
 if ((versions < 2)); then
     (
-    # Temporarily change $HOME directory make Bail's datadir the default 
+    # Temporarily change $HOME directory make Bails's datadir the default 
     HOME+=/Persistent
     zenity -notification "Use the default data directory."
     bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB
