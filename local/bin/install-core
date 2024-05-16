@@ -223,7 +223,7 @@ fi
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
-mv -vbu $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+mv -vbu "$LOCAL_DIR/{bitcoin.conf,README.md}" "$DATA_DIR"
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # set -datadir for Tails
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
@@ -232,10 +232,7 @@ ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tm
 ln --symbolic $DATA_DIR $HOME &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Change mime association from electrum to bitcoin core
-sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$XDG_DATA_HOME/applications/mimeinfo.cache
-
-# create application shortcuts
-#TODO for L1
+sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -260,10 +257,9 @@ fi
 
 printf '\033]2;Bitcoin Core installation complete!\a'
 
-# Clear notifications
-dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
-
 # Display info about IBD, keeping Tails private and reading material
+
+# TODO: Remove strDataDir= key from Bitcoin-Qt.conf before setting the temporary $HOME, then as soon as bitcoin is running or closed, change it back to the full path not dependent on mounts for max safety.
 if ((versions < 2)); then
     (
     # Temporarily change $HOME directory make Bails's datadir the default 
