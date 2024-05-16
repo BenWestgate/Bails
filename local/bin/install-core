@@ -187,7 +187,7 @@ assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $DOWNLOAD
 space=$(($(df --output=size $SOURCE | tail -1) / 1024 - ( assumed_chain_state_size + 10 ) * 1024))
 prune_MiB=$((space > 1907 ? space : 1907 ))
 # Disable pruning if USB stick is large enough
-prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_MiB))
+prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
@@ -262,10 +262,12 @@ printf '\033]2;Bitcoin Core installation complete!\a'
 # TODO: Remove strDataDir= key from Bitcoin-Qt.conf before setting the temporary $HOME, then as soon as bitcoin is running or closed, change it back to the full path not dependent on mounts for max safety.
 if ((versions < 2)); then
     (
+    sed -i.bak '#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf"
     # Temporarily change $HOME directory make Bails's datadir the default 
     HOME+=/Persistent
-    zenity -notification "Use the default data directory."
-    bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB
+    zenity --notification "Use the default data directory."
+    bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB &
+    mv "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf{.bak,}
     link_dotfiles
     ) &
     # TODO Make it easier to read. and Confirm it doesn't run on reinstalls!
