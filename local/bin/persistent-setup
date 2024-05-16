@@ -69,13 +69,19 @@ else:
     printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
 else
     # Choose passphrase
-    zenity --warning --title='Choose a strong passphrase' \
-        --text='It is important to select a strong passphrase to protect your Bitcoin data.\n\nWe recommend using a suggested passphrase from the Persistent Storage dialog.' \
-        --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage --no-wrap $ICON
-    zenity --warning --title='Write your passphrase down' \
-        --text='It is impossible to recover your passphrase if you forget it!\n\nTo help you remember your passphrase, you can write it on a piece of paper, store it in a sealed envelope in your wallet for a few days, and destroy it once you know it well. Write on a hard surface to avoid leaving an imprint of the secret.' \
-        --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.gedit --width=530 $ICON
-
+    zenity --warning --title='Choose a strong passphrase' --no-wrap $ICON \
+        --text='It is important to select a strong passphrase to protect your Bitcoin data.\n
+We recommend using a suggested passphrase from the Persistent Storage dialog.' \
+        --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage
+    zenity --warning --title='Write your passphrase down' $ICON \
+        --text='It is impossible to recover your passphrase if you forget it!\n
+To help you remember your passphrase, you can write it on a piece
+of paper, seal it in an envelope, secure it in a place like:
+   • a safe,
+   • locked desk drawer, or
+   • your wallet\nfor a few days, and destroy it once you know it well.\n
+Write on a hard surface to avoid leaving an imprint of the secret.' \
+        --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
     # Persistent storage creation
     until [ -b '/dev/mapper/TailsData_unlocked' ]; do
             sleep 10
@@ -115,8 +121,18 @@ fi
 
     # Display memorization tips
     zenity --info --title='Tips for your new passphrase' \
-        --text="You will be prompted periodically to enter your passphrase as spaced repetition training. Practice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n\nIt is essential to keep your passphrase safe. Do not re-use it for any other accounts. If you wrote it down, store it out of sight, in a secured location, away from your Bails USB sticks and destroy it once you memorize it." \
-        --ok-label='I Will Destroy It Once Memorized' --width=640 $ICON
+            --text="You will be prompted to enter your passphrase as spaced repetition training.\n\nPractice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n
+    Keep your passphrase safe, DO NOT:
+    • share it with anyone (instead clone them a Bails USB),
+    • give it when someone emails, calls, or messages,
+    • photograph it,
+    • re-use for any other account, or type it outside of Bails.
+    DO:
+    • be mindful of whether you can be seen or recorded typing,
+    • immediately change it when you suspect it is compromised,
+    • store it out of sight away from your Bails USB sticks, and
+    • destroy it once memorized." \
+            --ok-label='I Will Destroy It Once Memorized' $ICON
 }
 # Checking features of the Persistent Storage
 if /usr/local/lib/tpscli is-active PersistentDirectory && \
