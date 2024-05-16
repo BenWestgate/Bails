@@ -42,4 +42,5 @@ fi
 
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BAILS_DIR
-$BAILS_DIR/local/bin/install-core
+for folder in {config,local}; do mv $BAILS_DIR/{,.}$folder; done
+$BAILS_DIR/.local/bin/install-core
