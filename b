@@ -42,4 +42,4 @@ fi
 
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BAILS_DIR
-$BAILS_DIR/bin/install-core
+$BAILS_DIR/local/bin/install-core
