@@ -158,7 +158,7 @@ cd "$(ls -dt "$DOWNLOAD_DIR"/bitcoin-core-* | head -1)" || {
 versions=$(ls -d $DOWNLOAD_DIR/bitcoin-core-* | wc --lines)
 
 if (( old_versions != versions )) || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
-    if zenity --question --title='Verify Bitcoin Core download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify' --width=610 $ICON --icon-name=gtk-dialog-authentication; then
+    if zenity --question --title='Verify Bitcoin Core download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify' $ICON --icon-name=gtk-dialog-authentication; then
         if [ ! -f SHA256SUMS ]; then
             zenity --warning --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize $ICON
             pkill wget
