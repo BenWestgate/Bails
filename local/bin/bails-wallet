@@ -446,8 +446,6 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
         zenity --notification --text='Importing your wallet. This may take several minutes...\nLock the screen if you need to walk away from the PC.' $ICON
         sleep 10
         tails-screen-locker
-        # Clear notifications
-        dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
     } &>/dev/null &
     lock_if_slow=$!
     for change in 0 1; do

@@ -47,7 +47,7 @@ while true; do
     get_passphrase
     # Check if the passphrase is empty (user canceled) or not
     until [ "$passphrase" ]; do
-        zenity --notification --text="No passphrase entered!\nEnter your passphrase to check your memory."
+        zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
         # Call the function to get the passphrase
         sleep 2
         get_passphrase
@@ -63,7 +63,7 @@ while true; do
         enter='Enter'
     else
         unset passphrase temp_pass
-        zenity --notification --text="Passphrase does not match.\nTry again to improve your memory."
+        zenity --notification --text="Passphrase does not match.\nTry again."
         sleep 2
         enter='Re-enter'
         ((exp = (exp == 0) ? 2 : exp + 1)) 

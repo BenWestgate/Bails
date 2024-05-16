@@ -80,7 +80,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
         --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
     # Persistent storage creation
     until [ -b '/dev/mapper/TailsData_unlocked' ]; do
-            sleep 15
+            sleep 12
             notify-send --icon=bails128 'Important: Choose the suggested passphrase or click ↻.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
     done & notifying+=($!)
 
@@ -150,19 +150,19 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
         { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
     {
         /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=9; false; }
+            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=7; false; }
     } &&
         {
             /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections" to remember your Wi-Fi' --window-icon=network-wired --timeout=9; true; }
+                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections" to remember your Wi-Fi' --window-icon=network-wired --timeout=7; true; }
         } &&
         {
             /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=9; false; }
+                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=7; false; }
         } &&
         {
             /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=9; false; }
+                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=7; false; }
         }
 done
 

@@ -158,7 +158,7 @@ cd "$(ls -dt "$DOWNLOAD_DIR"/bitcoin-core-* | head -1)" || {
 versions=$(ls -d $DOWNLOAD_DIR/bitcoin-core-* | wc --lines)
 
 if (( old_versions != versions )) || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
-    if zenity --question --title='Verify Bitcoin Core download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify' --width=610 $ICON --icon-name=gtk-dialog-authentication; then
+    if zenity --question --title='Verify Bitcoin Core download' --text='Download verification is optional but highly recommended. It requires around 5 to 10 minutes.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --cancel-label='Skip' --ok-label='Verify' $ICON --icon-name=gtk-dialog-authentication; then
         if [ ! -f SHA256SUMS ]; then
             zenity --warning --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize $ICON
             pkill wget
@@ -187,7 +187,7 @@ assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size $DOWNLOAD
 space=$(($(df --output=size $SOURCE | tail -1) / 1024 - ( assumed_chain_state_size + 10 ) * 1024))
 prune_MiB=$((space > 1907 ? space : 1907 ))
 # Disable pruning if USB stick is large enough
-prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_MiB))
+prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
@@ -223,7 +223,7 @@ fi
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
-mv -vbu $LOCAL_DIR/{bitcoin.conf,README.md} $DATA_DIR
+mv -vbu "$LOCAL_DIR/{bitcoin.conf,README.md}" "$DATA_DIR"
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # set -datadir for Tails
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
@@ -232,10 +232,7 @@ ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tm
 ln --symbolic $DATA_DIR $HOME &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Change mime association from electrum to bitcoin core
-sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >$XDG_DATA_HOME/applications/mimeinfo.cache
-
-# create application shortcuts
-#TODO for L1
+sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -260,24 +257,27 @@ fi
 
 printf '\033]2;Bitcoin Core installation complete!\a'
 
-# Clear notifications
-dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
-
 # Display info about IBD, keeping Tails private and reading material
+
+# TODO: Remove strDataDir= key from Bitcoin-Qt.conf before setting the temporary $HOME, then as soon as bitcoin is running or closed, change it back to the full path not dependent on mounts for max safety.
 if ((versions < 2)); then
     (
+    sed -i.bak '#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf"
     # Temporarily change $HOME directory make Bails's datadir the default 
     HOME+=/Persistent
-    zenity -notification "Use the default data directory."
-    bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB
+    zenity --notification "Use the default data directory."
+    bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB &
+    mv "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf"{.bak,}
     link_dotfiles
     ) &
     # TODO Make it easier to read. and Confirm it doesn't run on reinstalls!
-    sleep 5 # wait so the dialogs open on top of bitcoin core.
+    until [ -f $DATA_DIR/bitcoind.pid ]; do
+        sleep 1
+    done
     zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core will begin syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
 else
     bitcoin-qt-wrapper &
-fi &>/dev/null &
+fi &>/dev/null
 
 # Exit by killing controlling terminal
 echo "Bitcoin Core installation complete! 
