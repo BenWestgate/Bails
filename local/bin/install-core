@@ -168,7 +168,7 @@ if (( old_versions != versions )) || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
             install-core	# launch this script again
             exit 1
         fi
-        zenity --info --title="Trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. In order to recognize the validity of signatures, you will choose a few individuals who you find trustworthy. Their keys will be used to check the signature attesting to the validity of your download." --width=620 $ICON --icon-name=security-high & understood=$!
+        zenity --info --title="Trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. In order to recognize the validity of signatures, you will choose a few individuals who you find trustworthy. Their keys will be used to check the signature attesting to the validity of your download." $ICON --icon-name=security-high & understood=$!
         printf '\033]2;Getting Bitcoin Core builder keys...\a'
         ( cd $DOWNLOAD_DIR
         [ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
@@ -274,7 +274,7 @@ if ((versions < 2)); then
     ) &
     # TODO Make it easier to read. and Confirm it doesn't run on reinstalls!
     sleep 5 # wait so the dialogs open on top of bitcoin core.
-    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --width=552 --text='Bitcoin Core will begin syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
+    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core will begin syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
 else
     bitcoin-qt-wrapper &
 fi &>/dev/null &
