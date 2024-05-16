@@ -75,7 +75,7 @@ ask_t_and_n() {
     # Explain the seed backup and what conditions will recover the seed
     # allows tweaking it or skipping it in a 'Change Something' dialog, TODO decide best formatting in Tails
     tn_grammar
-    until zenity --question --icon-name=org.gnome.gedit --title="$threshold-of-$locations codex32 seed backup" \
+    until zenity --question --icon-name=org.gnome.TextEditor --title="$threshold-of-$locations codex32 seed backup" \
         --text="In case all Bails USBs fail or you lose the passphrase of your Persistent Storage, we will split your seed into <b>$locations</b> codex32 $string$plurs across <b>$locations location$plurs</b>, with <b>any $threshold</b> of those ${string}s able to restore your seed by typing $pronoun into a codex32-enabled wallet such as Bails.$password_derived\n\nYou will need:\n\t• $locations piece$plurs of paper\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret\n\nOne $string can stay hidden near this Bails USB and the others will go offsite, one to each of your backup locations.\n\n-If <b>$threshold</b> $string$plurtss $plurts stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n\n-If <b>$((locations - threshold + 2 > locations ? locations : locations - threshold + 2))</b> location$plurs are lost$password_loss, you will <b>NOT</b> be able to restore your seed.\n\nDo you understand?" \
         --cancel-label='Change Something' --width=567 $ICON; do
         backup_choice="$(zenity --title='Change backup parameters' --question --extra-button='Location Quantity' \
@@ -139,7 +139,7 @@ display_confirm() {
         progress="($backups_made of $locations)"
         unset share
         until [ "$codex32_string" == "$share" ]; do
-            zenity --title="Create new a seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.gedit --no-wrap $ICON
+            zenity --title="Create new a seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.TextEditor --no-wrap $ICON
             choice="Create a new seed"
             input_share
             if [ "$codex32_string" == "$share" ]; then
