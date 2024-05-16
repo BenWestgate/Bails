@@ -37,7 +37,6 @@ export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
 export XDG_CONFIG_HOME=$DOTFILES/.config
 export XDG_CACHE_HOME=$DOTFILES/.cache
-export XDG_DATA_HOME=$LOCAL_DIR/share
 export TMPDIR=$XDG_RUNTIME_DIR
 
 readonly DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
@@ -194,10 +193,6 @@ prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_MiB))
 printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
-# Move completed download to persistent storage
-rsync --remove-source-files --recursive $DOWNLOAD_DIR $XDG_DATA_HOME
-link_dotfiles
-
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
@@ -208,6 +203,11 @@ else
     install-core	# launch this script again
     exit 1
 fi
+
+# Move completed verified download to persistent storage
+export XDG_DATA_HOME=$LOCAL_DIR/share
+rsync --remove-source-files --recursive $DOWNLOAD_DIR $XDG_DATA_HOME
+link_dotfiles
 
 # Kill Bitcoin Core if running, wait for it to shutdown safely
 # TODO export this as a function or file, bails-wallet also needs it and so will bails-backup!
