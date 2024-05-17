@@ -56,7 +56,7 @@ while true; do
     fi
     if ! get_passphrase; then
         zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
-        sleep 3
+        sleep 2
         continue
     fi
     if check_passphrase &>/dev/null <<< "$passphrase"; then
@@ -69,7 +69,7 @@ while true; do
     else
         unset passphrase temp_passw
         zenity --notification --text="Passphrase does not match.\nTry again."
-        sleep 3
+        sleep 2
         enter='Re-enter'
         ((exp = (exp == 0) ? 2 : exp + 1)) 
     fi
