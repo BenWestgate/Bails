@@ -39,7 +39,7 @@ if [ -b '/dev/mapper/TailsData_unlocked' ]; then
     # Check for existing Persistent Storage passphrase if setup never completed
     [ -d $INSTALL_DIR ] || while true; do
         existing_passphrase="$(python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter your existing Persistent Storage passphrase")
+box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
 if box.passphrase:
     print(box.passphrase)
 else:
@@ -99,7 +99,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
             --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize $ICON
         python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter the passphrase of your Persistent Storage")
+box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
 if box.passphrase:
     print(box.passphrase+"\n"+box.passphrase)
 else:
