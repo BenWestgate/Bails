@@ -24,11 +24,16 @@
 # Prompts the user for their user account password as spaced repetition.
 ###############################################################################
 
+screen_is_locked() {
+    # Check if the current session is locked
+    session_state=$(loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p LockedHint | cut -d= -f2)
+    [ "$session_state" = "yes" ]
+}
+
 # Function to prompt for passphrase using pinentry-gnome3
 get_passphrase() {
     passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 --timeout 99999 2>&1 | grep D | cut -c3-)"
     [ "$passphrase" ]
-    return $?
 }
 
 check_passphrase() {
@@ -44,11 +49,14 @@ interval=30 # initial value
 exp=1
 enter='Enter'
 sleep $interval
-no_entry_sleep=2
 while true; do
+    if screen_is_locked; then
+        sleep $interval
+        continue
+    fi
     if ! get_passphrase; then
         zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
-        sleep $((no_entry_sleep*=2))
+        sleep 3
         continue
     fi
     if check_passphrase &>/dev/null <<< "$passphrase"; then
