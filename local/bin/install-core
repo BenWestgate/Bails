@@ -265,7 +265,7 @@ if ((versions < 2)); then
     sed -i.bak '#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf"
     # Temporarily change $HOME directory make Bails's datadir the default 
     HOME+=/Persistent
-    zenity --notification "Use the default data directory."
+    zenity --notification --text="Use the default data directory." --window-icon=bails128
     bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB &
     mv "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf"{.bak,}
     link_dotfiles
