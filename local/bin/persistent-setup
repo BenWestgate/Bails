@@ -154,7 +154,7 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
     } &&
         {
             /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections" to remember your Wi-Fi' --window-icon=network-wired --timeout=7; true; }
+                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=network-wired --timeout=7; true; }
         } &&
         {
             /usr/local/lib/tpscli is-active GnuPG ||
