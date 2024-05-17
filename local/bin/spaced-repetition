@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2023 Ben Westgate
+# Copyright (c) 2024 Ben Westgate
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,8 @@
 # Function to prompt for passphrase using pinentry-gnome3
 get_passphrase() {
     passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 --timeout 99999 2>&1 | grep D | cut -c3-)"
+    [ "$passphrase" ]
+    return $?
 }
 
 check_passphrase() {
@@ -37,34 +39,29 @@ check_passphrase() {
 }
 
 # Initialize variables
-# Set a minimum interval of 5 seconds
 min_interval=5
-interval=30 # initial value, chatGPT thinks 120 to 300 seconds is, now thinks initial delay of around 30 to 45 seconds
+interval=30 # initial value
 exp=1
 enter='Enter'
 sleep $interval
+no_entry_sleep=2
 while true; do
-    get_passphrase
-    # Check if the passphrase is empty (user canceled) or not
-    until [ "$passphrase" ]; do
+    if ! get_passphrase; then
         zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
-        # Call the function to get the passphrase
-        sleep 2
-        get_passphrase
-    done
-    # Check if the entered passphrase matches the correct one
+        sleep $((no_entry_sleep*=2))
+        continue
+    fi
     if check_passphrase &>/dev/null <<< "$passphrase"; then
         unset passphrase temp_passw
         interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
         (( interval < min_interval )) && interval=$min_interval
-        # Wait for the specified interval before showing the pinentry dialog again
         sleep $interval
         exp=0
         enter='Enter'
     else
-        unset passphrase temp_pass
+        unset passphrase temp_passw
         zenity --notification --text="Passphrase does not match.\nTry again."
-        sleep 2
+        sleep 3
         enter='Re-enter'
         ((exp = (exp == 0) ? 2 : exp + 1)) 
     fi
