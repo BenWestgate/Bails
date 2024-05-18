@@ -24,13 +24,6 @@
 # Sets environment variable and launches install-core
 ###############################################################################
 
-# For faster testing use:
-# git clone https://github.com/benwestgate/bails --depth=1; */b
-
-# Bails can be re-ran by typing bails/b to update bitcoin-core
-# Re-run will allow creating a new wallet and codex32 backup
-# Otherwise it mostly skips already completed tasks
-
 # Check for root.
 if [[ $(id -u) = "0" ]]; then
   echo "
@@ -42,5 +35,4 @@ fi
 
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BAILS_DIR
-mv $BAILS_DIR/{src,.local}
-$BAILS_DIR/.local/bin/install-core
+$BAILS_DIR/bails/.local/bin/install-core
