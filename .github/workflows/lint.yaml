@@ -4,8 +4,8 @@ on:
   push:
     branches: [ master ]
     paths:
-      - b
-      - bails/.local/bin/*
+      - 'b'
+      - 'bails/.local/bin/*'
       - '**.py'
 jobs:
   shell-lint:
