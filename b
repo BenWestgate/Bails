@@ -32,7 +32,6 @@ YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
   read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
   exit 0
 fi
-
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BAILS_DIR
 $BAILS_DIR/bails/.local/bin/install-core
