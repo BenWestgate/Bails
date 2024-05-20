@@ -150,19 +150,19 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
         { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
     {
         /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=7; false; }
+            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; false; }
     } &&
         {
             /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=network-wired --timeout=7; true; }
+                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=network-wired --timeout=6; true; }
         } &&
         {
             /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=7; false; }
+                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=6; false; }
         } &&
         {
             /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=7; false; }
+                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; false; }
         }
 done
 
