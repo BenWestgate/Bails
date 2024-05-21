@@ -28,6 +28,9 @@
 DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 INSTALL_DIR="$DOTFILES/.local/share/bitcoin-core"
 
+# Check if user password is already set
+passwd_unset=$(passwd -S $USER | grep -c NP)
+
 # Display welcome message
 [ -d $INSTALL_DIR ] || zenity --title='Welcome to Bails' --info \
     --text="Thank you for choosing Bails, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
@@ -66,6 +69,7 @@ else:
     done
     unset entropy
      # Change user account password to Persistent Storage passphrase for spaced repetition practice.
+    ((passwd_unset)) && \
     printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
 else
     # Choose passphrase
@@ -94,6 +98,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     kill "${notifying[@]}" &>/dev/null
 
     # Memorization help
+    ((passwd_unset)) && \
     until {
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
@@ -110,7 +115,7 @@ else:
     done
 
 fi
-[ -d $INSTALL_DIR ] || {
+if ((passwd_unset)) && ! [ -d "$INSTALL_DIR" ]; then
     # Spaced repetition training loop
     spaced-repetition &
 
@@ -122,13 +127,15 @@ fi
      • give it when someone emails, calls, or messages,
      • photograph it,
      • re-use for any other account, or type it outside of Bails.
+
     DO:
      • be mindful of whether you can be seen or recorded typing,
      • immediately change it when you suspect it is compromised,
      • store it out of sight away from your Bails USB sticks, and
      • destroy it once memorized." \
-            --ok-label='I Will Destroy It Once Memorized' $ICON
-}
+            --ok-label='I Will Destroy It Once Memorized' "$ICON"
+fi
+
 # Checking features of the Persistent Storage
 if /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
@@ -150,24 +157,24 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
         { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
     {
         /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=7; false; }
+            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; false; }
     } &&
         {
             /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=network-wired --timeout=7; true; }
+                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=gnome-dev-ethernet --timeout=6; true; }
         } &&
         {
             /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=7; false; }
+                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=6; false; }
         } &&
         {
             /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=7; false; }
+                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; false; }
         }
 done
 
 # Closes the Persistent Storage window
-pkill 'python3 /usr/local/lib/tps-frontend' &>/dev/null
-pkill 'zenity --notification' &>/dev/null
+pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
+pkill -f 'zenity --notification' &>/dev/null
 
 exit 0
