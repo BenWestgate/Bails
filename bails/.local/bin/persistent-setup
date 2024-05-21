@@ -69,7 +69,7 @@ else:
     done
     unset entropy
      # Change user account password to Persistent Storage passphrase for spaced repetition practice.
-    ((password_unset)) && \
+    ((passwd_unset)) && \
     printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
 else
     # Choose passphrase
