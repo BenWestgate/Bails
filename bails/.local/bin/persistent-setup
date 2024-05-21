@@ -123,18 +123,19 @@ if ((passwd_unset)) && ! [ -d "$INSTALL_DIR" ]; then
     zenity --info --title='Tips for your new passphrase' \
             --text="You will be prompted to enter your passphrase as spaced repetition training.\n\nPractice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n
     Keep your passphrase safe, DO NOT:
-    • share it with anyone (instead clone them a Bails USB),
-    • give it when someone emails, calls, or messages,
-    • photograph it,
-    • re-use for any other account, or type it outside of Bails.
+     • share it with anyone (instead clone them a Bails USB),
+     • give it when someone emails, calls, or messages,
+     • photograph it,
+     • re-use for any other account, or type it outside of Bails.
 
     DO:
-    • be mindful of whether you can be seen or recorded typing,
-    • immediately change it when you suspect it is compromised,
-    • store it out of sight away from your Bails USB sticks, and
-    • destroy it once memorized." \
+     • be mindful of whether you can be seen or recorded typing,
+     • immediately change it when you suspect it is compromised,
+     • store it out of sight away from your Bails USB sticks, and
+     • destroy it once memorized." \
             --ok-label='I Will Destroy It Once Memorized' "$ICON"
 fi
+
 # Checking features of the Persistent Storage
 if /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
