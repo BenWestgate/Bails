@@ -122,7 +122,7 @@ rsync --recursive $BAILS_DIR/bails/ $HOME
 mkdir -p "$DOWNLOAD_DIR"
 
 # Download verify-binaries tool
-( cd "$DOWNLOAD_DIR"; wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/contrib/verify-binaries/verify.py ) & get_verify_tool=$!
+( cd "$DOWNLOAD_DIR"; wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/verify-binaries/verify.py ) & get_verify_tool=$!
 
 # Download Bitcoin core checksums and signatures in background
 
