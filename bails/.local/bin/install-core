@@ -285,13 +285,13 @@ if [ -e $LOCAL_DIR/state/installed ]; then
 else
     (
     # Remove our custom datadir from Bitcoin-Qt.conf
-    sed -i.bak '#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf"
+    sed -i.bak '\#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' $HOME/.config/Bitcoin/Bitcoin-Qt.conf
     # Temporarily change $HOME directory make Bails's datadir the default
     HOME=~/Persistent
     zenity --info --text="Use the default data directory.\n\nThat will store your bitcoin data at:\n  <i>~/Persistent/.bitcoin</i>" --ok-label="Use the default data directory" --window-icon=bails128
     bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB &
     # Restore original config TODO this may need a small sleep to avoid a race condition.
-    mv "$XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf"{.bak,}
+    mv "$HOME/.config/Bitcoin/Bitcoin-Qt.conf"{.bak,}
     HOME=/home/$USER
     link_dotfiles
     ) &
