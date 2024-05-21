@@ -253,7 +253,7 @@ printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 
 link_dotfiles
-rsync --remove-source-files "$LOCAL_DIR/{bitcoin.conf,README.md}" "$DATA_DIR"
+rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} "$DATA_DIR"
 [ -e $DATA_DIR/wallets ] || mkdir $DATA_DIR/wallets
 ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets
