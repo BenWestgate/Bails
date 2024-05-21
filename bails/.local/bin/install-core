@@ -128,7 +128,7 @@ OLD_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f4)
 wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; ) & sig_dl=$!
 
 # Download verify-binaries tool
-( wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/contrib/verify-binaries/verify.py ) & get_verify_tool=$!
+( wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/verify-binaries/verify.py ) & get_verify_tool=$!
 
 # Download Bitcoin Core in background to the destination directory
 ( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
