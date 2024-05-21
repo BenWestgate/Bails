@@ -176,7 +176,7 @@ cd bitcoin-core-$NEW_VER || {
     install-core	# launch this script again
     exit 1
 }
-if [[ $OLD_VER != $NEW_VER ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
+if [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
     if $DOWNLOAD_DIR/verify.py bin SHA256SUMS bitcoin-$NEW_VER-x86_64-linux-gnu.tar.gz; then
         zenity --question --title='Optional download verification' --text='Your Bitcoin Core download has been successfully verified by at least 3 good signatures from individuals trusted by the Bails maintainers.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming these extra verification steps gives further assurance you have not downloaded an unexpected or maliciously tampered version of Bitcoin.' --cancel-label='Continue' --default-cancel --ok-label='Extra Verification' $ICON --icon-name=gtk-dialog-authentication
         verified=$?
