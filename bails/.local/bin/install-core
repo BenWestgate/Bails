@@ -184,6 +184,7 @@ if [[ $OLD_VER != $NEW_VER ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
         zenity --question --title='Verify Bitcoin Core download' --text='Download verification is required.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --ok-label='Verify Now' $ICON --icon-name=gtk-dialog-authentication
         verified=0
     fi
+fi
 # TODO read the exit codes of verify.py to handle all error dialogs in a switch.
 if ! ((verified)); then
     if [ ! -f SHA256SUMS ]; then
