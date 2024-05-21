@@ -1,5 +1,0 @@
-[Default Applications]
-application/x-raw-disk-image=decrypt-vault.desktop;
-
-[Added Associations]
-application/x-raw-disk-image=decrypt-vault.desktop;
