@@ -117,7 +117,7 @@ rsync --recursive $BAILS_DIR/bails/ $HOME
 
 # Check existing Bitcoin Core version
 cd $DOWNLOAD_DIR
-OLD_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f4)
+OLD_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f3)
 
 # Download Bitcoin Core builder keys
 ( [ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
@@ -169,7 +169,7 @@ ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $get_verify_tool | cu
 printf '\033]2;Updating all keys from keyserver...\a'
 ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
-NEW_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f4)
+NEW_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f3)
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-$NEW_VER || {
     zenity --error --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
