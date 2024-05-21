@@ -148,7 +148,7 @@ rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
 link_dotfiles	# Clobbers the tmpfs installation
 
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
-ps -p $get_keys &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $get_keys &>/dev/null && fg %$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 gpg --list-keys | grep 'Key fingerprint' | while read -r line; do grep "$line" builder-keys; done || \
 for key in ./trusted-keys/*; do
@@ -164,10 +164,10 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 printf '\033]2;Getting Bitcoin Core verification script...\a'
-ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 printf '\033]2;Updating all keys from keyserver...\a'
-ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
 NEW_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f4)
 # Switch into latest bitcoin-core directory
