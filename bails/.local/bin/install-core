@@ -177,6 +177,7 @@ cd bitcoin-core-$NEW_VER || {
     exit 1
 }
 if [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
+    # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version. If we cannot from github.
     if $DOWNLOAD_DIR/verify.py bin SHA256SUMS bitcoin-$NEW_VER-x86_64-linux-gnu.tar.gz; then
         zenity --question --title='Optional download verification' --text='Your Bitcoin Core download has been successfully verified by at least 3 good signatures from individuals trusted by the Bails maintainers.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming these extra verification steps gives further assurance you have not downloaded an unexpected or maliciously tampered version of Bitcoin.' --cancel-label='Continue' --default-cancel --ok-label='Extra Verification' $ICON --icon-name=gtk-dialog-authentication
         verified=$?
@@ -197,6 +198,7 @@ if ! ((verified)); then
     fi
     zenity --info --title="Choose trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. You decide which of these public keys you trust.\n\nTo validate your download's signatures, choose a few individuals who you find trustworthy." "$ICON" --icon-name=security-high
     check_sigs 3
+    # TODO we can use the environment variable $BINVERIFY_MIN_GOOD_SIGS to increment and decrement the threshold and run verify.py in a loop.
     ./verify.py bin SHA256SUMS bitcoin-$NEW_VER-x86_64-linux-gnu.tar.gz
 fi
 
