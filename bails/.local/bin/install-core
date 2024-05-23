@@ -114,10 +114,11 @@ pkill tca &>/dev/null
 set -m
 
 # Installs Bails to tmpfs
-rsync --recursive $BAILS_DIR/bails/ $HOME
+rsync --recursive "$BAILS_DIR/bails/" "$HOME"
 
 # Check existing Bitcoin Core version
-cd $DOWNLOAD_DIR
+# shellcheck disable=SC2164
+cd "$DOWNLOAD_DIR"
 OLD_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f3)
 
 # Download Bitcoin Core builder keys
@@ -153,10 +154,10 @@ ps -p $get_keys &>/dev/null && fg %$(jobs -l | grep $get_keys | cut -f1 -d' ' | 
 
 gpg --list-keys | grep 'Key fingerprint' | while read -r line; do grep "$line" builder-keys; done || \
 for key in ./trusted-keys/*; do
-    if grep builder-keys <<< gpg --show-keys $key | grep "Key fingerprint"; then
-        gpg --import $key
+    if grep builder-keys <<< gpg --show-keys "$key" | grep "Key fingerprint"; then
+        gpg --import "$key"
     else
-        echo Warning: Bails trusted key $key not found in bitcoin-core/guix.sigs repository, skipping.
+        echo "Warning: Bails trusted key $key not found in bitcoin-core/guix.sigs repository, skipping."
     fi
 done
 gpg --refresh-keys & gpg_refresh=$!
@@ -172,7 +173,7 @@ ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $gpg_refresh | cut -f1 -d
 
 NEW_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f3)
 # Switch into latest bitcoin-core directory
-cd bitcoin-core-$NEW_VER || {
+cd bitcoin-core-"$NEW_VER" || {
     zenity --error --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
     install-core	# launch this script again
     exit 1
@@ -227,17 +228,6 @@ else
     exit 1
 fi
 
-# Move completed verified download to persistent storage
-export XDG_DATA_HOME=$LOCAL_DIR/share
-rm -Rf "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
-rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
-rsync --remove-source-files --recursive "$BAILS_DIR"/ $XDG_DATA_HOME/bails
-
-# Change mime association from electrum to bitcoin core
-sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
-
-link_dotfiles
-
 # Kill Bitcoin Core if running, wait for it to shutdown safely
 # TODO export this as a function or file, bails-wallet also needs it and so will bails-backup!
 if pgrep bitcoin; then
@@ -248,20 +238,27 @@ if pgrep bitcoin; then
         sleep 1
     done
 fi
+# Move completed verified download to persistent storage
+export XDG_DATA_HOME=$LOCAL_DIR/share
+rm -Rf "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
+rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
+rsync --remove-source-files --recursive "$BAILS_DIR"/ $XDG_DATA_HOME/bails
 
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 
+# Change mime association from electrum to bitcoin core
+sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
+# Configure data directory
+rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DATA_DIR
 link_dotfiles
-rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} "$DATA_DIR"
-[ -e $DATA_DIR/wallets ] || mkdir $DATA_DIR/wallets
-ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
-chmod -w $DATA_DIR/wallets
+[ -e $DATA_DIR/wallets ] || mkdir $DATA_DIR/wallets # TODO: this can be replaced by creating the symlink in panic mode solution
+ln --symbolic --force /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # set -datadir for Tails
-ln --symbolic --force $TMPDIR/debug.log $DATA_DIR/debug.log # links debug.log to $TMPDIR so logs won't persist restart
-ln --symbolic $DATA_DIR $HOME &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
-
+ln --symbolic --force "$TMPDIR/debug.log" $DATA_DIR/debug.log # links debug.log to $TMPDIR so logs won't persist restart
+ln --symbolic $DATA_DIR "$HOME" &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
     "onion": "127.0.0.1:9050",
@@ -270,7 +267,7 @@ ln --symbolic $DATA_DIR $HOME &>/dev/null # This can't be persisted by dotfiles 
     "dbcache": "450"
 }' > $DATA_DIR/settings.json
 
-# # Update $PATH enironment variable to include new user bin
+# # Update $PATH environment variable to include new user bin
 # # shellcheck source=/dev/null
 # . $HOME/.profile
 

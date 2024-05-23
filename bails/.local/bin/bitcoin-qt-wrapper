@@ -29,7 +29,7 @@ export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # Symlink default datadir to our custom datadir
-ln -s $DATA_DIR $HOME
+ln -s $DATA_DIR "$HOME"
 
 if ! (( RANDOM % 20 )); then
         # 1 out of 20 start-ups show donation message
