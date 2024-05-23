@@ -56,19 +56,14 @@ link_dotfiles() {
 check_sigs() {
     temp_file="$(mktemp)"
     trap 'rm -rf -- "$temp_file"' EXIT
-    type=info
-    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
-    if (( good_sig < $1 )); then
-        type=warning
-        keys="$(grep fingerprint $DOWNLOAD_DIR/builder-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
-        for key in $keys; do
-            search_key
-            (( good_sig >= $1 )) && { type=info; break; }
-        done
-    fi
+    type=warning
+    keys="$(grep fingerprint $DOWNLOAD_DIR/builder-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
+    for key in $keys; do
+        search_key
+        (( good_sig >= $1 )) && { type=info; break; }
+    done
     zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap "$ICON" --timeout=10
-    (( good_sig < $1 )) && { sleep 2; return 1; }
-    return 0
+    ((good_sig >= $1 ))
 }
 
 
@@ -94,7 +89,6 @@ search_key() {
         fi
     elif [ -n "$1" ]; then
         echo "$key not found."
-        return 1
     else
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver keyserver.ubuntu.com'
@@ -119,7 +113,7 @@ rsync --recursive "$BAILS_DIR/bails/" "$HOME"
 # Check existing Bitcoin Core version
 # shellcheck disable=SC2164
 cd "$DOWNLOAD_DIR"
-OLD_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f3)
+OLD_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 
 # Download Bitcoin Core builder keys
 ( [ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
@@ -152,15 +146,18 @@ link_dotfiles	# Clobbers the tmpfs installation
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 ps -p $get_keys &>/dev/null && fg %$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
-gpg --list-keys | grep 'Key fingerprint' | while read -r line; do grep "$line" builder-keys; done || \
-for key in ./trusted-keys/*; do
-    if grep builder-keys <<< gpg --show-keys "$key" | grep "Key fingerprint"; then
-        gpg --import "$key"
-    else
-        echo "Warning: Bails trusted key $key not found in bitcoin-core/guix.sigs repository, skipping."
-    fi
-done
-gpg --refresh-keys & gpg_refresh=$!
+if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating.
+    printf '\033]2;Updating all keys from keyserver...\a'
+    gpg --refresh-keys
+else # Import a trusted set on first-run.
+    for key in ./trusted-keys/*; do # 
+        if grep "$(gpg --show-keys "$key" | grep 'Key fingerprint')" builder-keys; then
+            gpg --import "$key"
+        else
+            echo "Warning: Bails trusted key $key not found in bitcoin-core/guix.sigs repository, skipping."
+        fi
+    done
+fi & gpg_refresh=$!
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
@@ -168,10 +165,9 @@ ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -
 printf '\033]2;Getting Bitcoin Core verification script...\a'
 ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
-printf '\033]2;Updating all keys from keyserver...\a'
 ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
-NEW_VER=$(ls -dt bitcoin-core-* | head -1 | cut -d- -f3)
+NEW_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-"$NEW_VER" || {
     zenity --error --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
@@ -181,14 +177,14 @@ cd bitcoin-core-"$NEW_VER" || {
 export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
 who_trusts="the Bails maintainers"
 while [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; do
-    # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version. If we cannot from github.
-    if "$DOWNLOAD_DIR"/verify.py bin SHA256SUMS bitcoin-"$NEW_VER"-x86_64-linux-gnu.tar.gz; then
+    # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version number.
+    if python3 "$DOWNLOAD_DIR"/verify.py bin SHA256SUMS bitcoin-"$NEW_VER"-x86_64-linux-gnu.tar.gz; then
         zenity --question --title='Further download verification' --text="Your Bitcoin Core download has been successfully verified by at least '$BINVERIFY_MIN_GOOD_SIGS' good signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue' --default-cancel --ok-label='Extra Verification' "$ICON" --icon-name=gtk-dialog-authentication
         verified=$?
         ((verified)) && { unset BINVERIFY_MIN_GOOD_SIGS; break;}
         ((BINVERIFY_MIN_GOOD_SIGS++))
     else
-        zenity --warning --title='Verify Bitcoin Core download' --text='Download verification is required.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --ok-label='Verify Now' "$ICON" --icon-name="name=gtk-dialog-authentication"
+        zenity --warning --title='Verify Bitcoin Core download' --text='Download verification is required.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --ok-label='Verify Now' "$ICON" --icon-name="gtk-dialog-authentication"
         verified=0
     fi
     if [ ! -f SHA256SUMS ]; then # TODO read the exit codes of verify.py to handle all error dialogs in a switch.
@@ -203,15 +199,6 @@ while [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; do
     who_trusts="you"
     check_sigs "$BINVERIFY_MIN_GOOD_SIGS" || BINVERIFY_MIN_GOOD_SIGS=3
 done
-# Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
-ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
-assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-# Calculate space available for block file storage
-space=$(($(df --output=size $SOURCE | tail -1) / 1024 - ( assumed_chain_state_size + 10 ) * 1024))
-prune_MiB=$((space > 1907 ? space : 1907 ))
-# Disable pruning if USB stick is large enough
-prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
@@ -259,6 +246,17 @@ sed -i 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # set -rp
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # set -datadir for Tails
 ln --symbolic --force "$TMPDIR/debug.log" $DATA_DIR/debug.log # links debug.log to $TMPDIR so logs won't persist restart
 ln --symbolic $DATA_DIR "$HOME" &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
+
+# Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
+ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+# Calculate space available for block file storage
+space=$(($(df --output=size $SOURCE | tail -1) / 1024 - ( assumed_chain_state_size + 10 ) * 1024))
+prune_MiB=$((space > 1907 ? space : 1907 ))
+# Disable pruning if USB stick is large enough
+prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
+
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
     "onion": "127.0.0.1:9050",
