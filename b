@@ -34,4 +34,4 @@ YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
 fi
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BAILS_DIR
-$BAILS_DIR/bails/.local/bin/install-core
+"$BAILS_DIR/bails/.local/bin/install-core"
