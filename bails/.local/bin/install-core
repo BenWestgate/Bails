@@ -175,7 +175,7 @@ ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d'
 LATEST_VERSION=$(ls -dt "$DOWNLOAD_DIR"/bitcoin-core-* | head -1 | cut -d- -f4)
 python3 $DOWNLOAD_DIR/verify.py pub $LATEST_VERSION
 print $?
-read
+read -r
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
