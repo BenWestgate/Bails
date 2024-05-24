@@ -44,7 +44,7 @@ readonly DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
 
 link_dotfiles() {
     ( # runs in subshell to preserve current directory
-        cd $DOTFILES
+        cd $DOTFILES || persistent-setup # Run persistent-setup again if off.
         find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
         find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
     ) &>/dev/null
@@ -60,7 +60,7 @@ check_sigs() {
     keys="$(grep fingerprint $DOWNLOAD_DIR/builder-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
     for key in $keys; do
         search_key
-        (( good_sig >= $1 )) && { type=info; break; }
+        (( good_sig < $1 )) || { type=info; break; }
     done
     zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap "$ICON" --timeout=10
     ((good_sig >= $1 ))
@@ -70,22 +70,22 @@ check_sigs() {
 # Search and display key info
 # Parameter 1 = (optional) fall back keyserver
 search_key() {
-    echo ''>$temp_file
-    { gpg --search-keys $1 $key >$temp_file; } & gpg_pid=$!
-    [ "$1" ] || echo -e "\nSearching $key on openpgp.org keyserver..."
-    until grep 'key' $temp_file >/dev/null; do
+    echo ''>"$temp_file"
+    { gpg --search-keys $1 "$key" >"$temp_file"; } & gpg_pid=$!
+    [ $1 ] || echo -e "\nSearching $key on openpgp.org keyserver..."
+    until grep 'key' "$temp_file" >/dev/null; do
         sleep 1; printf '.'
         ps -p $gpg_pid &>/dev/null || break
     done
     pkill gpg &>/dev/null
-    if grep '@' $temp_file >/dev/null; then 
-        sed -i 's/(1)/   /' $temp_file
+    if grep '@' "$temp_file" >/dev/null; then 
+        sed -i 's/(1)/   /' "$temp_file"
         if zenity --question --title='Do you trust this individual?' --no-markup --ellipsize \
-        --text="$(<$temp_file)" $ICON --icon-name=auth-fingerprint; then
-            gpg $1 --recv-key $key
+        --text="$(<$temp_file)" "$ICON" --icon-name=auth-fingerprint; then
+            gpg $1 --recv-key "$key"
             good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
         else
-            gpg --batch --yes --delete-keys $key &>/dev/null
+            gpg --batch --yes --delete-keys "$key" &>/dev/null
         fi
     elif [ -n "$1" ]; then
         echo "$key not found."
@@ -111,8 +111,8 @@ set -m
 rsync --recursive "$BAILS_DIR/bails/" "$HOME"
 
 # Check existing Bitcoin Core version
-# shellcheck disable=SC2164
-cd "$DOWNLOAD_DIR"
+cd "$DOWNLOAD_DIR" || exit 1
+# shellcheck disable=SC2010
 OLD_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 
 # Download Bitcoin Core builder keys
@@ -144,7 +144,7 @@ rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
 link_dotfiles	# Clobbers the tmpfs installation
 
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
-ps -p $get_keys &>/dev/null && fg %$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $get_keys &>/dev/null && fg %"$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 
 if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating
     gpg --refresh-keys
@@ -158,6 +158,7 @@ else # Import a trusted set on first-run.
     done
 fi & gpg_refresh=$!
 
+# shellcheck disable=SC2010
 NEW_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-"$NEW_VER" || {
@@ -169,11 +170,11 @@ export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
 who_trusts="the Bails maintainers"
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
-ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 printf '\033]2;Getting Bitcoin Core verification script...\a'
-ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $get_verify_tool &>/dev/null && fg %"$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 printf '\033]2;Updating all keys from keyserver...\a'
-ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $gpg_refresh &>/dev/null && fg %"$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 
 while [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; do
     printf '\033]2;Verify download signatures...\a'
@@ -202,7 +203,7 @@ done
 
 # Bring Bitcoin Core download to foreground to display progress and wait for it to complete
 printf '\033]2;Downloading Bitcoin Core...\a'
-ps -p $core_download &>/dev/null && fg %$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $core_download &>/dev/null && fg %"$(jobs -l | grep $core_download | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 
 # Verify download integrity		# TODO make sure they can actually retry the download by re-running the script, that everything gets skipped that needs to be skipped.
 if sha256sum --ignore-missing --check SHA256SUMS; then
@@ -248,7 +249,7 @@ ln --symbolic --force "$TMPDIR/debug.log" $DATA_DIR/debug.log # links debug.log 
 ln --symbolic $DATA_DIR "$HOME" &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
-ps -p $get_size &>/dev/null && fg %$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')
+ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
 assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
 # Calculate space available for block file storage
@@ -279,8 +280,8 @@ if [ -e $LOCAL_DIR/state/installed ]; then
     bitcoin-qt-wrapper &
 else
     (
-    # Remove our custom datadir from Bitcoin-Qt.conf
-    sed -i.bak '\#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' $HOME/.config/Bitcoin/Bitcoin-Qt.conf
+    # Remove our custom DataDir from Bitcoin-Qt.conf
+    sed -i.bak '\#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' "$HOME"/.config/Bitcoin/Bitcoin-Qt.conf
     # Temporarily change $HOME directory make Bails's datadir the default
     HOME=~/Persistent
     zenity --info --text="Use the default data directory.\n\nThat will store your bitcoin data at:\n  <i>~/Persistent/.bitcoin</i>" --ok-label="Use the default data directory" --window-icon=bails128

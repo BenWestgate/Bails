@@ -42,7 +42,7 @@ if ! (( RANDOM % 20 )); then
         text="Bails protects your wallet.\n\nHelp us keep your bitcoins safe!"
         bitcoin_address=$BITCOIN_ADDRESS_SELFISH
     fi
-    if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 $ICON --modal --ellipsize; then
+    if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
         notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
         xdg-open bitcoin:$bitcoin_address
         exit 0
