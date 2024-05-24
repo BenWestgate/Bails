@@ -1,0 +1,5 @@
+# Ignore everything in this directory
+# This will create a destination in dotfiles later to preserve .cache/fontconfig from Bitcoin Core
+*
+# Except this file
+!.gitignore
