@@ -163,10 +163,12 @@ NEW_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-"$NEW_VER" || {
     zenity --error --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
-    pkill wget
-    rm --verbose ./*	# removes old downloads
-    sleep 5
-    install-core	# launch this script again
+    {
+        pkill wget
+        rm --verbose ./*	# removes old downloads
+        sleep 5
+        install-core	# launch this script again
+    }
     exit 1
 }
 export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
