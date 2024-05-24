@@ -253,7 +253,7 @@ ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' |
 assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
 assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
 # Calculate space available for block file storage
-space=$(($(df --output=size $SOURCE | tail -1) / 1024 - ( assumed_chain_state_size + 10 ) * 1024))
+space=$((($(df --output=avail $SOURCE | tail -1) - (assumed_chain_state_size + 10) * 1024**2) / 1024))
 prune_MiB=$((space > 1907 ? space : 1907 ))
 # Disable pruning if USB stick is large enough
 prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
@@ -268,7 +268,7 @@ prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 
 # # Update $PATH environment variable to include new user bin
 # shellcheck source=/dev/null
-. "$HOME"/.profile
+#. "$HOME"/.profile
 
 if (( $(find $DATA_DIR/.bitcoin/wallets/* | wc -l) < 2 )); then
     bails-wallet
