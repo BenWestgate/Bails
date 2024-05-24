@@ -63,7 +63,7 @@ check_sigs() {
         (( good_sig < $1 )) || { type=info; break; }
     done
     zenity --$type --title="$good_sig of $1 good signatures found" --text="$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep 'Good signature' | cut -c6-)" --no-markup --width=200 --no-wrap "$ICON" --timeout=10
-    ((good_sig >= $1 ))
+    (( good_sig >= $1 ))
 }
 
 
@@ -83,7 +83,6 @@ search_key() {
         if zenity --question --title='Do you trust this individual?' --no-markup --ellipsize \
         --text="$(<$temp_file)" "$ICON" --icon-name=auth-fingerprint; then
             gpg $1 --recv-key "$key"
-            good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
         else
             gpg --batch --yes --delete-keys "$key" &>/dev/null
         fi
@@ -93,6 +92,7 @@ search_key() {
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver keyserver.ubuntu.com'
     fi
+    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
 }
 
 
