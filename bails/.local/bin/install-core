@@ -194,11 +194,13 @@ while [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; do
         verified=0
     fi
     if [ ! -f SHA256SUMS ]; then # TODO read the exit codes of verify.py to handle all error dialogs in a switch.
-        zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON"
-        pkill wget
-        rm --verbose ./*	# removes old download
-        sleep 5
-        install-core	# launch this script again
+        zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
+        {
+            pkill wget
+            rm --verbose ./*	# removes old download
+            sleep 5
+            install-core	# launch this script again
+        }
         exit 1
     fi
     [[ "$who_trusts" == "you" ]] || zenity --info --title="Choose trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. You decide which of these public keys you trust.\n\nTo validate your download's signatures, choose a few individuals who you find trustworthy." "$ICON" --icon-name=security-high
@@ -214,10 +216,12 @@ ps -p $core_download &>/dev/null && fg %"$(jobs -l | grep $core_download | cut -
 if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
 else
-    zenity --warning --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" &&
-    rm --verbose ./*	# removes old download
-    sleep 5
-    install-core	# launch this script again
+    zenity --warning --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
+    {
+        rm --verbose ./*	# removes old download
+        sleep 5
+        install-core	# launch this script again
+    }
     exit 1
 fi
 
