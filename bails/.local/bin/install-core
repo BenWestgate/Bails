@@ -40,10 +40,15 @@ export XDG_CACHE_HOME=$DOTFILES/.cache
 export TMPDIR=$XDG_RUNTIME_DIR
 
 readonly DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
-
+readonly BITCOIN_CORE_SOURCE_DOMAINS=(
+    "bitcoincore.org" # Clearnet
+    "6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion" # Tor onion service
+)
+readonly SECURITY_IN_A_BOX_TOR_URL="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/"
+readonly VERIFY_BINARIES_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/verify-binaries/verify.py"
 
 link_dotfiles() {
-    ( # runs in subshell to preserve current directory
+    ( # Run in subshell to preserve current directory
         cd $DOTFILES
         find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
         find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
@@ -122,16 +127,34 @@ rsync --recursive $BAILS_DIR/bails/ $HOME
 mkdir -p "$DOWNLOAD_DIR"
 
 # Download verify-binaries tool
-( cd "$DOWNLOAD_DIR"; wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/verify-binaries/verify.py ) & get_verify_tool=$!
+( cd "$DOWNLOAD_DIR"; wget -O verify.py "${VERIFY_BINARIES_URL}" ) & get_verify_tool=$!
 
 # Download Bitcoin core checksums and signatures in background
+(
+    cd "$DOWNLOAD_DIR"
+    # shellcheck disable=SC2048
+    for domain in ${BITCOIN_CORE_SOURCE_DOMAINS[*]}; do
+        wget --tries=1 --no-host-directories --cut-dirs=1 --recursive \
+            --level=1 --accept=SHA256SUMS* --include-directories=bin \
+            "https://${domain}/en/download/" && break
+    done
+) & sig_dl=$!
 
-( cd "$DOWNLOAD_DIR"; #wget --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
-wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; ) & sig_dl=$!
-# TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
 # Download Bitcoin Core in background to the destination directory
-( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; cd "$DOWNLOAD_DIR"; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
-wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; ) & core_download=$!
+# TODO FIXME uncomment the onion service when bitcoincore.org fixes their service.
+(
+    sleep 1
+    while pgrep wget &>/dev/null; do
+        sleep 1
+    done
+    cd "$DOWNLOAD_DIR"
+    # shellcheck disable=SC2048
+    for domain in ${BITCOIN_CORE_SOURCE_DOMAINS[*]}; do
+        wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive \
+            --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
+            "http://${domain}/en/download/" && break
+    done
+) & core_download=$!
 
 # Download chain parameters in background
 ( cd "$DOWNLOAD_DIR"; wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp ) & get_size=$!
@@ -172,9 +195,9 @@ if (( old_versions != versions )) || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
         if [ ! -f SHA256SUMS ]; then
             zenity --warning --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize $ICON
             pkill wget
-            rm --verbose ./*	# removes old download
+            rm --verbose ./*	# Remove old download
             sleep 5
-            install-core	# launch this script again
+            install-core	# Launch this script again
             exit 1
         fi
         zenity --info --title="Trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. In order to recognize the validity of signatures, you will choose a few individuals who you find trustworthy. Their keys will be used to check the signature attesting to the validity of your download." $ICON --icon-name=security-high & understood=$!
@@ -182,7 +205,7 @@ if (( old_versions != versions )) || [ ! -f $LOCAL_DIR/bin/bitcoind ]; then
         ( cd $DOWNLOAD_DIR
         [ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
         gpg --show-keys guix.sigs/builder-keys/*.gpg > show-keys )
-        (( versions > 1 )) && gpg --refresh-keys	# refresh keys in keyring to see if any were revoked since last install
+        (( versions > 1 )) && gpg --refresh-keys	# Refresh keys in keyring to see if any were revoked since last install
         printf '\033]2;Verify Bitcoin Core signatures\a'
         wait -f $understood
         check_sigs 2
@@ -208,9 +231,9 @@ if sha256sum --ignore-missing --check SHA256SUMS; then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
 else
     zenity --warning --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize $ICON &&
-    rm --verbose ./*	# removes old download
+    rm --verbose ./*	# Remove old download
     sleep 5
-    install-core	# launch this script again
+    install-core	# Launch this script again
     exit 1
 fi
 
@@ -220,7 +243,7 @@ rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 link_dotfiles
 
 # Kill Bitcoin Core if running, wait for it to shutdown safely
-# TODO export this as a function or file, bails-wallet also needs it and so will bails-backup!
+# TODO: export this as a function or file, bails-wallet also needs it and so will bails-backup!
 if pgrep bitcoin; then
     printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
     while test -f $DATA_DIR/bitcoind.pid; do
@@ -234,11 +257,11 @@ printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
 mkdir --parents $DATA_DIR/{chainstate,wallets,blocks}
 mv -vbu "$LOCAL_DIR/{bitcoin.conf,README.md}" "$DATA_DIR"
-sed -i 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # set -rpcport for Tails
-sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # set -datadir for Tails
-ln --symbolic --force /media/$USER $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+sed --in-place 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # Set -rpcport for Tails
+sed --in-place "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # Set -datadir for Tails
+ln --symbolic --force /media/$USER $DATA_DIR/wallets     # Link media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets
-ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # links debug.log to tmp so logs won't persist restart
+ln --symbolic --force /tmp/debug.log $DATA_DIR/debug.log # Link debug.log to tmp so logs won't persist restart
 ln --symbolic $DATA_DIR $HOME &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Change mime association from electrum to bitcoin core
@@ -284,7 +307,7 @@ if ((versions < 2)); then
     until [ -f $DATA_DIR/bitcoind.pid ]; do
         sleep 1
     done
-    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core will begin syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
+    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text="Bitcoin Core will begin syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href=\"file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html\">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href=\"file:///usr/share/doc/tails/website/doc.en.html\">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href=\"${SECURITY_IN_A_BOX_TOR_URL}\">security in-a-box</a> website."
 else
     bitcoin-qt-wrapper &
 fi &>/dev/null
