@@ -332,7 +332,7 @@ print(codex32_kdf_share)')
                 if (($(python3 -c 'from codex32 import ms32
 ms32.identifier_verify_checksum("'"$(recover_seed)"'")'))); then
                     ((${#share_list[*]} > 2)) && plur='s'
-                    zenity --notification --text="The passphrase you entered does not match your share$plur.\nDouble-check your passphrase and try again." "$ICON" --no-wrap
+                    zenity --notification --text="The passphrase you entered does not match your share$plur.\nDouble-check your passphrase and try again." "$ICON"
                     unset passphrase share_list[$((threshold - 1))]
                 fi
             else
@@ -434,9 +434,9 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     done
     chmod -w $DATA_DIR/wallets # write protect folder so wallets w/o seed backups can't be made
     {
-        zenity --title='Wallet encryption info' --width=500 --info --text="Wallet encryption adds an extra layer of security by requiring a passphrase to access your bitcoins. This helps protect against unauthorized access if your wallet file is stolen." $ICON
-        zenity --title="Wallet encryption warning" --width=500 --warning --text="Warning: If you lose your passphrase <u>and</u> can not find $reset, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
-        zenity --title="Wallet encrypted" --width=500 --warning --text="Your wallet has been encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
+        zenity --title='Wallet encryption info' --info --text="Wallet encryption adds an extra layer of security by requiring a passphrase to access your bitcoins. This helps protect against unauthorized access if your wallet file is stolen." $ICON
+        zenity --title="Wallet encryption warning" --warning --text="Warning: If you lose your passphrase <u>and</u> can not find $reset, you will <b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
+        zenity --title="Wallet encrypted" --warning --text="Your wallet has been encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     } &
     encryption_info=$!
     {
@@ -458,29 +458,18 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     done
     kill $lock_if_slow
     pkill python3 # kills tails-screen-locker
-    python3 -c "
-import subprocess
-import json
-wallets = json.loads(subprocess.run(['bitcoin-cli','listwallets'], capture_output=True).stdout)
-for wallet in wallets:
-    balance = subprocess.run(['bitcoin-cli','-rpcwallet='+wallet,'getbalance'], capture_output=True).stdout
-    if balance != b'0.00000000\n':
-        exit(1)"
-    funded=$?
     wait -f $encryption_info
     # TODO this dialog needs improvement
-    zenity --info --title='Wallet setup complete' --width=500 --ok-label=Finish $ICON --icon-name=bails128 \
+    zenity --info --title='Wallet setup complete' --width=500 --ok-label=Finish "$ICON" --icon-name=bails128 \
         --text="Congratulations! You have created a wallet.\n\nDistribute your backups offsite in secured confidential locations, safe from prying eyes and potential theft.\nDestroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://t.me/Bails_support'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
     stop-btc "d"
-    ((funded)) && bitcoin-qt-wrapper || gtk-launch bitcoin-qt # don't ask for donations if no wallets are funded.
-
     return 0
 }
 
 ### Begins Execution Here ###
 
-# Kill bitcoin-qt if it is already running
-stop-btc "-qt"
+# Kill bitcoin if it is already running
+stop-btc
 printf '\033]2;Create wallet\a'
 
 # Start bitcoind if it is not already running
