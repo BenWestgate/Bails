@@ -38,7 +38,7 @@ passwd_unset=$(passwd -S $USER | grep -c NP)
 printf '\033]2;Setup the Persistent Storage\a'
 
 # check for already unlocked Persistent Storage
-if [ -b '/dev/mapper/TailsData_unlocked' ]; then
+pgrep -f spaced-repetition || if [ -b '/dev/mapper/TailsData_unlocked' ]; then
     # Check for existing Persistent Storage passphrase
     until [ -d $INSTALL_DIR ]; do
         existing_passphrase="$(python3 -c 'from bails import set_pass
@@ -133,7 +133,7 @@ if ((passwd_unset)) && ! [ -d "$INSTALL_DIR" ]; then
      • store it out of sight away from your Bails USB sticks, and
      • destroy it once memorized." \
             --ok-label='I Will Destroy It Once Memorized' "$ICON"
-fi
+    fi
 
 # Checking features of the Persistent Storage
 if /usr/local/lib/tpscli is-active PersistentDirectory && \
