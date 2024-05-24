@@ -11,5 +11,10 @@
 # originals are restored and the temporary password is displayed for
 # the clone's owner to photograph or write down. Files then restored.
 
-gnome-terminal --wait --title="Log of Persistent Storage Clone" --hide-menubar \
-        -- tails-installer --clone
+zenity --info --title='Coming soon'
+exit 1
+stop-btc
+#TODO move file described above into the autostart
+#TODO display temporary passphrase
+tails-installer --backup
+#TODO remove that file

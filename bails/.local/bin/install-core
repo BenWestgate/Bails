@@ -225,15 +225,7 @@ else
 fi
 
 # Kill Bitcoin Core if running, wait for it to shutdown safely
-# TODO export this as a function or file, bails-wallet also needs it and so will bails-backup!
-if pgrep bitcoin; then
-    printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
-    while test -f $DATA_DIR/bitcoind.pid; do
-        kill "$(<$DATA_DIR/bitcoind.pid)"
-        pkill bitcoin
-        sleep 1
-    done
-fi
+stop-btc
 
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR

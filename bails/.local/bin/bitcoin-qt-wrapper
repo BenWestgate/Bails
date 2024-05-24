@@ -59,10 +59,10 @@ if ((space < old_prune)); then
     sed -i "s/\"prune\": \"$old_prune\"/\"prune\": \"$space\"/" "$DATA_DIR/settings.json"
 fi
 
-# If set, change dbcache to available memory minus 2100 MiB
+# If set, change dbcache to available memory minus 2 GiB
 old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
 if $old_dbcache; then
-    new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2100 ))
+    new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
     sed -i "s/\"dbcache\": \"$old_dbcache\"/\"dbcache\": \"$new_dbcache\"/" "$DATA_DIR/settings.json"
 fi
 

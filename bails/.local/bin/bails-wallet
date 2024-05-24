@@ -470,34 +470,23 @@ for wallet in wallets:
     wait -f $encryption_info
     # TODO this dialog needs improvement
     zenity --info --title='Wallet setup complete' --width=500 --ok-label=Finish $ICON --icon-name=bails128 \
-        --text="Congratulations! You have created a wallet.\n\nBe sure to distribute your backups offsite in secure and confidential locations, away from prying eyes and potential theft. Also, destroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://bitcoin-core-on-tails.slack.com'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
-    stop_bitcoin "d"
+        --text="Congratulations! You have created a wallet.\n\nDistribute your backups offsite in secured confidential locations, safe from prying eyes and potential theft.\nDestroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://t.me/Bails_support'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
+    stop-btc "d"
     ((funded)) && bitcoin-qt-wrapper || gtk-launch bitcoin-qt # don't ask for donations if no wallets are funded.
 
     return 0
 }
 
-stop_bitcoin() {
-    if pgrep bitcoin$1; then
-        printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
-        while test -f $DATA_DIR/bitcoind.pid; do
-            kill "$(<$DATA_DIR/bitcoind.pid)"
-            pkill bitcoin
-            sleep 1
-        done
-    fi
-}
-
 ### Begins Execution Here ###
 
 # Kill bitcoin-qt if it is already running
-stop_bitcoin "-qt"
+stop-btc "-qt"
 printf '\033]2;Create wallet\a'
 
 # Start bitcoind if it is not already running
 if ! pgrep bitcoind; then
     bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g) / 1024 - 2800)) -maxmempool=5 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
-    stop_bitcoin "d"
+    stop-btc "d"
     exit 0
 fi
 
