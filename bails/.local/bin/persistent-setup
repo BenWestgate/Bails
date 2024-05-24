@@ -39,8 +39,8 @@ printf '\033]2;Setup the Persistent Storage\a'
 
 # check for already unlocked Persistent Storage
 if [ -b '/dev/mapper/TailsData_unlocked' ]; then
-    # Check for existing Persistent Storage passphrase if setup never completed
-    [ -d $INSTALL_DIR ] || while true; do
+    # Check for existing Persistent Storage passphrase
+    until [ -d $INSTALL_DIR ]; do
         existing_passphrase="$(python3 -c 'from bails import set_pass
 box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
 if box.passphrase:
