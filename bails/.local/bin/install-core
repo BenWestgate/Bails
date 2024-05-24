@@ -268,7 +268,7 @@ prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 
 # # Update $PATH environment variable to include new user bin
 # shellcheck source=/dev/null
-#. "$HOME"/.profile
+. "$HOME"/.profile
 
 if (( $(find $DATA_DIR/.bitcoin/wallets/* | wc -l) < 2 )); then
     bails-wallet
