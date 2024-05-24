@@ -146,8 +146,7 @@ link_dotfiles	# Clobbers the tmpfs installation
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 ps -p $get_keys &>/dev/null && fg %$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')
 
-if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating.
-    printf '\033]2;Updating all keys from keyserver...\a'
+if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating
     gpg --refresh-keys
 else # Import a trusted set on first-run.
     for key in ./trusted-keys/*; do # 
@@ -159,14 +158,6 @@ else # Import a trusted set on first-run.
     done
 fi & gpg_refresh=$!
 
-printf '\033]2;Getting Bitcoin Core signatures...\a'
-ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
-
-printf '\033]2;Getting Bitcoin Core verification script...\a'
-ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')
-
-ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')
-
 NEW_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-"$NEW_VER" || {
@@ -176,10 +167,19 @@ cd bitcoin-core-"$NEW_VER" || {
 }
 export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
 who_trusts="the Bails maintainers"
+
+printf '\033]2;Getting Bitcoin Core signatures...\a'
+ps -p $sig_dl &>/dev/null && fg %$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')
+printf '\033]2;Getting Bitcoin Core verification script...\a'
+ps -p $get_verify_tool &>/dev/null && fg %$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')
+printf '\033]2;Updating all keys from keyserver...\a'
+ps -p $gpg_refresh &>/dev/null && fg %$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')
+
 while [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; do
+    printf '\033]2;Verify download signatures...\a'
     # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version number.
-    if python3 "$DOWNLOAD_DIR"/verify.py bin SHA256SUMS bitcoin-"$NEW_VER"-x86_64-linux-gnu.tar.gz; then
-        zenity --question --title='Further download verification' --text="Your Bitcoin Core download has been successfully verified by at least '$BINVERIFY_MIN_GOOD_SIGS' good signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue' --default-cancel --ok-label='Extra Verification' "$ICON" --icon-name=gtk-dialog-authentication
+    if python3 "$DOWNLOAD_DIR"/verify.py bin SHA256SUMS; then
+        zenity --question --title='Further download verification' --text="Your Bitcoin Core download has been successfully verified by at least $BINVERIFY_MIN_GOOD_SIGS good signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue Setup' --default-cancel --ok-label='More Verification' "$ICON" --icon-name=gtk-dialog-authentication
         verified=$?
         ((verified)) && { unset BINVERIFY_MIN_GOOD_SIGS; break;}
         ((BINVERIFY_MIN_GOOD_SIGS++))
