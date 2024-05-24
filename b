@@ -34,4 +34,9 @@ YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
 fi
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BAILS_DIR
-"$BAILS_DIR/bails/.local/bin/install-core"
+# Installs Bails to tmpfs
+rsync --recursive "$BAILS_DIR/bails/" "$HOME"
+
+# shellcheck disable=SC1091
+. "$HOME"/.profile
+install-core
