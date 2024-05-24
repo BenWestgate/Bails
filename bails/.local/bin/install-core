@@ -116,7 +116,7 @@ cd "$DOWNLOAD_DIR" || exit 1
 OLD_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 
 # Download Bitcoin Core builder keys
-[ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 & get_keys=$! 
+git clone https://github.com/bitcoin-core/guix.sigs --depth=1 & get_keys=$!
 
 # Download Bitcoin core checksums and signatures in background
 ( #wget --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
@@ -130,7 +130,7 @@ wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/master/contr
 wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/; ) & core_download=$!
 
 # Download chain parameters in background
-( wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp ) & get_size=$!
+wget -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
 
 # Clear the terminal
 clear -x
@@ -142,11 +142,10 @@ persistent-setup || systemctl reboot
 rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
 link_dotfiles	# Clobbers the tmpfs installation
 
-[ -d "guix.sigs" ] || {
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 ps -p $get_keys &>/dev/null && fg %"$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 gpg --show-keys guix.sigs/builder-keys/*.gpg > builder-keys
-}
+
 if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating
     gpg --refresh-keys
 else # Import a trusted set on first-run.
