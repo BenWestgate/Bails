@@ -116,15 +116,14 @@ cd "$DOWNLOAD_DIR" || exit 1
 OLD_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 
 # Download Bitcoin Core builder keys
-( [ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 && \
-        gpg --show-keys guix.sigs/builder-keys/*.gpg > builder-keys ) & get_keys=$!
+[ -d "guix.sigs" ] || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 & get_keys=$! 
 
 # Download Bitcoin core checksums and signatures in background
 ( #wget --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
 wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUMS* --include-directories=bin https://bitcoincore.org/en/download/; ) & sig_dl=$!
 
 # Download verify-binaries tool
-( wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/verify-binaries/verify.py ) & get_verify_tool=$!
+wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/verify-binaries/verify.py & get_verify_tool=$!
 
 # Download Bitcoin Core in background to the destination directory
 ( sleep 1; while pgrep wget &>/dev/null; do sleep 1; done; #wget --continue --tries=1 --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin http://6hasakffvppilxgehrswmffqurlcjjjhd76jgvaqmsg6ul25s7t3rzyd.onion/en/download/ ||
@@ -143,13 +142,15 @@ persistent-setup || systemctl reboot
 rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
 link_dotfiles	# Clobbers the tmpfs installation
 
+[ -d "guix.sigs" ] || {
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 ps -p $get_keys &>/dev/null && fg %"$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-
+gpg --show-keys guix.sigs/builder-keys/*.gpg > builder-keys
+}
 if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating
     gpg --refresh-keys
 else # Import a trusted set on first-run.
-    for key in ./trusted-keys/*; do # 
+    for key in ./trusted-keys/*; do
         if grep "$(gpg --show-keys "$key" | grep 'Key fingerprint')" builder-keys; then
             printf '\033]2;Updating all keys from keyserver...\a'
             gpg --import "$key"
@@ -158,7 +159,8 @@ else # Import a trusted set on first-run.
         fi
     done
 fi
-
+printf '\033]2;Getting Bitcoin Core signatures...\a'
+ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 # shellcheck disable=SC2010
 NEW_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
 # Switch into latest bitcoin-core directory
@@ -175,8 +177,6 @@ cd bitcoin-core-"$NEW_VER" || {
 export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
 who_trusts="the Bails maintainers"
 
-printf '\033]2;Getting Bitcoin Core signatures...\a'
-ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 printf '\033]2;Getting Bitcoin Core verification script...\a'
 ps -p $get_verify_tool &>/dev/null && fg %"$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 
