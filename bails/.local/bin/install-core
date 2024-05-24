@@ -72,7 +72,7 @@ check_sigs() {
 search_key() {
     echo ''>"$temp_file"
     { gpg --search-keys $1 "$key" >"$temp_file"; } & gpg_pid=$!
-    [ $1 ] || echo -e "\nSearching $key on openpgp.org keyserver..."
+    [ -n "$1" ] || echo -e "\nSearching $key on openpgp.org keyserver..."
     until grep 'key' "$temp_file" >/dev/null; do
         sleep 1; printf '.'
         ps -p $gpg_pid &>/dev/null || break
