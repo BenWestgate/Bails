@@ -267,8 +267,8 @@ prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 }' > $DATA_DIR/settings.json
 
 # # Update $PATH environment variable to include new user bin
-# # shellcheck source=/dev/null
-# . $HOME/.profile
+# shellcheck source=/dev/null
+. "$HOME"/.profile
 
 if [ -z "$(ls -A $DATA_DIR/wallets)" ]; then
     bails-wallet
