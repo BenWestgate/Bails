@@ -226,15 +226,15 @@ if pgrep bitcoin; then
         sleep 1
     done
 fi
+
+printf '\033]2;Installing Bitcoin Core...\a'
+tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
+
 # Move completed verified download to persistent storage
 export XDG_DATA_HOME=$LOCAL_DIR/share
 rm -Rf "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
 rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 rsync --remove-source-files --recursive "$BAILS_DIR"/ $XDG_DATA_HOME/bails
-
-printf '\033]2;Installing Bitcoin Core...\a'
-tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL_DIR
-
 # Change mime association from electrum to bitcoin core
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
