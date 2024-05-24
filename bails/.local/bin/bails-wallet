@@ -468,16 +468,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
 
 ### Begins Execution Here ###
 
-# Kill bitcoin if it is already running
-stop-btc
 printf '\033]2;Create wallet\a'
-
-# Start bitcoind if it is not already running
-if ! pgrep bitcoind; then
-    bitcoind -dbcache=$(($(grep Available /proc/meminfo | sed s/[^0-9]//g) / 1024 - 2800)) -maxmempool=5 -startupnotify="until bails-wallet; do zenity --question --title='Create wallet' --text='Are you sure you do not want to Create a Bails Wallet now?' $ICON --ellipsize && break; done; pkill bitcoind;"
-    stop-btc "d"
-    exit 0
-fi
 
 choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --column "Menu Item" \
     --text='Do you want to make a new seed, or use an existing seed?\n\nIf this is your first use select "Create a new seed".\n' \
@@ -546,8 +537,6 @@ elif [ "$choice" == "Import descriptors" ]; then
 else
     exit 1
 fi
-# Exit by killing controlling terminal
-gnome-terminal -- pkill gnome-terminal &
 exit 0
 
 # the extended_private_masterkey + user_entropy go thru Scrypt and the output determines master seed

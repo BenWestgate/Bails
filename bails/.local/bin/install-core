@@ -260,20 +260,16 @@ prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
+    "dbcache": "450"
     "onion": "127.0.0.1:9050",
     "proxy": "127.0.0.1:9050",
     "prune": "'$prune_MiB'",
-    "dbcache": "450"
+    "server": true
 }' > $DATA_DIR/settings.json
 
 # # Update $PATH environment variable to include new user bin
 # shellcheck source=/dev/null
 . "$HOME"/.profile
-
-if (( $(find $DATA_DIR/.bitcoin/wallets/* | wc -l) < 2 )); then
-    bails-wallet
-fi
-
 printf '\033]2;Bitcoin Core installation complete!\a'
 
 if [ -e $LOCAL_DIR/state/installed ]; then
@@ -295,8 +291,13 @@ else
 fi &>/dev/null
 touch $LOCAL_DIR/state/installed
 
+if (( $(find $DATA_DIR/.bitcoin/wallets/* | wc -l) < 2 )); then
+    bails-wallet
+fi
+
+
 # Exit by killing controlling terminal
-echo "Bitcoin Core installation complete! 
+echo "Bails installation complete! 
 
 Closing this window in 30 seconds, press any key to abort.
 "
