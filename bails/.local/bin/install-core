@@ -151,12 +151,13 @@ if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating
 else # Import a trusted set on first-run.
     for key in ./trusted-keys/*; do # 
         if grep "$(gpg --show-keys "$key" | grep 'Key fingerprint')" builder-keys; then
+            printf '\033]2;Updating all keys from keyserver...\a'
             gpg --import "$key"
         else
             echo "Warning: Bails trusted key $key not found in bitcoin-core/guix.sigs repository, skipping."
         fi
     done
-fi & gpg_refresh=$!
+fi
 
 # shellcheck disable=SC2010
 NEW_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
@@ -178,8 +179,6 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 printf '\033]2;Getting Bitcoin Core verification script...\a'
 ps -p $get_verify_tool &>/dev/null && fg %"$(jobs -l | grep $get_verify_tool | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-printf '\033]2;Updating all keys from keyserver...\a'
-ps -p $gpg_refresh &>/dev/null && fg %"$(jobs -l | grep $gpg_refresh | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 
 while [[ "$OLD_VER" != "$NEW_VER" ]] || [ ! -f $LOCAL_DIR/bin/bitcoind ]; do
     printf '\033]2;Verify download signatures...\a'
