@@ -279,17 +279,13 @@ printf '\033]2;Bitcoin Core installation complete!\a'
 if [ -e $LOCAL_DIR/state/installed ]; then
     bitcoin-qt-wrapper &
 else
-    # Remove our custom DataDir from Bitcoin-Qt.conf
-    sed -i.bak '\#strDataDir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin#d' "$HOME"/.config/Bitcoin/Bitcoin-Qt.conf
     # Temporarily change $HOME directory make Bails's datadir the default
     zenity --notification --text="Use the default data directory.\n~/Persistent/.bitcoin" --window-icon=bails128
     HOME=~/Persistent
-
     bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB &
     # Restore original config TODO this may need a small sleep to avoid a race condition.
     sleep 1
     HOME=/home/$USER
-    mv "$HOME/.config/Bitcoin/Bitcoin-Qt.conf"{.bak,}
     link_dotfiles
     until [ -f $DATA_DIR/bitcoind.pid ]; do
         sleep 1
