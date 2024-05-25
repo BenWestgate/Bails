@@ -27,7 +27,7 @@
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 
-cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin
+cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
 if ! grep 'progress=0.999' debug.log; then
     sleep 30
     notify-send --urgency=low 'Lock your screen before stepping away from the PC.' 'Synchronizing Bitcoin Core may take a while...' --icon=system-lock-screen

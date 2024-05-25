@@ -236,7 +236,7 @@ link_dotfiles
 [ -e $DATA_DIR/wallets ] || mkdir $DATA_DIR/wallets # TODO: this can be replaced by creating the symlink in panic mode solution
 ln --symbolic --force /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
-ln --symbolic --force {$HOME/.bitcoin,$DATA_DIR}/debug.log" $DATA_DIR/debug.log # links debug.log to tmpfs so logs won't persist restart
+ln --symbolic --force {$HOME/.bitcoin,$DATA_DIR}/debug.log $DATA_DIR/debug.log # links debug.log to tmpfs so logs won't persist restart
 ln --symbolic $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
