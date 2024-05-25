@@ -43,7 +43,7 @@ rsync --recursive "$BAILS_DIR/bails/" "$HOME"
 . "$HOME"/.profile
 install-core &
 
-until /usr/local/lib/tpscli is-unlocked && \
+until /usr/local/lib/tpscli is_unlocked && \
   /usr/local/lib/tpscli is-active Dotfiles && \
   [ -d "$DOTFILES" ] && [ -w "$DOTFILES" ]; do
     sleep 1
