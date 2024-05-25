@@ -426,22 +426,22 @@ y = bip32.BIP32Node
 print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="standard").to_xprv())')
     # TODO for L2 offline restores do not persist signing wallet /tmp/$tmp_dir/$name	# easiest Idea may be just symlink to any tmpfs as target, name it amnesia
     zenity --notification --text="Wallet seed restored successfully." "$ICON"
-    name=$(zenity --title='Name your new wallet' --entry --text='Wallet Name:' --entry-text='Wallet' $ICON)
+    name=$(zenity --title='Name your new wallet' --entry --text='Wallet Name:' --entry-text='Wallet' "$ICON")
     [ "$name" ] || name='Wallet'
     [ "$passphrase" ] || set_passphrase 'Set passphrase for the wallet'
     chmod +w $DATA_DIR/wallets # writes enabled to create wallet
     until $CLI createwallet "$name" false true "$passphrase" false true $2; do
-        name=$(zenity --title='Create failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $identifier" $ICON --width=340)
+        name=$(zenity --title='Create failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $identifier" "$ICON" --width=340)
     done
     chmod -w $DATA_DIR/wallets # write protect folder so wallets w/o seed backups can't be made
     {
-        zenity --title='Wallet encryption info' --info --icon-name=changes-prevent --text="Wallet encryption adds an extra layer of security by requiring a passphrase to access your bitcoins. This helps protect against unauthorized access if your wallet file is stolen." $ICON
+        zenity --title='Wallet encryption info' --info --icon-name=emblem-readonly --text="Wallet encryption adds an extra layer of security by requiring a passphrase to access your bitcoins. This helps protect against unauthorized access if your wallet file is stolen." $ICON
         zenity --title="Wallet encryption warning" --warning --text="Warning: If you lose your passphrase <u>and</u> can not find $reset,\nyou will <b>LOSE ALL OF YOUR BITCOINS</b>\!" $ICON
         zenity --title="Wallet encrypted" --warning --text="Your wallet has been encrypted. Remember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer." $ICON
     } &
     encryption_info=$!
     {
-        zenity --notification --text='Importing your wallet. This may take several minutes...\nLock the screen if you need to walk away from the PC.' $ICON
+        zenity --notification --text='Importing your wallet. This may take several minutes...\nLock the screen if you need to walk away from the PC.' "$ICON"
         sleep 10
         tails-screen-locker
     } &>/dev/null &
