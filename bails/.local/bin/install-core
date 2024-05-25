@@ -57,6 +57,7 @@ check_sigs() {
     temp_file="$(mktemp)"
     trap 'rm -rf -- "$temp_file"' EXIT
     type=warning
+    # shellcheck disable=SC2086
     keys="$(grep fingerprint $DOWNLOAD_DIR/builder-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
     for key in $keys; do
         search_key
@@ -71,6 +72,7 @@ check_sigs() {
 # Parameter 1 = (optional) fall back keyserver
 search_key() {
     echo ''>"$temp_file"
+    # shellcheck disable=SC2086
     { gpg --search-keys $1 "$key" >"$temp_file"; } & gpg_pid=$!
     [ -n "$1" ] || echo -e "\nSearching $key on openpgp.org keyserver..."
     until grep 'key' "$temp_file" >/dev/null; do
@@ -80,8 +82,10 @@ search_key() {
     pkill gpg &>/dev/null
     if grep '@' "$temp_file" >/dev/null; then 
         sed -i 's/(1)/   /' "$temp_file"
+        # shellcheck disable=SC2086
         if zenity --question --title='Do you trust this individual?' --no-markup --ellipsize \
         --text="$(<$temp_file)" "$ICON" --icon-name=auth-fingerprint; then
+            # shellcheck disable=SC2086
             gpg $1 --recv-key "$key"
         else
             gpg --batch --yes --delete-keys "$key" &>/dev/null
@@ -154,6 +158,8 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 # shellcheck disable=SC2010
 NEW_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
+# Overwrite builder-keys with only those who signed the latest release
+(cd guix.sigs/"$NEW_VER" || exit 1; for name in *; do gpg --show-keys "$DOWNLOAD_DIR"/guix.sigs/builder-keys/"$name".gpg; done) > builder-keys
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-"$NEW_VER" || {
     zenity --error --title="Download failure" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
