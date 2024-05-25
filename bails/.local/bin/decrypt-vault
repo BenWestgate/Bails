@@ -39,7 +39,6 @@ for _ in 1 2 3; do
     fi
     if mnt_point="$(mount | grep "$uuid on /media/amnesia" | cut -d' ' -f3)"; then
         wallet=${mnt_point/'/media/amnesia/'/}
-        # TODO fix bitcoin.conf so -datadir and -rpcport aren't needed
         # TODO make sure as much works as possible if Persistent disabled
         bitcoin-cli -datadir=/home/amnesia/Persistent/.bitcoin loadwallet "$wallet" false || \
         if pgrep bitcoin-qt &>/dev/null; then

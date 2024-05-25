@@ -25,8 +25,7 @@
 ###############################################################################
 
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
-DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
-INSTALL_DIR="$DOTFILES/.local/share/bitcoin-core"
+INSTALL_DIR="/live/persistence/TailsData_unlocked/dotfiles/.local/share/bitcoin-core"
 
 # Check if user password is already set
 passwd_unset=$(passwd -S $USER | grep -c NP)
@@ -38,7 +37,7 @@ passwd_unset=$(passwd -S $USER | grep -c NP)
 printf '\033]2;Setup the Persistent Storage\a'
 
 # check for already unlocked Persistent Storage
-pgrep -f spaced-repetition || if [ -b '/dev/mapper/TailsData_unlocked' ]; then
+pgrep -f spaced-repetition || if /usr/local/lib/tpscli tps_is_unlocked; then
     # Check for existing Persistent Storage passphrase
     until [ -d $INSTALL_DIR ]; do
         existing_passphrase="$(python3 -c 'from bails import set_pass
@@ -82,12 +81,12 @@ To help you remember, write it on paper, seal in an envelope, secure it for a fe
 Write on a hard surface to avoid leaving an imprint of the secret.' \
         --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
     # Persistent storage creation
-    until [ -b '/dev/mapper/TailsData_unlocked' ]; do
+    until /usr/local/lib/tpscli tps_is_unlocked; do
             sleep 12
             notify-send --icon=bails128 'Important: Choose the suggested passphrase or click ↻.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
     done & notifying+=($!)
 
-    until [ -b '/dev/mapper/TailsData_unlocked' ]; do
+    until /usr/local/lib/tpscli tps_is_unlocked; do
         grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
             { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
         sleep 1

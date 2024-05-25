@@ -226,22 +226,18 @@ tar -xvf bitcoin-*-x86_64-linux-gnu.tar* --strip-components=1 --directory=$LOCAL
 export XDG_DATA_HOME=$LOCAL_DIR/share
 rm -Rf "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
 rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
-# Install Bails to Persistent Storage
-[ -n "$BAILS_DIR" ] && rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
-[ -n "$BAILS_DIR" ] && rsync --remove-source-files --recursive "$BAILS_DIR"/ $XDG_DATA_HOME/bails
-[ -n "$BAILS_DIR" ] && rm -rf "$BAILS_DIR"
 # Change mime association from electrum to bitcoin core
 sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
-rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DATA_DIR
+rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
+sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
+sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 link_dotfiles
 [ -e $DATA_DIR/wallets ] || mkdir $DATA_DIR/wallets # TODO: this can be replaced by creating the symlink in panic mode solution
 ln --symbolic --force /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
-sed -i 's/#rpcport=<port>/rpcport=17600/' "$DATA_DIR/bitcoin.conf"     # set -rpcport for Tails
-sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DATA_DIR/bitcoin.conf"  # set -datadir for Tails
-ln --symbolic --force "$TMPDIR/debug.log" $DATA_DIR/debug.log # links debug.log to $TMPDIR so logs won't persist restart
-ln --symbolic $DATA_DIR "$HOME" &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
+ln --symbolic --force {$HOME/.bitcoin,$DATA_DIR}/debug.log" $DATA_DIR/debug.log # links debug.log to tmpfs so logs won't persist restart
+ln --symbolic $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR &>/dev/null # This can't be persisted by dotfiles so an autostart remakes it.
 
 # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
 ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')"

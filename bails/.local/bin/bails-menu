@@ -28,9 +28,9 @@
 
 # Set environment variables
 export WAYLAND_DISPLAY=""
-export LOCAL_DIR="/live/persistence/TailsData_unlocked/dotfiles/.local/"
+export DOTFILES="/live/persistence/TailsData_unlocked/dotfiles"
+export LOCAL_DIR="$DOTFILES/.local/"
 export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
-export BAILS_DIR="$LOCAL_DIR"
 
 onlynet_onion() {
     zenity --question --title='Network Privacy' --width=420 --text='Bails offers different settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
@@ -41,14 +41,14 @@ onlynet_onion() {
     
     if [ $zenity_exit_status = 0 ]; then
         # User chose to enable -onlynet=onion
-        sed --in-place 's/#onlynet=<net>/onlynet=onion/' $DATA_DIR/bitcoin.conf
+        sed --in-place 's/#onlynet=<net>/onlynet=onion/' $DOTFILES/.bitcoin/bitcoin.conf
         zenity --info --title='Network settings updated' --text='You have chosen to connect exclusively to Tor (onion) peers.
 
     Your network settings have been updated.' --width=420 --icon-name=tor-connected-symbolic
 
     else
         # User chose default network settings
-        sed --in-place 's/onlynet=onion/#onlynet=<net>/' $DATA_DIR/bitcoin.conf
+        sed --in-place 's/onlynet=onion/#onlynet=<net>/' $DOTFILES/.bitcoin/bitcoin.conf
         zenity --info --title='Default network settings' --text='You have chosen to keep the default network settings.
     Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' --width=420 --icon-name=tor-disconnected-symbolic
 
