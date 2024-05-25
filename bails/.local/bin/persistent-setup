@@ -65,7 +65,7 @@ else:
             zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase to continue." "$ICON"
     done
     unset entropy
-    if ((passwd_unset)); then
+    [ -e ~/.local/state/installed ] || if ((passwd_unset)); then
         # Change user account password to Persistent Storage passphrase for spaced repetition practice.a
         printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
     fi

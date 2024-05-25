@@ -28,6 +28,7 @@ export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
+persistent-setup # Checks needed persistent features are on.
 # Symlink default datadir to our custom datadir
 ln -s $DATA_DIR "$HOME"
 
@@ -50,7 +51,7 @@ fi
 
 if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         # 1 out of 20 start-ups show donation message
-    DONT_ASK_DONATIONS=1 # We already asked for donations
+    export DONT_ASK_DONATIONS=1 # We already asked for donations NOTE: if this doesn't work use a TEMP file.
     if (( RANDOM % 2 )); then
         # In half of the cases, display a message with benevolent incentive
         text="Bails needs donations to keep everybody free and safe to use Bitcoin.\n\nEvery bit helps in our fight against surveillance, censorship and confiscation!"
@@ -66,6 +67,5 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         exit 0
     fi
 fi
-
 
 bitcoin-qt "$@"
