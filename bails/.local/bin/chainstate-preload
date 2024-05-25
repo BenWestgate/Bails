@@ -30,12 +30,16 @@ total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
 if ! grep 'progress=0.999' debug.log; then
     sleep 30
-    notify-send --urgency=low 'Lock your screen before stepping away from the PC.' 'Synchronizing Bitcoin Core may take a while...' --icon=system-lock-screen
-    tails-screen-locker
+    if passwd -S "$USER" | grep NP; then
+        zenity --info --title='Remember to lock your screen' --text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...' --icon-name=system-lock-screen "$ICON" --timeout=10 &
+        tails-screen-locker
+    fi
 else
     sleep 200
-    notify-send --urgency=low 'Always lock your screen before stepping away from the PC.' --icon=system-lock-screen
-    tails-screen-locker
+    if passwd -S "$USER" | grep NP; then
+        zenity --info --title='Remember to lock your screen' --text='Always lock your screen before stepping away from the PC.' --icon-name=system-lock-screen "$ICON" --timeout=5 &
+        tails-screen-locker
+    fi
 fi &>/dev/null &
 
 until grep 'progress=0.999' debug.log; do
@@ -44,7 +48,7 @@ until grep 'progress=0.999' debug.log; do
     if (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )); then
         kill $full_speed &>/dev/null
         {
-            zenity --notification --text='Your computer is low on memory.\nAdditional RAM might significantly improve sync performance.' $ICON
+            zenity --info --title='Your computer is low on memory' --text='Additional RAM might significantly improve sync performance.' "$ICON" --icon-name=drive-harddisk-solidstate --timeout=6
             sleep 60
         } &
         exit 1
@@ -52,7 +56,7 @@ until grep 'progress=0.999' debug.log; do
     sleep $((++i))
     # exit if cat command finishes and can't be killed. Means entire chainstate was preloaded.
     if ! kill $full_speed &>/dev/null; then
-        zenity --notification --text='Bitcoin chainstate preloaded to RAM' $ICON
+        zenity --info --title='Chainstate preloaded to RAM' --text='Bitcoin chainstate preloaded to memory.' "$ICON" --icon-name=drive-harddisk-solidstate --timeout=4
         sleep 20
         exit 0
     fi

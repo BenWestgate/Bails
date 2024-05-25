@@ -31,24 +31,6 @@ export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 # Symlink default datadir to our custom datadir
 ln -s $DATA_DIR "$HOME"
 
-if ! (( RANDOM % 20 )); then
-        # 1 out of 20 start-ups show donation message
-    if (( RANDOM % 2 )); then
-        # In half of the cases, display a message with benevolent incentive
-        text="Bails needs donations to keep everybody free and safe to use Bitcoin.\n\nEvery bit helps in our fight against surveillance, censorship and confiscation!"
-        bitcoin_address=$BITCOIN_ADDRESS_BENEVOLENT
-    else
-        # In the other half, display a message with a more selfish incentive
-        text="Bails protects your wallet.\n\nHelp us keep your bitcoins safe!"
-        bitcoin_address=$BITCOIN_ADDRESS_SELFISH
-    fi
-    if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
-        notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
-        xdg-open bitcoin:$bitcoin_address
-        exit 0
-    fi
-fi
-
 space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
   $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
 space=$(( space > 1907 ? space : 1907 ))
@@ -65,5 +47,25 @@ if $old_dbcache; then
     new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
     sed -i "s/\"dbcache\": \"$old_dbcache\"/\"dbcache\": \"$new_dbcache\"/" "$DATA_DIR/settings.json"
 fi
+
+if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
+        # 1 out of 20 start-ups show donation message
+    DONT_ASK_DONATIONS=1 # We already asked for donations
+    if (( RANDOM % 2 )); then
+        # In half of the cases, display a message with benevolent incentive
+        text="Bails needs donations to keep everybody free and safe to use Bitcoin.\n\nEvery bit helps in our fight against surveillance, censorship and confiscation!"
+        bitcoin_address=$BITCOIN_ADDRESS_BENEVOLENT
+    else
+        # In the other half, display a message with a more selfish incentive
+        text="Bails protects your wallet.\n\nHelp us keep your bitcoins safe!"
+        bitcoin_address=$BITCOIN_ADDRESS_SELFISH
+    fi
+    if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
+        notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
+        xdg-open bitcoin:$bitcoin_address
+        exit 0
+    fi
+fi
+
 
 bitcoin-qt "$@"

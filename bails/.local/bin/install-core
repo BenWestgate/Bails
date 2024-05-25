@@ -269,15 +269,15 @@ prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 # shellcheck source=/dev/null
 . "$HOME"/.profile
 printf '\033]2;Bitcoin Core installation complete!\a'
-
 if [ -e $LOCAL_DIR/state/installed ]; then
     bitcoin-qt-wrapper &
 else
-    # Temporarily change $HOME directory make Bails's datadir the default
+    (
     zenity --notification --text="Use the default data directory.\n~/Persistent/.bitcoin" --window-icon=bails128
+    export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
+    # Temporarily change $HOME directory make Bails's datadir the default
     HOME=~/Persistent
     bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB -min &
-    # Restore original config TODO this may need a small sleep to avoid a race condition.
     until [ -f $DATA_DIR/bitcoind.pid ]; do
         sleep 1
         pgrep bitcoin || bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB -min &
@@ -285,6 +285,7 @@ else
     sleep 1
     HOME=/home/$USER
     link_dotfiles
+    )
 fi &>/dev/null
 touch $LOCAL_DIR/state/installed
 
