@@ -32,13 +32,10 @@ if ! grep 'progress=0.999' debug.log; then
     sleep 30
     notify-send --urgency=low 'Lock your screen before stepping away from the PC.' 'Synchronizing Bitcoin Core may take a while...' --icon=system-lock-screen
     tails-screen-locker
-    # Clear notifications
-    dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 else
     sleep 200
     notify-send --urgency=low 'Always lock your screen before stepping away from the PC.' --icon=system-lock-screen
     tails-screen-locker
-    dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
 fi &>/dev/null &
 
 until grep 'progress=0.999' debug.log; do
@@ -49,8 +46,6 @@ until grep 'progress=0.999' debug.log; do
         {
             zenity --notification --text='Your computer is low on memory.\nAdditional RAM might significantly improve sync performance.' $ICON
             sleep 60
-            # Clear notifications
-            dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
         } &
         exit 1
     fi
@@ -59,8 +54,6 @@ until grep 'progress=0.999' debug.log; do
     if ! kill $full_speed &>/dev/null; then
         zenity --notification --text='Bitcoin chainstate preloaded to RAM' $ICON
         sleep 20
-        # Clear notifications
-        dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());'
         exit 0
     fi
 done
