@@ -33,9 +33,9 @@ export LOCAL_DIR="$DOTFILES/.local/"
 export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
 
 onlynet_onion() {
-    zenity --question --title='Network Privacy' --width=420 --text='Bails offers different settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
+    zenity --question --title='Network Privacy' --text='Bails offers two settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
 
-    Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity and can be less stable if you have limited Tor peers.' --icon-name=tor-connection --default-cancel
+Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity, speed and can be less stable if you have limited Tor peers.' --icon-name=tor-connection --default-cancel
 
     zenity_exit_status=$?
     
@@ -44,13 +44,13 @@ onlynet_onion() {
         sed --in-place 's/#onlynet=<net>/onlynet=onion/' $DOTFILES/.bitcoin/bitcoin.conf
         zenity --info --title='Network settings updated' --text='You have chosen to connect exclusively to Tor (onion) peers.
 
-    Your network settings have been updated.' --width=420 --icon-name=tor-connected-symbolic
+Your network settings have been updated.' --icon-name=tor-connected-symbolic
 
     else
         # User chose default network settings
         sed --in-place 's/onlynet=onion/#onlynet=<net>/' $DOTFILES/.bitcoin/bitcoin.conf
         zenity --info --title='Default network settings' --text='You have chosen to keep the default network settings.
-    Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' --width=420 --icon-name=tor-disconnected-symbolic
+Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' --icon-name=tor-disconnected-symbolic
 
     fi
 }
