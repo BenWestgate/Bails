@@ -39,14 +39,14 @@ old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
 
 # If set, reduce prune when needed to not run out of space
 if ((space < old_prune)); then
-    sed -i "s/\"prune\": \"$old_prune\"/\"prune\": \"$space\"/" "$DATA_DIR/settings.json"
+    sed -i 's/"prune": "'"$old_prune"'/"prune": "'$space/ "$DATA_DIR/settings.json"
 fi
 
 # If set, change dbcache to available memory minus 2 GiB
 old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-if $old_dbcache; then
+if [ -n "$old_dbcache" ]; then
     new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
-    sed -i "s/\"dbcache\": \"$old_dbcache\"/\"dbcache\": \"$new_dbcache\"/" "$DATA_DIR/settings.json"
+    sed -i 's/"dbcache": "'"$old_dbcache"'/"dbcache": "'$new_dbcache/ "$DATA_DIR/settings.json"
 fi
 
 if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
