@@ -460,12 +460,12 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     $CLI unloadwallet "$name"   #TODO remove this when Bitcoin Core removes the bug that doesn't load bech32m addresses after importing.
     $CLI loadwallet "$name"
     kill $lock_if_slow
-    pkill python3 # kills tails-screen-locker
+    pkill python3 &>/dev/null # kills tails-screen-locker
     wait -f $encryption_info
     # TODO this dialog needs improvement
     zenity --info --title='Wallet setup complete' --ok-label=Finish "$ICON" --icon-name=bails128 \
         --text="Congratulations! You have created a wallet.\n\nDistribute your backups offsite in secured confidential locations, safe from prying eyes and potential theft. Destroy any written copies of your passphrase before storing significant funds.\n\nIf you have any questions or need further assistance, refer to the provided <a href='file:///home/amnesia/share/Bails/docs'>documentation</a> or visit our <a href='https://t.me/Bails_support'>support resources</a>.\n\nIf you find Bails valuable, consider supporting our project by <a href='bitcoin:$BITCOIN_ADDRESS_COMPLETED'>donating</a> or <a href='https://github.com/BenWestgate/Bails/issues'>contributing</a>.\n\nEnjoy using Bails!"
-    return 0
+    exit 0
 }
 
 ### Begins Execution Here ###

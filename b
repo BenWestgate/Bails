@@ -49,10 +49,10 @@ rsync --recursive "$BAILS_DIR/bails/" "$HOME"
 # shellcheck disable=SC1091
 . "$HOME"/.profile
 if [ -z "$1" ]; then # Don't update/install core if ran with a parameter
-  install-core &
+  install-core
 else
-  persistent-setup &
-fi
+  persistent-setup
+fi &
 
 until /usr/local/lib/tpscli is-unlocked && \
   /usr/local/lib/tpscli is-active Dotfiles && \
@@ -64,6 +64,7 @@ rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
 rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
 rm -rf "$BAILS_DIR"
 
+wait
 if [ -z "$1" ]; then
   zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
 else
