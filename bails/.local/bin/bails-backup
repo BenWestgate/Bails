@@ -8,7 +8,7 @@
 # that they should be tested at least once a year, ideally twice or
 # quarterly. The file is removed after backup is complete.
 
-
-
-gnome-terminal --wait --title="Log of Persistent Storage Backup" --hide-menubar \
-        -- tails-installer --clone
+stop-btc
+#TODO move file described above into the autostart
+tails-installer --backup
+#TODO remove that file

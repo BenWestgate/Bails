@@ -1,0 +1,10 @@
+#!/bin/bash
+DATA_DIR='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/'
+if pgrep bitcoin$1; then
+    printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
+    while test -f $DATA_DIR/bitcoind.pid; do
+        kill "$(<$DATA_DIR/bitcoind.pid)"
+        pkill bitcoin
+        sleep 1
+    done
+fi
