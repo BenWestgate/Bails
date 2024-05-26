@@ -143,11 +143,11 @@ ps -p $get_keys &>/dev/null && fg %"$(jobs -l | grep $get_keys | cut -f1 -d' ' |
 gpg --show-keys guix.sigs/builder-keys/*.gpg > builder-keys
 
 if [[ -e $LOCAL_DIR/state/installed ]]; then # Refresh keys if updating
+    printf '\033]2;Updating all keys from keyserver...\a'
     gpg --refresh-keys
 else # Import a trusted set on first-run.
     for key in ./trusted-keys/*; do
         if grep "$(gpg --show-keys "$key" | grep 'Key fingerprint')" builder-keys; then
-            printf '\033]2;Updating all keys from keyserver...\a'
             gpg --import "$key"
         else
             echo "Warning: Bails trusted key $key not found in bitcoin-core/guix.sigs repository, skipping."
