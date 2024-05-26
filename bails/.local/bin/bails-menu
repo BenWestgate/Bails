@@ -72,7 +72,7 @@ case "$response" in
 "Clone") bails-clone ;;
 "Backup") bails-backup ;;
 "Settings") setting=$(zenity --window-icon="$LOCAL_DIR/share/icons/bails128.png" --question \
-        --icon-name=org.gnome.Settings --title=Settings --text="Coming soon\n\nConfigure Bitcoin Core on Tails" \
+        --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails" \
         --extra-button="Update Bitcoin Core" --extra-button="Update Bails" --extra-button="Network Privacy" \
         --switch --width=300) ;;
 "Help") help=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
@@ -83,17 +83,17 @@ case "$response" in
 esac
 
 case "$help" in
-    "Donate") xdg-open bitcoin: ;; # FIXME change address
+    "Donate") xdg-open bitcoin: ;; # FIXME: change address
     "Report a Bug") tor-browser https://github.com/BenWestgate/Bails/issues ;;
     "About") zenity --info --window-icon="$LOCAL_DIR/share/icons/bails128.png" \
-        --title="About Bails" --icon-name=bails128 --text="Bails version v0.5.0\n\nCopyright (C) 2023 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>" --width=650 ;;
+        --title="About Bails" --icon-name=bails128 --text="Bails version v0.6.0\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>" --width=650 ;;
     "Online Help") xdg-open https://bitcoin-core-on-tails.slack.com/ && \
         xdg-open https://t.me/bails_support ;;
 esac
 
 case "$setting" in
         "Update Bitcoin Core") /usr/bin/gnome-terminal --title="Updating Bitcoin Core..." --hide-menubar \
-            -- "$LOCAL_DIR/bin/install-core" ;;
+            -- "install-core" ;;
         "Update Bails") /usr/bin/gnome-terminal --title="Updating Bails..." --hide-menubar \
             -- rm -rf bails && git clone https://github.com/benwestgate/bails --depth=1 && bails/b ;;
         "Network Privacy") onlynet_onion ;;
