@@ -32,6 +32,9 @@ persistent-setup # Checks needed persistent features are on.
 # Symlink default datadir to our custom datadir
 ln -s $DATA_DIR "$HOME"
 
+# Update favorite apps list
+gsettings set org.gnome.shell favorite-apps "['bails.desktop', 'bitcoin-qt-wrapper.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'whisperback.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
+
 space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
   $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
 space=$(( space > 1907 ? space : 1907 ))
