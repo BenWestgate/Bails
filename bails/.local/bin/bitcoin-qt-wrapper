@@ -75,5 +75,4 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         exit 0
     fi
 fi
-
-bitcoin-qt "$@" &
+/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt "$@" &
