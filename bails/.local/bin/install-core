@@ -272,14 +272,17 @@ if [ -e $LOCAL_DIR/state/installed ]; then
     bitcoin-qt-wrapper &
 else
     (
-    zenity --notification --text="Use the default data directory.\n~/Persistent/.bitcoin" --window-icon=bails128
+    if ((prune_MiB)); then
+        prune_text=" and storage limit"
+        prune_text2=" and <i>$((prune_MiB * 2**20 / 10**9 + 1)) GB</i>"
+    fi
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
     # Temporarily change $HOME directory make Bails's datadir the default
     HOME=~/Persistent
-    bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB -min &
     until [ -f $DATA_DIR/bitcoind.pid ]; do
-        sleep 1
+        zenity --notification --text="Use the default data directory$prune_text.\n<i>$HOME/Persistent/.bitcoin</i>$prune_text2" --window-icon=bails128
         pgrep bitcoin || bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB -min &
+        sleep 10
     done
     sleep 1
     HOME=/home/$USER

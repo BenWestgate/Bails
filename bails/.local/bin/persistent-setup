@@ -83,7 +83,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     # Persistent storage creation
     until /usr/local/lib/tpscli is-unlocked; do
             sleep 12
-            notify-send --icon=bails128 'Important: Choose the suggested passphrase or click ↻.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
+            notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
     done & notifying+=($!)
 
     until /usr/local/lib/tpscli is-unlocked; do
