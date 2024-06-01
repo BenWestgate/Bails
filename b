@@ -27,11 +27,11 @@
 export VERSION='v0.6.0-alpha'
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
+BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ "$1" == "--help" ]; then
   echo "Bails Version: $VERSION"
-  exit 0
-fi
+else
 
 # Check for root.
 if [[ $(id -u) = "0" ]]; then
@@ -43,7 +43,6 @@ YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
 fi
 
 
-BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Installs Bails to tmpfs
 rsync --recursive "$BAILS_DIR/bails/" "$HOME"
 # shellcheck disable=SC1091
@@ -71,4 +70,4 @@ else
   zenity --info --title="Bails update successful" --text="Bails has been updated to $VERSION." "$ICON" --icon-name=bails128
 fi
 
-
+fi
