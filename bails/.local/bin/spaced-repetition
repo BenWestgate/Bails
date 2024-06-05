@@ -46,7 +46,7 @@ check_passphrase() {
 # Initialize variables
 min_interval=5
 interval=30 # initial value
-exp=1
+exp=0
 enter='Enter'
 sleep $interval
 while true; do
