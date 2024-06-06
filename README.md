@@ -41,7 +41,7 @@ Bitcoin Core provides **exclusive privacy features**, making it challenging for 
 - **Pen or pencil**
 - **Couple pieces of paper**
 - **Hard surface** to write on
-- **1 hour in total** 1.3 GB to download, ½ hour to install Tails, ¼ hour to setup Bails
+- **1 hour in total** 1.4 GB to download, ½ hour to install Tails, ¼ hour to setup Bails
 
 ## Your steps
 

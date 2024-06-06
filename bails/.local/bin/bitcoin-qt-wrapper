@@ -28,11 +28,41 @@ export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
+persistent-setup # Checks needed persistent features are on.
 # Symlink default datadir to our custom datadir
-ln -s $DATA_DIR $HOME
+ln -s $DATA_DIR "$HOME"
 
-if ! (( RANDOM % 20 )); then
+# Update favorite apps list
+gsettings set org.gnome.shell favorite-apps "['bails.desktop', 'bitcoin-qt-wrapper.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'whisperback.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
+
+space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
+  $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
+space=$(( space > 1907 ? space : 1907 ))
+old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
+if ((space < old_prune)); then # Reduce prune as needed to not run out of space
+    sed -i 's/"prune": "'"$old_prune"'/"prune": "'$space/ "$DATA_DIR/settings.json"
+fi
+# Warn if prune is off and space is low
+if ((old_prune == 0)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
+    zenity --warning --title="Disk Space Low" --text='There is less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
+fi
+
+old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
+
+if [ -z "$old_dbcache" ]; then
+    last_run=$(find $DATA_DIR/blocks -exec stat -c "%Y %n" {} + | grep blk | sort -nr | head -n1 | awk '{print $1}')
+    if ((last_run < $(date -d "2 weeks ago" +%s))); then # Add dbcache setting
+        sed -i '2a\    "dbcache": "450",' settings.json
+        old_dbcache=450
+    fi
+fi
+# If set, change dbcache to available memory minus 2 GiB
+new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
+sed -i 's/"dbcache": "'"$old_dbcache"'/"dbcache": "'$new_dbcache/ "$DATA_DIR/settings.json"
+
+if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         # 1 out of 20 start-ups show donation message
+    export DONT_ASK_DONATIONS=1 # We already asked for donations NOTE: if this doesn't work use a TEMP file.
     if (( RANDOM % 2 )); then
         # In half of the cases, display a message with benevolent incentive
         text="Bails needs donations to keep everybody free and safe to use Bitcoin.\n\nEvery bit helps in our fight against surveillance, censorship and confiscation!"
@@ -42,28 +72,10 @@ if ! (( RANDOM % 20 )); then
         text="Bails protects your wallet.\n\nHelp us keep your bitcoins safe!"
         bitcoin_address=$BITCOIN_ADDRESS_SELFISH
     fi
-    if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 $ICON --modal --ellipsize; then
+    if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
         notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
         xdg-open bitcoin:$bitcoin_address
         exit 0
     fi
 fi
-
-space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
-  $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
-space=$(( space > 1907 ? space : 1907 ))
-old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-
-# If set, reduce prune when needed to not run out of space
-if ((space < old_prune)); then
-    sed -i "s/\"prune\": \"$old_prune\"/\"prune\": \"$space\"/" "$DATA_DIR/settings.json"
-fi
-
-# If set, change dbcache to available memory minus 2100 MiB
-old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-if $old_dbcache; then
-    new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2100 ))
-    sed -i "s/\"dbcache\": \"$old_dbcache\"/\"dbcache\": \"$new_dbcache\"/" "$DATA_DIR/settings.json"
-fi
-
-bitcoin-qt "$@"
+/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt "$@" &

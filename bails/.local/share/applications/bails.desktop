@@ -6,5 +6,5 @@ Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bails-menu
 Terminal=false
 Type=Application
 Icon=bails128
-Categories=Office;Finance;P2P;Network;Qt;
+Categories=Finance;P2P;Network;Qt;
 StartupWMClass=bails
