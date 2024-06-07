@@ -34,9 +34,9 @@ Bitcoin Core provides **exclusive privacy features**, making it challenging for 
 
 ## You need
 - **1 USB stick** or memory card, 32 GB minimum
-    - If you need a flash drive, see our [recommended flash drives](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#what-type-of-flash-drive-should-i-get) for top speed
+    - If you need a flash drive, see our [recommended flash drives](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#what-type-of-flash-drive-should-i-get) for top speed
 - **2 GB of RAM** computer made in the last 15 years
-    - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save money
+    - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save money
 - **A smartphone** to follow the instructions
 - **Pen or pencil**
 - **Couple pieces of paper**
@@ -92,13 +92,13 @@ In the next steps, you will shut down the computer. To be able to follow the res
 
 For support and discussion join our [telegram channel](https://t.me/bails_support).
 
-For more reading checkout our [Frequently Asked Questions](FAQ.md).
+For more reading checkout our [Frequently Asked Questions](docs/FAQ.md).
 
 To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 ## Advantages and Disadvantages
 
-For a discussion on the pros and cons of using Bails, refer to the [detailed document](Advantages_and_Disadvantages.md). It describes the unique features and limitations of the Bails platform.
+For a discussion on the pros and cons of using Bails, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the Bails platform.
 
 ## Source Code Headers
 
