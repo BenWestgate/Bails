@@ -1,8 +1,8 @@
 [Desktop Entry]
 Version=1.0
-Name=₿ails
+Name=Bails
 Comment=Create and Restore Codex32 Backups, Configure Settings and Clone Bails shareware for a friend.
-Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bails-menu
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/wrapped bails-menu
 Terminal=false
 Type=Application
 Icon=bails128

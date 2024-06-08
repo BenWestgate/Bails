@@ -45,7 +45,7 @@ for _ in 1 2 3; do
             notify-send 'ERROR: Wallet "'"$wallet"'" is already loaded.' --icon=error
             break
         else
-            bitcoin-qt-wrapper -wallet="$wallet" &
+            wrapper bitcoin-qt -wallet="$wallet" &
         fi
         notify-send 'Wallet "'"$wallet"'" has been loaded.' --icon=bitcoin128
         break
