@@ -260,7 +260,7 @@ prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 . "$HOME"/.profile
 printf '\033]2;Bitcoin Core installation complete!\a'
 if [ -e $LOCAL_DIR/state/installed ]; then
-    gtk-launch bitcoin-qt-wrapper &
+    gtk-launch bitcoin-qt
 else
     (
     if ((prune_MiB)); then
