@@ -42,15 +42,6 @@ export TMPDIR=$XDG_RUNTIME_DIR
 readonly DOWNLOAD_DIR=$HOME/.local/share/bitcoin-core
 
 
-link_dotfiles() {
-    ( # runs in subshell to preserve current directory
-        cd $DOTFILES || { persistent-setup; exit 1; } # Run persistent-setup again if off.
-        find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
-        find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
-    ) &>/dev/null
-}
-
-
 # Look for good signatures
 # Parameter 1 = Good Signatures required
 check_sigs() {
@@ -126,7 +117,7 @@ wget --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=SHA256SUM
 # Download verify-binaries tool
 wget -O verify.py https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/verify-binaries/verify.py & get_verify_tool=$!
 
-# Download Bitcoin Core in background to the destination directory
+# Download Bitcoin Core in background to the destination directory # TODO use named pipe mkfifo to tell install-core when it's time to verify signatures.
 wget --continue --no-host-directories --cut-dirs=1 --recursive --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin https://bitcoincore.org/en/download/ & core_download=$!
 
 # Download chain parameters in background
@@ -233,13 +224,13 @@ export XDG_DATA_HOME=$LOCAL_DIR/share
 rm -Rf "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
 rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 # Change mime association from electrum to bitcoin core
-sed 's/electrum/bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
+sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
 rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
-link_dotfiles
+link-dotfiles
 [ -e $DATA_DIR/wallets ] || mkdir -p $DATA_DIR/wallets # TODO: this can be replaced by creating the symlink in panic mode solution
 ln --symbolic --force /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
@@ -269,7 +260,7 @@ prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
 . "$HOME"/.profile
 printf '\033]2;Bitcoin Core installation complete!\a'
 if [ -e $LOCAL_DIR/state/installed ]; then
-    bitcoin-qt-wrapper &
+    gtk-launch bitcoin-qt-wrapper &
 else
     (
     if ((prune_MiB)); then
@@ -281,12 +272,12 @@ else
     HOME=~/Persistent
     until [ -f $DATA_DIR/bitcoind.pid ]; do
         zenity --notification --text="Use the default data directory$prune_text.\n<i>$HOME/Persistent/.bitcoin</i>$prune_text2" --window-icon=bails128
-        pgrep bitcoin || bitcoin-qt-wrapper -choosedatadir -prune=$prune_MiB -min &
+        pgrep bitcoin || wrapped bitcoin-qt -choosedatadir -prune=$prune_MiB -min &
         sleep 10
     done
     sleep 1
     HOME=/home/$USER
-    link_dotfiles
+    link-dotfiles
     )
 fi &>/dev/null
 touch $LOCAL_DIR/state/installed

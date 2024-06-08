@@ -1,0 +1,108 @@
+#!/bin/bash
+# Copyright (c) 2024 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+###############################################################################
+# Downloads/Updates Sparrow and installs it persistently. Starts sparrow.
+###############################################################################
+
+readonly DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
+readonly PERSISTENT='/live/persistence/TailsData_unlocked/Persistent'
+readonly XDG_DATA_DIRS=$DOTFILES/.local/share
+readonly ICON="--window-icon=$XDG_DATA_DIRS/icons/bails128.png"
+readonly SPARROW_SIGNING_KEY="D4D0D3202FC06849A257B38DE94618334C674B40"
+readonly SPARROW_DOWNLOAD_URL="https://sparrowwallet.com/download"
+
+test ! -d $PERSISTENT/.sparrow
+installed=$?
+if ((installed)); then
+    gpg --keyserver=keyserver.ubuntu.com --refresh-keys & keys=$!
+else
+    mkdir $XDG_DATA_DIRS/sparrow
+    gpg --keyserver=keyserver.ubuntu.com --recv-keys $SPARROW_SIGNING_KEY & keys=$!
+fi 
+cd $XDG_DATA_DIRS/sparrow || exit 1
+wget --continue --no-directories --span-hosts --recursive --level=1 \
+    --include-directories=sparrowwallet/sparrow/releases/download/ \
+    --reject=sparrow-server* --accept=manifest.txt{,.asc},amd64.deb \
+    --domains={sparrowwallet,github}.com $SPARROW_DOWNLOAD_URL
+wait -f $keys
+gpg --verify ./*manifest.txt.asc || exit 1  #TODO check for the fingerprint
+sha256sum --check ./*manifest.txt --ignore-missing || exit 1
+for deb in ./*amd64.deb; do
+    version=$(echo "$deb" | cut -d_ -f2)
+done
+rm -rf {DEBIAN,opt}
+dpkg-deb -R ./*amd64.deb .
+find . -type f -exec sed -i s,/opt/sparrow,$DOTFILES/.local,g {} \;
+find . -type f -exec sed -i "s,bin/Sparrow,bin/wrapped Sparrow -d $PERSISTENT/.sparrow,g" {} \;
+cp opt/sparrow/lib/sparrow-Sparrow.desktop $XDG_DATA_DIRS/applications
+cp opt/sparrow/lib/Sparrow.png $XDG_DATA_DIRS/icons
+rsync -r --remove-source-files opt/sparrow/ $DOTFILES/.local
+DEBIAN/postinst configure # Install MIME associations and shortcuts
+mv {~/.local/share,$XDG_DATA_DIRS}/applications/defaults.list # Persist MIME
+link-dotfiles
+if ((installed)); then
+    zenity --info --title="Sparrow successfully upgraded to $version." --text="Update was successful." --icon-name=Sparrow $ICON
+else
+    mkdir $PERSISTENT/.sparrow
+    echo '{
+  "mode": "ONLINE",
+  "bitcoinUnit": "AUTO",
+  "unitFormat": "DOT",
+  "feeRatesSource": "ELECTRUM_SERVER",
+  "loadRecentWallets": true,
+  "validateDerivationPaths": true,
+  "groupByAddress": true,
+  "includeMempoolOutputs": true,
+  "notifyNewTransactions": true,
+  "checkNewVersions": true,
+  "theme": "LIGHT",
+  "openWalletsInNewWindows": false,
+  "hideEmptyUsedAddresses": false,
+  "showTransactionHex": true,
+  "showLoadingLog": true,
+  "showAddressTransactionCount": false,
+  "showDeprecatedImportExport": false,
+  "signBsmsExports": false,
+  "preventSleep": false,
+  "recentWalletFiles": [],
+  "dustAttackThreshold": 1000,
+  "enumerateHwPeriod": 30,
+  "useZbar": true,
+  "serverType": "BITCOIN_CORE",
+  "coreServer": "http://127.0.0.1:17600",
+  "coreAuthType": "COOKIE",
+  "coreDataDir": "/live/persistence/TailsData_unlocked/Persistent/.bitcoin",
+  "useLegacyCoreWallet": false,
+  "useProxy": true,
+  "proxyServer": "127.0.0.1:9050",
+  "autoSwitchProxy": true,
+  "maxServerTimeout": 34,
+  "maxPageSize": 100,
+  "usePayNym": false,
+  "mempoolFullRbf": false,
+  "appWidth": 927.0,
+  "appHeight": 922.0
+}' > $PERSISTENT/.sparrow/config
+    ln -s {$PERSISTENT,$HOME}/.sparrow
+    zenity --info --title="Sparrow $version successfully installed." --text="Installation was successful." --icon-name=Sparrow $ICON
+fi
+gtk-launch sparrow-Sparrow
