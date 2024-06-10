@@ -100,7 +100,7 @@ case "$setting" in
         "Update Bitcoin Core") /usr/bin/gnome-terminal --title="Updating Bitcoin Core..." --hide-menubar \
             -- "install-core" ;;
         "Update Bails") /usr/bin/gnome-terminal --title="Updating Bails..." --hide-menubar \
-            -- rm -rf bails && git clone https://github.com/benwestgate/bails --depth=1 && bails/b ;;
+            -- rm -rf bails && git clone https://github.com/benwestgate/bails --depth=1 && bails/b --update ;;
         "$action Sparrow") gnome-terminal --title="$action Sparrow Wallet" --hide-menubar \
             -- "install-sparrow" ;;
         "Network Privacy") onlynet_onion ;;
