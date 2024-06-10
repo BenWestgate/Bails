@@ -66,7 +66,9 @@ response=$(zenity --question --window-icon="$LOCAL_DIR/share/icons/bails128.png"
 
 Clone - Create a synchronized Bails node for a friend.
 
-Backup - Duplicate your Bails node to protect data." \
+Backup - Duplicate your Bails node to protect data.
+
+Settings - Updates, add software and configure." \
     --extra-button="Wallet" --extra-button="Clone" --extra-button="Backup" --extra-button="Settings" --extra-button="Help" \
     --switch --width=350)
 
@@ -77,9 +79,9 @@ case "$response" in
 "Clone") bails-clone ;;
 "Backup") bails-backup ;;
 "Settings") setting=$(zenity --window-icon="$LOCAL_DIR/share/icons/bails128.png" --question \
-        --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nOnly install or update software with a retained good reputation.\n\nBails can not protect you from security issues due to installing or updating software that has become untrustworthy." \
+        --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
         --extra-button="Update Bitcoin Core" --extra-button="Update Bails" --extra-button="$action Sparrow" --extra-button="Network Privacy" \
-        --switch --width=300) ;;
+        --switch) ;;
 "Help") help=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
         --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
         --extra-button="Online Help" --extra-button="Donate" --extra-button="Report a Bug" \
@@ -105,3 +107,4 @@ case "$setting" in
             -- "install-sparrow" ;;
         "Network Privacy") onlynet_onion ;;
 esac
+bails-menu
