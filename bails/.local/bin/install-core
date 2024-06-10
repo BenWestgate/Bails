@@ -130,7 +130,7 @@ OLD_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
         sleep $x
     done & get_keys=$!
 
-    until for domain in "${BITCOIN_CORE_SOURCE_DOMAINS[*]}"; do
+    until for domain in ${BITCOIN_CORE_SOURCE_DOMAINS[*]}; do
         wget --continue --no-host-directories --cut-dirs=1 --recursive \
             --level=1 --accept=SHA256SUMS* --include-directories=bin \
             "${domain}/en/download/" && break
@@ -157,7 +157,7 @@ OLD_VER=$(ls -t | grep bitcoin-core- | head -1 | cut -d- -f3)
     fi
 ) & sig_dl=$!
 # Download Bitcoin Core in background to the destination directory
-until for domain in "${BITCOIN_CORE_SOURCE_DOMAINS[*]}"; do
+until for domain in ${BITCOIN_CORE_SOURCE_DOMAINS[*]}; do
     wget --continue --no-host-directories --cut-dirs=1 --recursive \
         --level=1 --accept=x86_64-linux-gnu.tar.gz --include-directories=bin \
         "${domain}/en/download/" && break
