@@ -70,14 +70,15 @@ Backup - Duplicate your Bails node to protect data." \
     --extra-button="Wallet" --extra-button="Clone" --extra-button="Backup" --extra-button="Settings" --extra-button="Help" \
     --switch --width=350)
 
-# Menu options handling
+# Menu options 
+which Sparrow && action=Update || action=Install
 case "$response" in
 "Wallet") bails-wallet ;;
 "Clone") bails-clone ;;
 "Backup") bails-backup ;;
 "Settings") setting=$(zenity --window-icon="$LOCAL_DIR/share/icons/bails128.png" --question \
-        --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails" \
-        --extra-button="Update Bitcoin Core" --extra-button="Update Bails" --extra-button="Network Privacy" \
+        --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nOnly install or update software with a retained good reputation.\n\nBails can not protect you from security issues due to installing or updating software that has become untrustworthy." \
+        --extra-button="Update Bitcoin Core" --extra-button="Update Bails" --extra-button="$action Sparrow" --extra-button="Network Privacy" \
         --switch --width=300) ;;
 "Help") help=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
         --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
@@ -100,5 +101,7 @@ case "$setting" in
             -- "install-core" ;;
         "Update Bails") /usr/bin/gnome-terminal --title="Updating Bails..." --hide-menubar \
             -- rm -rf bails && git clone https://github.com/benwestgate/bails --depth=1 && bails/b ;;
+        "$action Sparrow") gnome-terminal --title="$action Sparrow Wallet" --hide-menubar \
+            -- "install-sparrow" ;;
         "Network Privacy") onlynet_onion ;;
 esac

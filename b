@@ -31,17 +31,19 @@ BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ "$1" == "--help" ]; then
   echo "Bails Version: $VERSION"
-else
-  # Check for root.
-  if [[ $(id -u) = "0" ]]; then
+  exit 0
+elif ! grep 'NAME="Tails"' /etc/os-release > /dev/null; then # Check for Tails OS.
+    echo "
+    YOU MUST RUN THIS SCRIPT IN TAILS OS!
+    "
+    read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN FROM TAILS. "
+elif [[ $(id -u) = "0" ]]; then # Check for root.
     echo "
   YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
-    exit 0
-  fi
-
-  # Installs Bails to tmpfs
+else
+  # Install Bails to tmpfs
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
   . "$HOME"/.profile
@@ -69,3 +71,4 @@ else
   fi
 
 fi
+exit 1
