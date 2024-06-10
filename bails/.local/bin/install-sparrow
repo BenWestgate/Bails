@@ -31,14 +31,8 @@ readonly ICON="--window-icon=$XDG_DATA_DIRS/icons/bails128.png"
 readonly SPARROW_SIGNING_KEY="D4D0D3202FC06849A257B38DE94618334C674B40"
 readonly SPARROW_DOWNLOAD_URL="https://sparrowwallet.com/download"
 
-test ! -d $PERSISTENT/.sparrow
-installed=$?
-if ((installed)); then
-    gpg --keyserver=keyserver.ubuntu.com --refresh-keys & keys=$!
-else
-    mkdir $XDG_DATA_DIRS/sparrow
-    gpg --keyserver=keyserver.ubuntu.com --recv-keys $SPARROW_SIGNING_KEY & keys=$!
-fi 
+mkdir {$XDG_DATA_DIRS/,$PERSISTENT/.}sparrow
+gpg --keyserver=keyserver.ubuntu.com --recv-keys $SPARROW_SIGNING_KEY & keys=$!
 cd $XDG_DATA_DIRS/sparrow || exit 1
 wget --continue --no-directories --span-hosts --recursive --level=1 \
     --include-directories=sparrowwallet/sparrow/releases/download/ \
@@ -47,24 +41,16 @@ wget --continue --no-directories --span-hosts --recursive --level=1 \
 wait -f $keys
 gpg --verify ./*manifest.txt.asc || exit 1  #TODO check for the fingerprint
 sha256sum --check ./*manifest.txt --ignore-missing || exit 1
-for deb in ./*amd64.deb; do
-    version=$(echo "$deb" | cut -d_ -f2)
-done
 rm -rf {DEBIAN,opt}
 dpkg-deb -R ./*amd64.deb .
 find . -type f -exec sed -i s,/opt/sparrow,$DOTFILES/.local,g {} \;
 find . -type f -exec sed -i "s,bin/Sparrow,bin/wrapped Sparrow -d $PERSISTENT/.sparrow,g" {} \;
-cp opt/sparrow/lib/sparrow-Sparrow.desktop $XDG_DATA_DIRS/applications
-echo "SingleMainWindow=true" >> $XDG_DATA_DIRS/applications/sparrow-Sparrow.desktop
-cp opt/sparrow/lib/Sparrow.png $XDG_DATA_DIRS/icons
+sed '$ s/$/\nSingleMainWindow=true/' opt/sparrow/lib/sparrow-Sparrow.desktop > $XDG_DATA_DIRS/applications/sparrow-Sparrow.desktop
+mv opt/sparrow/lib/Sparrow.png $XDG_DATA_DIRS/icons 
 rsync -r --remove-source-files opt/sparrow/ $DOTFILES/.local
 DEBIAN/postinst configure # Install MIME associations and shortcuts
-mv {~/.local/share,$XDG_DATA_DIRS}/applications/defaults.list # Persist MIME
-link-dotfiles
-if ((installed)); then
-    zenity --info --title="Sparrow successfully upgraded to $version." --text="Update was successful." --icon-name=Sparrow $ICON
-else
-    mkdir $PERSISTENT/.sparrow
+rsync --remove-source-files {~/.local/share,$XDG_DATA_DIRS}/applications/defaults.list # Persist MIME
+if ln {$XDG_DATA_DIRS,~/.local/share}/icons/Sparrow.png; then
     echo '{
   "mode": "ONLINE",
   "bitcoinUnit": "AUTO",
@@ -104,7 +90,8 @@ else
   "appWidth": 927.0,
   "appHeight": 922.0
 }' > $PERSISTENT/.sparrow/config
-    ln -s {$PERSISTENT,$HOME}/.sparrow
-    zenity --info --title="Sparrow $version successfully installed." --text="Installation was successful." --icon-name=Sparrow $ICON
+    zenity --info --title="$(Sparrow --version) successfully installed" --text="Installation was successful." --icon-name=Sparrow $ICON &
+else
+    zenity --info --title="Successfully upgraded to $(Sparrow --version)" --text="Update was successful." --icon-name=Sparrow $ICON &
 fi
 gtk-launch sparrow-Sparrow

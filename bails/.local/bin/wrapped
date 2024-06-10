@@ -32,10 +32,9 @@ export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 # shellcheck disable=SC1090
 . ~/.profile
 persistent-setup # Checks needed persistent features are on.
-# Symlink default datadir to our custom datadir
-for dotfolder in /live/persistence/TailsData_unlocked/Persistent/.*; do
-    ln -s "$dotfolder" ~
-done
+# Symlink at default datadir to our custom datadir
+ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
+
 # Update favorite apps list
 gsettings set org.gnome.shell favorite-apps "['bails.desktop', 'sparrow-Sparrow.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'whisperback.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
 
