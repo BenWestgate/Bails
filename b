@@ -25,6 +25,7 @@
 ###############################################################################
 
 export VERSION='v0.7.0-alpha'
+export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
