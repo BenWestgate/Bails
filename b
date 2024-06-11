@@ -64,6 +64,10 @@ else
   rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
   rm -rf "$BAILS_DIR"
 
+  # shellcheck disable=SC1090
+  . ~/.profile
+  link-dotfiles
+
   wait
   if [ -z "$1" ]; then
     zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
