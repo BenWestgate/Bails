@@ -70,7 +70,7 @@ Backup - Duplicate your Bails node to protect data.
 
 Settings - Updates, add software, and configure." \
     --extra-button="Wallet" --extra-button="Clone" --extra-button="Backup" --extra-button="Settings" --extra-button="Help" \
-    --switch --width=350)
+    --switch)
 
 # Menu options 
 which Sparrow && action=Update || action=Install
@@ -93,7 +93,7 @@ case "$response2" in
     "Donate") xdg-open bitcoin: ;; # FIXME: change address
     "Report a Bug") tor-browser https://github.com/BenWestgate/Bails/issues ;;
     "About") zenity --info --window-icon="$LOCAL_DIR/share/icons/bails128.png" \
-        --title="About Bails" --icon-name=bails128 --text="Bails version $VERSION\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>" --width=650; bails-menu ;;
+        --title="About Bails" --icon-name=bails128 --text="Bails version $VERSION\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; bails-menu ;;
     "Online Help") xdg-open https://bitcoin-core-on-tails.slack.com/ && \
         xdg-open https://t.me/bails_support ;;
     "Update Bitcoin Core") gnome-terminal --title="Updating Bitcoin Core..." --hide-menubar \
