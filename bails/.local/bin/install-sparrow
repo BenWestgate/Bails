@@ -39,10 +39,12 @@ wget --continue --no-directories --span-hosts --recursive --level=1 \
     --reject=sparrow-server* --accept=manifest.txt{,.asc},amd64.deb \
     --domains={sparrowwallet,github}.com $SPARROW_DOWNLOAD_URL
 wait -f $keys
-gpg --verify ./*manifest.txt.asc || exit 1  #TODO check for the fingerprint
-sha256sum --check ./*manifest.txt --ignore-missing || exit 1
+for version in ./*manifest.txt; do
+    gpg --verify "$version".asc || exit 1
+    deb=$(sha256sum --check "$version" --ignore-missing) && echo "$deb" || exit 1
+done
 rm -rf {DEBIAN,opt}
-dpkg-deb -vR ./*amd64.deb .
+dpkg-deb -vR "${deb::-4}" . || exit 1
 find . -type f -exec sed -i s,/opt/sparrow,$DOTFILES/.local,g {} \;
 find . -type f -exec sed -i "s,bin/Sparrow,bin/wrapped Sparrow -d $PERSISTENT/.sparrow,g" {} \;
 sed '$ s/$/\nSingleMainWindow=true/' opt/sparrow/lib/sparrow-Sparrow.desktop > $XDG_DATA_HOME/applications/sparrow-Sparrow.desktop
