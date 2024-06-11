@@ -50,7 +50,7 @@ rsync opt/sparrow/lib/Sparrow.png $XDG_DATA_DIRS/icons
 rsync -r --remove-source-files opt/sparrow/ $DOTFILES/.local
 DEBIAN/postinst configure # Install MIME associations and shortcuts
 rsync --remove-source-files {~/.local/share,$XDG_DATA_DIRS}/applications/defaults.list # Persist MIME
-if ln {$XDG_DATA_DIRS,~/.local/share}/icons/Sparrow.png; then
+if ln -s {$XDG_DATA_DIRS,~/.local/share}/icons/Sparrow.png; then
     echo '{
   "mode": "ONLINE",
   "bitcoinUnit": "AUTO",
