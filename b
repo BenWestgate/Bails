@@ -74,6 +74,5 @@ else
     zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
   else
     zenity --info --title="Bails update successful" --text="Bails has been updated to $VERSION." "$ICON" --icon-name=bails128
-  fi
-
+  fi &
 fi
