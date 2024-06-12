@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# wraps bitcoin-qt to sometimes ask for donations.
+# wraps Bitcoin executables to sometimes ask for donations.
 ###############################################################################
 BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
 BITCOIN_ADDRESS_SELFISH=	# TODO: add these
@@ -28,12 +28,15 @@ export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
+/live/persistence/TailsData_unlocked/dotfiles/.local/bin/link-dotfiles
+# shellcheck disable=SC1090
+. ~/.profile
 persistent-setup # Checks needed persistent features are on.
-# Symlink default datadir to our custom datadir
-ln -s $DATA_DIR "$HOME"
+# Symlink at default datadir to our custom datadir
+ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
 
 # Update favorite apps list
-gsettings set org.gnome.shell favorite-apps "['bails.desktop', 'bitcoin-qt-wrapper.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'whisperback.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
+gsettings set org.gnome.shell favorite-apps "['bails.desktop', 'sparrow-Sparrow.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'whisperback.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
 
 space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
   $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
@@ -44,7 +47,7 @@ if ((space < old_prune)); then # Reduce prune as needed to not run out of space
 fi
 # Warn if prune is off and space is low
 if ((old_prune == 0)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
-    zenity --warning --title="Disk Space Low" --text='There is less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
+    zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
 fi
 
 old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
@@ -78,4 +81,4 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         exit 0
     fi
 fi
-/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt "$@" &
+"$@" &

@@ -24,24 +24,28 @@
 # Sets environment variable and launches install-core and/or installs Bails
 ###############################################################################
 
-export VERSION='v0.6.0-alpha'
+export VERSION='v0.7.0-alpha'
+export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ "$1" == "--help" ]; then
   echo "Bails Version: $VERSION"
-else
-  # Check for root.
-  if [[ $(id -u) = "0" ]]; then
+elif ! grep 'NAME="Tails"' /etc/os-release > /dev/null; then # Check for Tails OS.
+    echo "
+    YOU MUST RUN THIS SCRIPT IN TAILS OS!
+    "
+    read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN FROM TAILS. "
+    exit 1
+elif [[ $(id -u) = "0" ]]; then # Check for root.
     echo "
   YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
-    exit 0
-  fi
-
-  # Installs Bails to tmpfs
+    exit 1
+else
+  # Install Bails to tmpfs
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
   . "$HOME"/.profile
@@ -61,11 +65,14 @@ else
   rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
   rm -rf "$BAILS_DIR"
 
+  # shellcheck disable=SC1090
+  . ~/.profile
+  link-dotfiles
+
   wait
   if [ -z "$1" ]; then
     zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
   else
     zenity --info --title="Bails update successful" --text="Bails has been updated to $VERSION." "$ICON" --icon-name=bails128
-  fi
-
+  fi &
 fi

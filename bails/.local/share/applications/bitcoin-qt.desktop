@@ -5,11 +5,11 @@ Comment=Connect to the Bitcoin P2P Network
 Comment[de]=Verbinde mit dem Bitcoin peer-to-peer Netzwerk
 Comment[fr]=Bitcoin, monnaie virtuelle cryptographique pair à pair
 Comment[tr]=Bitcoin, eşten eşe kriptografik sanal para birimi
-Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf -startupnotify=chainstate-preload %u
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/wrapped bitcoin-qt -conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf -datadir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin %u
 Terminal=false
 Type=Application
 Icon=bitcoin128
-Categories=Office;Finance;P2P;Network;Qt;
+MimeType=x-scheme-handler/bitcoin;
+Categories=Finance;P2P;Network;Qt;
 StartupWMClass=Bitcoin-qt
-NoDisplay=true
-NotShowIn=GNOME
+SingleMainWindow=true
