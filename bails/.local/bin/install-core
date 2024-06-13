@@ -129,7 +129,7 @@ wget --continue -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bit
 
 # Query latest version
 until wget ${BITCOIN_CORE_DOMAIN}/en/download; do sleep $((retry++)); done
-VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download
+VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
 
 # Download Bitcoin core checksums and signatures in background
 until wget -cxnH --cut-dirs=1 ${BITCOIN_CORE_DOMAIN}/bin/bitcoin-core-${VER}/SHA256SUMS{,.asc}; do sleep $((retry++)); done & sig_dl=$!
