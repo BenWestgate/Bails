@@ -64,8 +64,6 @@ else
   rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
   rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
   rm -rf "$BAILS_DIR"
-  # shellcheck disable=SC1090
-  . ~/.profile
   link-dotfiles
   wait
   if [ -z "$1" ]; then
