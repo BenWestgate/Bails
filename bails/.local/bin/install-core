@@ -226,10 +226,10 @@ ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' |
 assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
 assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
 # Calculate space available for block file storage
-space=$((($(df --output=avail $SOURCE | tail -1) * 1024 - (assumed_chain_state_size + 10) * 10**9) / 1024**2))
-prune_MiB=$((space > 1907 ? space : 1907 ))
+space=$(($(df --output=avail $SOURCE | tail -1) * 1024 / 10 ** 9 - assumed_chain_state_size + 10))
+prune_GB=$((space > 2 ? space : 2 ))
 # Disable pruning if USB stick is large enough
-prune_MiB=$((space > assumed_blockchain_size * 1024 ? 0 : prune_MiB))
+prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
 
 # Enable proxies for Tor and prune
 [ -f $DATA_DIR/settings.json ] || echo '{
@@ -250,7 +250,7 @@ else
     (
     if ((prune_MiB)); then
         prune_text=" and storage limit"
-        prune_text2=" and <i>$((prune_MiB * 2**20 / 10**9 + 1)) GB</i>"
+        prune_text2=" and <i>$prune_GB GB</i>"
     fi
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
     # Temporarily change $HOME directory make Bails's datadir the default
