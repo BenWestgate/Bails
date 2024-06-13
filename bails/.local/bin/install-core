@@ -271,18 +271,3 @@ else
     zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
 fi &>/dev/null
 touch $LOCAL_DIR/state/installed
-
-# Exit by killing controlling terminal
-echo "Bails installation complete! 
-
-Closing this window in 30 seconds, press any key to abort.
-"
-for ((i = 30; i >= 1; i--)); do
-    echo -n "$i "
-    read -r -t 1 -n 1 && { printf '\n%s\n' "Aborted."; exit 0; }
-done
-echo "
-Closing terminal window..."
-sleep 3
-PARENT_PID=$(ps -o ppid= -p $$)
-kill -9 "$PARENT_PID"

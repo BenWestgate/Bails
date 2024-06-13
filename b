@@ -64,15 +64,27 @@ else
   rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
   rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
   rm -rf "$BAILS_DIR"
-
   # shellcheck disable=SC1090
   . ~/.profile
   link-dotfiles
-
   wait
   if [ -z "$1" ]; then
     zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
+    # Exit by killing controlling terminal
+    echo "Bails installation complete! 
+
+Closing this window in 30 seconds, press any key to abort.
+"
+for ((i = 30; i >= 1; i--)); do
+    echo -n "$i "
+    read -r -t 1 -n 1 && { printf '\n%s\n' "Aborted."; exit 0; }
+done
+    echo "
+Closing terminal window..."
+    sleep 3
+    PARENT_PID=$(ps -o ppid= -p $$)
+    kill -9 "$PARENT_PID"
   else
     zenity --info --title="Bails update successful" --text="Bails has been updated to $VERSION." "$ICON" --icon-name=bails128
-  fi &
+  fi
 fi
