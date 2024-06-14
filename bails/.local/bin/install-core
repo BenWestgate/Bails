@@ -91,6 +91,10 @@ search_key() {
     good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
 }
 
+get_guix() {
+    cd guix.sigs || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 || return 1
+    git pull # Update guix.sigs
+}
 
 ###############################################################################
 # Begin execution here
@@ -115,9 +119,8 @@ DOWNLOAD_DIR=$LOCAL_DIR/share/bitcoin-core
 cd "$DOWNLOAD_DIR" || exit 1
 
 # Get Bitcoin Core builder keys
-until git clone https://github.com/bitcoin-core/guix.sigs --depth=1; do
+until get_guix; do
     echo "Cloning Bitcoin Core release attestations failed, retrying in $((retry++)) seconds..."
-    rm -Rf guix.sigs
     sleep $((retry++))
 done & get_keys=$!
 
