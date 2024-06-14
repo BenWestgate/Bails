@@ -256,6 +256,8 @@ else
     # Temporarily change $HOME directory make Bails's datadir the default
     HOME=~/Persistent
     until [ -f $DATA_DIR/bitcoind.pid ]; do
+        grep /strDataDir= $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf && stop-btc
+        sed -i '/strDataDir=/d' $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf
         zenity --notification --text="Use the default data directory$prune_text.\n<i>$HOME/.bitcoin</i>$prune_text2" --window-icon=bails128
         pgrep bitcoin || wrapped bitcoin-qt -choosedatadir -prune=$prune_MiB -min &
         sleep 15
