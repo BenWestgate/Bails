@@ -118,6 +118,9 @@ set -m
 DOWNLOAD_DIR=$LOCAL_DIR/share/bitcoin-core
 cd "$DOWNLOAD_DIR" || exit 1
 
+echo $DOWNLOAD_DIR
+read -pr
+
 # Get Bitcoin Core builder keys
 until get_guix; do sleep $((retry++)); done & get_keys=$!
 
@@ -147,7 +150,7 @@ else # Import a trusted set on first-run.
         if grep "$(gpg --show-keys "$key" | grep 'Key fingerprint')" builder-keys; then
             gpg --import "$key"
         else
-            echo "Warning: Bails trusted key $key not found in bitcoin-core/guix.sigs/$VER, skipping."
+            echo "Warning: Bails trusted key $key did not sign Bitcoin Core version $VER, skipping."
         fi
     done
 fi
@@ -159,6 +162,8 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-"$VER" || exit 1
+echo $PWD
+read -r
 if [ ! -f SHA256SUMS ]; then # TODO read the exit codes of verify.py to handle all error dialogs in a switch.
     zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
     install-core	# Launch this script again
@@ -205,6 +210,8 @@ tar -xvf ${file_name::-4} --strip-components=1 --directory=$LOCAL_DIR
 
 # Move completed verified download to persistent storage
 export XDG_DATA_HOME=$LOCAL_DIR/share
+echo $XDG_DATA_HOME
+read -r
 rm -Rf "$DOWNLOAD_DIR"/{download,*.tmp,wget-log*}
 rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 # Change mime association from electrum to bitcoin core
@@ -256,6 +263,7 @@ else
     # Temporarily change $HOME directory make Bails's datadir the default
     HOME=~/Persistent
     until [ -f $DATA_DIR/bitcoind.pid ]; do
+        echo $XDG_CONFIG_HOME
         grep /strDataDir= $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf && stop-btc
         sed -i '/strDataDir=/d' $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf
         zenity --notification --text="Use the default data directory$prune_text.\n<i>$HOME/.bitcoin</i>$prune_text2" --window-icon=bails128
@@ -270,6 +278,6 @@ else
     bails-wallet
     fi
     # Display info about IBD, keeping Tails private and extra reading material
-    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/">security in-a-box</a> website.'
+    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
 fi &>/dev/null
 touch $LOCAL_DIR/state/installed
