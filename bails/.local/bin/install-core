@@ -119,10 +119,7 @@ DOWNLOAD_DIR=$LOCAL_DIR/share/bitcoin-core
 cd "$DOWNLOAD_DIR" || exit 1
 
 # Get Bitcoin Core builder keys
-until get_guix; do
-    echo "Cloning Bitcoin Core release attestations failed, retrying in $((retry++)) seconds..."
-    sleep $((retry++))
-done & get_keys=$!
+until get_guix; do sleep $((retry++)); done & get_keys=$!
 
 # Download chain parameters in background
 wget --continue -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
