@@ -44,6 +44,7 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
 else
+  set -m # Enable job control to show install-core progress in foreground
   # Install Bails to tmpfs
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
