@@ -48,22 +48,21 @@ else
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
-  (persistent-setup || systemctl reboot) & # Run persistent setup in background
-  if [ -z "$1" ]; then # Don't update or install core if ran with a parameter
-    # shellcheck disable=SC1091
-    . install-core
-  fi
-
-  until /usr/local/lib/tpscli is-unlocked && \
-    /usr/local/lib/tpscli is-active Dotfiles && \
-    [ -d "$DOTFILES" ] && [ -w "$DOTFILES" ]; do
-      sleep 1
-  done
-  # Install Bails to Persistent Storage
-  rsync -r --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
-  rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
-  rm -rf "$BAILS_DIR"
-  link-dotfiles
+  (
+    persistent-setup || systemctl reboot
+    until /usr/local/lib/tpscli is-unlocked && \
+      /usr/local/lib/tpscli is-active Dotfiles && \
+      [ -d "$DOTFILES" ] && [ -w "$DOTFILES" ]; do
+        sleep 1
+    done
+    # Install Bails to Persistent Storage
+    rsync -r --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
+    rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
+    rm -rf "$BAILS_DIR"
+    link-dotfiles
+  ) & # Run persistent setup in background
+  # shellcheck disable=SC1091
+  [ -z "$1" ] && . install-core # Don't update core if ran with a parameter
   wait
   if [ -z "$1" ]; then
     zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
@@ -84,5 +83,6 @@ Closing terminal window..."
   else
     zenity --info --title="Bails update successful" --text="Bails has been updated to $VERSION." "$ICON" --icon-name=bails128
   fi
+  exit 0
 fi
 exit 1
