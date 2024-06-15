@@ -94,10 +94,10 @@ search_key() {
 }
 
 
-get_guix_sigs() {
+get_guix_sigs() (
     cd guix.sigs || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 || return 1
     git pull # Update guix.sigs
-}
+)
 
 
 retry_on_fail() {

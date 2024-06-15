@@ -1,6 +1,6 @@
 #!/bin/bash
 DATA_DIR='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/'
-while pgrep bitcoin$1; do
+while pgrep bitcoin; do
     printf '\033]2;Waiting for Bitcoin Core to shutdown...\a'
     bitcoin-cli stop
     [ -f $DATA_DIR/bitcoind.pid ] && kill "$(<$DATA_DIR/bitcoind.pid)"
