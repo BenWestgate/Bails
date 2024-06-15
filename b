@@ -48,12 +48,11 @@ else
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
+  (persistent-setup || systemctl reboot) & # Run persistent setup in background
   if [ -z "$1" ]; then # Don't update or install core if ran with a parameter
     # shellcheck disable=SC1091
     . install-core
-  else
-    persistent-setup
-  fi &
+  fi
 
   until /usr/local/lib/tpscli is-unlocked && \
     /usr/local/lib/tpscli is-active Dotfiles && \

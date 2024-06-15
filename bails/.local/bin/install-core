@@ -114,10 +114,8 @@ retry_on_fail() {
 printf '\033]2;Welcome to Bails!\a'
 clear -x # Clear the terminal
 pkill tca &>/dev/null # Close tor connection assistant to clean up the screen
-set -m # Enable job control to show background downloads progress in foreground
+set -m # Enable job control to bring background downloads to the foreground
 
-# Setup Persistent Storage in background if it is not already
-( persistent-setup || systemctl reboot ) & tps_setup=$!
 cd "$DOWNLOAD_DIR" || exit 1
 # Download chain parameters in background
 retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
@@ -147,7 +145,7 @@ else # Import a trusted set on first-run.
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
-wait -f "$tps_setup"
+until [[ -f $XDG_STATE_HOME/tps_is_set_up ]]; do sleep 1; done # Waits on tps
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
