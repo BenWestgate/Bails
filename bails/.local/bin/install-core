@@ -197,6 +197,7 @@ printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 # Move completed verified download to persistent storage
 rm -Rf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
+until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure Bails installed
 rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
