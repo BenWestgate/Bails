@@ -47,9 +47,10 @@ else
   # Install Bails to tmpfs
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
-  . "$HOME"/.profile
+  . "$HOME/.profile"
   if [ -z "$1" ]; then # Don't update or install core if ran with a parameter
-    install-core
+    # shellcheck disable=SC1091
+    . install-core
   else
     persistent-setup
   fi &
@@ -60,7 +61,7 @@ else
       sleep 1
   done
   # Install Bails to Persistent Storage
-  rsync -r --remove-source-files "$BAILS_DIR"/bails/ $DOTFILES
+  rsync -r --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
   rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
   rm -rf "$BAILS_DIR"
   link-dotfiles
