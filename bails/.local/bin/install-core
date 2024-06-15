@@ -95,8 +95,11 @@ search_key() {
 
 
 get_guix_sigs() (
-    cd guix.sigs || git clone https://github.com/bitcoin-core/guix.sigs --depth=1 || return 1
-    git pull # Update guix.sigs
+    if cd guix.sigs > /dev/null; then
+        git pull # Update guix.sigs
+    else
+        git clone https://github.com/bitcoin-core/guix.sigs --depth=1
+    fi 
 )
 
 
