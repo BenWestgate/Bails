@@ -45,7 +45,7 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
 else
   # Install Bails to tmpfs
-  rsync -rvPh "$BAILS_DIR/bails/" "$HOME"
+  rsync -rvh "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   (
@@ -56,8 +56,8 @@ else
         sleep 1
     done
     # Install Bails to Persistent Storage
-    rsync -rvPh --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
-    rsync -rvPh --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
+    rsync -rvh --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
+    rsync -rvh --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     rm -rvf "$BAILS_DIR"
     link-dotfiles
   ) & # Run persistent setup in background

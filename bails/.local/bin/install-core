@@ -104,9 +104,10 @@ get_guix_sigs() (
 
 
 retry_on_fail() {
-    echo "$@"
+    echo "Running $*"
     until "$@"; do
         sleep $((retry++))
+        echo "Retrying $*"
     done
 }
 
@@ -198,20 +199,20 @@ tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 # Move completed verified download to persistent storage
 rm -Rvf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
 until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure Bails installed
-rsync -vPh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
+rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
-rsync -vPh --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
+rsync -vhb --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
 link-dotfiles
 [ -e $DATA_DIR/wallets ] || mkdir -p $DATA_DIR/wallets # TODO: this can be replaced by creating the symlink in panic mode solution
-ln --symbolic --force /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+ln --symbolic --force -b /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
 chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
-ln --symbolic --force {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
-ln --symbolic $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
+ln --symbolic --force -b {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
+ln --symbolic --force -b $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
 # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
 ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
