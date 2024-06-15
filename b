@@ -44,7 +44,6 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
 else
-  set -m # Enable job control to show install-core progress in foreground
   # Install Bails to tmpfs
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
@@ -65,7 +64,7 @@ else
   rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
   rm -rf "$BAILS_DIR"
   link-dotfiles
-  ps -p $other_setup &>/dev/null && fg %"$(jobs -l | grep $other_setup | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+  wait
   if [ -z "$1" ]; then
     zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
     # Exit by killing controlling terminal
