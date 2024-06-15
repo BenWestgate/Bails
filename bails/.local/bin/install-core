@@ -28,19 +28,21 @@
 
 # Set environment variables and constants
 export PATH="$HOME/.local/bin:$PATH"
+export DOWNLOAD_DIR="$HOME/.local/share/bitcoin"
+export ICON=--window-icon="$HOME/.local/share/icons/bails128.png"
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
-export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export TMPDIR=$XDG_RUNTIME_DIR
-export SOURCE='/live/persistence/TailsData_unlocked'
-export DATA_DIR=$SOURCE/Persistent/.bitcoin
-export DOTFILES=$SOURCE/dotfiles
-export XDG_CONFIG_HOME=$DOTFILES/.config
-export XDG_CACHE_HOME=$DOTFILES/.cache
-export LOCAL_DIR=$DOTFILES/.local
-export XDG_STATE_HOME=$LOCAL_DIR/state
-readonly XDG_DATA_HOME=$LOCAL_DIR/share
-readonly BITCOIN_CORE_DOMAIN=https://bitcoincore.org
+export SOURCE="/live/persistence/TailsData_unlocked"
+export DATA_DIR="$SOURCE/Persistent/.bitcoin"
+export DOTFILES="$SOURCE/dotfiles"
+export XDG_CONFIG_HOME="$DOTFILES/.config"
+export XDG_CACHE_HOME="$DOTFILES/.cache"
+export LOCAL_DIR="$DOTFILES/.local"
+export XDG_STATE_HOME="$LOCAL_DIR/state"
+readonly XDG_DATA_HOME="$LOCAL_DIR/share"
+readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
 readonly SECURITY_IN_A_BOX_TOR_URL="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/"
+readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp"
 
 
 # Look for good signatures
@@ -116,22 +118,19 @@ set -m # Enable job control to show background downloads progress in foreground
 
 # Setup Persistent Storage in background if it is not already
 ( persistent-setup || systemctl reboot ) & tps_setup=$!
-DOWNLOAD_DIR=$HOME/.local/share/bitcoin
-/usr/local/lib/tpscli is-unlocked && /usr/local/lib/tpscli is-active Dotfiles && \
-DOWNLOAD_DIR=$XDG_DATA_HOME/bitcoin # Download to Persistent Storage if set up
 cd "$DOWNLOAD_DIR" || exit 1
 # Download chain parameters in background
-retry_on_fail wget --continue -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
-retry_on_fail wget ${BITCOIN_CORE_DOMAIN}/en/download # Query latest version
+retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
+retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
 VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
 # Download Bitcoin core checksums and signatures in background
-retry_on_fail wget -cxnH --cut-dirs=1 ${BITCOIN_CORE_DOMAIN}/bin/bitcoin-core-"$VER"/SHA256SUMS{,.asc} & sig_dl=$!
+retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/SHA256SUMS"{,.asc} & sig_dl=$!
 # Download Bitcoin core binary in background
-retry_on_fail wget -cxnH --cut-dirs=1 ${BITCOIN_CORE_DOMAIN}/bin/bitcoin-core-"$VER"/bitcoin-"$VER"-x86_64-linux-gnu.tar.gz & get_core=$!
+retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/bitcoin-$VER-x86_64-linux-gnu.tar.gz" & get_core=$!
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 retry_on_fail get_guix_sigs
 
-(cd guix.sigs/"$VER" || exit 1; for name in *; do gpg --show-keys "$DOWNLOAD_DIR"/guix.sigs/builder-keys/"$name".gpg; done) > builder-keys
+(cd guix.sigs/"$VER" || exit 1; for name in *; do gpg --show-keys "$DOWNLOAD_DIR/guix.sigs/builder-keys/$name.gpg"; done) > builder-keys
 if OLD_VER=$(bitcoind --version); then # Refresh keys if updating
     action=update
     printf '\033]2;Updating all keys from keyserver...\a'
@@ -198,7 +197,7 @@ tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 rm -Rf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
 rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 # Change mime association from electrum to bitcoin core
-sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache >"$XDG_DATA_HOME/applications/mimeinfo.cache"
+sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
 rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails

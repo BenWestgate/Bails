@@ -52,7 +52,7 @@ else
     install-core
   else
     persistent-setup
-  fi & other_setup=$!
+  fi &
 
   until /usr/local/lib/tpscli is-unlocked && \
     /usr/local/lib/tpscli is-active Dotfiles && \
