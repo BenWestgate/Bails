@@ -250,7 +250,7 @@ else
     until [ -f $DATA_DIR/bitcoind.pid ]; do
         zenity --notification --text="Use the default data directory$prune_text.\n<i>$HOME/.bitcoin</i>$prune_text2" --window-icon=bails128
         pgrep bitcoin || wrapped bitcoin-qt -choosedatadir -prune=$prune_MiB -min
-        bitcoin-cli --rpcwait createwallet test_permissions && bitcoin-cli stop
+        bitcoin-cli --rpcwait createwallet test_permissions && stop-btc
         # grep /strDataDir= $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf && stop-btc
         sed -i '/strDataDir=/d' $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf
     done
