@@ -271,9 +271,8 @@ else
         sleep 15
     done
     sleep 1
-    HOME=/home/$USER
-    link-dotfiles
     )
+    link-dotfiles
     if (( $(find $DATA_DIR/wallets/* | wc -l) < 2 )); then
     bails-wallet
     fi

@@ -27,23 +27,22 @@
 export VERSION='v0.7.0-alpha'
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
-DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
+export DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ "$1" == "--help" ]; then
-  echo "Bails Version: $VERSION"
+if [ "$1" == "--version" ]; then
+  echo "Bails version $VERSION"
+  exit 0
 elif ! grep 'NAME="Tails"' /etc/os-release > /dev/null; then # Check for Tails OS.
     echo "
     YOU MUST RUN THIS SCRIPT IN TAILS OS!
     "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN FROM TAILS. "
-    exit 1
 elif [[ $(id -u) = "0" ]]; then # Check for root.
     echo "
   YOU SHOULD NOT RUN THIS SCRIPT AS ROOT!
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
-    exit 1
 else
   # Install Bails to tmpfs
   rsync --recursive "$BAILS_DIR/bails/" "$HOME"
@@ -86,3 +85,4 @@ Closing terminal window..."
     zenity --info --title="Bails update successful" --text="Bails has been updated to $VERSION." "$ICON" --icon-name=bails128
   fi
 fi
+exit 1
