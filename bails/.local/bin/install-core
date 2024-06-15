@@ -95,7 +95,7 @@ search_key() {
 
 
 get_guix_sigs() (
-    if cd guix.sigs > /dev/null; then
+    if cd guix.sigs 2>/dev/null; then
         git pull # Update guix.sigs
     else
         git clone https://github.com/bitcoin-core/guix.sigs --depth=1
@@ -104,6 +104,7 @@ get_guix_sigs() (
 
 
 retry_on_fail() {
+    echo "$@"
     until "$@"; do
         sleep $((retry++))
     done
@@ -131,8 +132,8 @@ retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VE
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 retry_on_fail get_guix_sigs
 
-(cd guix.sigs/"$VER" || exit 1; for name in *; do gpg --show-keys "$DOWNLOAD_DIR/guix.sigs/builder-keys/$name.gpg"; done) > builder-keys
-if OLD_VER=$(bitcoind --version); then # Refresh keys if updating
+(cd "guix.sigs/$VER" || exit 1; for name in *; do gpg --show-keys "$DOWNLOAD_DIR/guix.sigs/builder-keys/$name.gpg"; done) > builder-keys
+if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
     action=update
     printf '\033]2;Updating all keys from keyserver...\a'
     gpg --refresh-keys
