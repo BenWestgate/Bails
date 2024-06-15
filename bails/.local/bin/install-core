@@ -196,13 +196,13 @@ stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 # Move completed verified download to persistent storage
-rm -Rf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
+rm -Rvf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
 until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure Bails installed
-rsync --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
+rsync -vPh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
-rsync --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
+rsync -vPh --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
