@@ -25,7 +25,7 @@
 ###############################################################################
 
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
-INSTALL="/live/persistence/TailsData_unlocked/dotfiles/.local/state/installed"
+INSTALL="/live/persistence/TailsData_unlocked/dotfiles/.local/state/tps_is_set_up"
 
 # Check if user password is already set
 passwd_unset=$(passwd -S "$USER" | grep -c NP)
@@ -132,7 +132,7 @@ if ((passwd_unset)) && ! [ -f "$INSTALL" ]; then
      • store it out of sight away from your Bails USB sticks, and
      • destroy it once memorized." \
             --ok-label='I Will Destroy It Once Memorized' "$ICON"
-    fi
+fi
 
 # Check features of the Persistent Storage
 if /usr/local/lib/tpscli is-active PersistentDirectory && \
@@ -174,5 +174,4 @@ done
 # Close the Persistent Storage window
 pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
 pkill -f 'zenity --notification' &>/dev/null
-
-exit 0
+touch $INSTALL
