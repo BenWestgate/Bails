@@ -28,7 +28,6 @@ export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
-/live/persistence/TailsData_unlocked/dotfiles/.local/bin/link-dotfiles
 # shellcheck disable=SC1090
 . ~/.profile
 persistent-setup # Checks needed persistent features are on.
@@ -77,7 +76,7 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
     fi
     if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
         notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
-        xdg-open bitcoin:$bitcoin_address
+        xdg-open "bitcoin:$bitcoin_address"
         exit 0
     fi
 fi

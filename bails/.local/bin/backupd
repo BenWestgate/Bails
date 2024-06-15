@@ -90,4 +90,3 @@ $BIN_DIR/backupd $((2*rescan_time))
 # expire the USB that is Actually Oldest, not the one with the most adjusted age.
 # the number of up-to-date backups is displayed to the user in bails-menu, whenever one expires, before and after updating/creating a backup and constantly when 0 remain updated.
 # TODO make sure every backup gets marked expired after creating new descriptor wallets or encrypting existing ones.
-
