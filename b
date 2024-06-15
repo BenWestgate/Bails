@@ -52,7 +52,7 @@ else
     install-core
   else
     persistent-setup
-  fi &
+  fi & other_setup=$!
 
   until /usr/local/lib/tpscli is-unlocked && \
     /usr/local/lib/tpscli is-active Dotfiles && \
@@ -64,7 +64,7 @@ else
   rsync --remove-source-files --recursive "$BAILS_DIR"/ $DOTFILES/.local/share/bails
   rm -rf "$BAILS_DIR"
   link-dotfiles
-  wait
+  ps -p $other_setup &>/dev/null && fg %"$(jobs -l | grep $other_setup | cut -f1 -d' ' | tr -c -d '[:digit:]')"
   if [ -z "$1" ]; then
     zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
     # Exit by killing controlling terminal

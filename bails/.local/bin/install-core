@@ -118,17 +118,11 @@ set -m
 DOWNLOAD_DIR=$LOCAL_DIR/share/bitcoin-core
 cd "$DOWNLOAD_DIR" || exit 1
 
-echo $DOWNLOAD_DIR
-read -pr
-
-# Get Bitcoin Core builder keys
-until get_guix; do sleep $((retry++)); done & get_keys=$!
-
 # Download chain parameters in background
 wget --continue -O chainparams.cpp https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp & get_size=$!
 
 # Query latest version
-until wget ${BITCOIN_CORE_DOMAIN}/en/download; do sleep $((retry++)); done
+until wget ${BITCOIN_CORE_DOMAIN}/en/download; do sleep $((retry++)); done 
 VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
 
 # Download Bitcoin core checksums and signatures in background
@@ -137,7 +131,8 @@ until wget -cxnH --cut-dirs=1 ${BITCOIN_CORE_DOMAIN}/bin/bitcoin-core-"$VER"/SHA
 until wget -cxnH --cut-dirs=1 ${BITCOIN_CORE_DOMAIN}/bin/bitcoin-core-"$VER"/bitcoin-${VER}-x86_64-linux-gnu.tar.gz; do sleep $((retry++)); done & get_core=$!
 
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
-ps -p $get_keys &>/dev/null && fg %"$(jobs -l | grep $get_keys | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+# Get Bitcoin Core builder keys
+until get_guix; do sleep $((retry++)); done
 (cd guix.sigs/"$VER" || exit 1; for name in *; do gpg --show-keys "$DOWNLOAD_DIR"/guix.sigs/builder-keys/"$name".gpg; done) > builder-keys
 
 if OLD_VER=$(bitcoind --version); then # Refresh keys if updating
@@ -162,8 +157,6 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 # Switch into latest bitcoin-core directory
 cd bitcoin-core-"$VER" || exit 1
-echo $PWD
-read -r
 if [ ! -f SHA256SUMS ]; then # TODO read the exit codes of verify.py to handle all error dialogs in a switch.
     zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
     install-core	# Launch this script again
@@ -206,7 +199,7 @@ fi
 stop-btc
 
 printf '\033]2;Installing Bitcoin Core...\a'
-tar -xvf ${file_name::-4} --strip-components=1 --directory=$LOCAL_DIR
+tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 
 # Move completed verified download to persistent storage
 export XDG_DATA_HOME=$LOCAL_DIR/share
@@ -250,9 +243,10 @@ prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 
 # shellcheck source=/dev/null
 . "$HOME"/.profile
 printf "\033]2;Bitcoin Core %s complete!\a" $action
+read -r
 if [ -e $LOCAL_DIR/state/installed ]; then
     gtk-launch bitcoin-qt
-    zenity --info --title='Update successful' --text="${OLD_VER%Copyright}was updated to $(bitcoind --version)" $ICON --icon-name=bitcoin128
+    zenity --info --title='Update successful' --text="${OLD_VER%Copyright}was updated to $(bitcoind --version)" "$ICON" --icon-name=bitcoin128
 else
     (
     if ((prune_MiB)); then
@@ -267,16 +261,18 @@ else
         grep /strDataDir= $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf && stop-btc
         sed -i '/strDataDir=/d' $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf
         zenity --notification --text="Use the default data directory$prune_text.\n<i>$HOME/.bitcoin</i>$prune_text2" --window-icon=bails128
-        pgrep bitcoin || wrapped bitcoin-qt -choosedatadir -prune=$prune_MiB -min &
+        pgrep bitcoin || wrapped bitcoin-qt -choosedatadir -prune=$prune_MiB -min
         sleep 15
     done
     sleep 1
     )
+    echo about to link dotfiles
+    read -r
     link-dotfiles
     if (( $(find $DATA_DIR/wallets/* | wc -l) < 2 )); then
     bails-wallet
     fi
     # Display info about IBD, keeping Tails private and extra reading material
     zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
-fi &>/dev/null
+fi
 touch $LOCAL_DIR/state/installed
