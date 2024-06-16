@@ -49,7 +49,7 @@ else
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   (
-    persistent-setup || systemctl reboot
+    persistent-setup
     until /usr/local/lib/tpscli is-unlocked && \
       /usr/local/lib/tpscli is-active Dotfiles && \
       [ -d "$DOTFILES" ] && [ -w "$DOTFILES" ]; do
