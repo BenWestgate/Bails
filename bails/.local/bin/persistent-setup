@@ -25,13 +25,14 @@
 ###############################################################################
 
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
-INSTALL="/live/persistence/TailsData_unlocked/dotfiles/.local/state/tps_is_set_up"
+export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
+SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 
 # Check if user password is already set
 passwd_unset=$(passwd -S "$USER" | grep -c NP)
 
 # Display welcome message
-[ -f $INSTALL ] || zenity --title='Welcome to Bails' --info \
+[ -f $SET_UP ] || zenity --title='Welcome to Bails' --info \
     --text="Thank you for choosing Bails, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
 printf '\033]2;Setup the Persistent Storage\a'
@@ -39,7 +40,7 @@ printf '\033]2;Setup the Persistent Storage\a'
 # Check for already unlocked Persistent Storage
 pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
     # Check for existing Persistent Storage passphrase
-    until [ -f $INSTALL ]; do
+    until [ -f $SET_UP ]; do
         existing_passphrase="$(python3 -c 'from bails import set_pass
 box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
 if box.passphrase:
@@ -65,7 +66,7 @@ else:
             zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase to continue." "$ICON"
     done
     unset entropy
-    [ -f $INSTALL ] || if ((passwd_unset)); then
+    [ -f $SET_UP ] || if ((passwd_unset)); then
         # Change user account password to Persistent Storage passphrase for spaced repetition practice.a
         printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
     fi
@@ -113,7 +114,7 @@ else:
     done
 
 fi
-if ((passwd_unset)) && ! [ -f "$INSTALL" ]; then
+if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
     # Spaced repetition training loop
     spaced-repetition &
 
@@ -174,4 +175,5 @@ done
 # Close the Persistent Storage window
 pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
 pkill -f 'zenity --notification' &>/dev/null
-touch $INSTALL
+mkdir -vp $XDG_STATE_HOME
+touch $SET_UP
