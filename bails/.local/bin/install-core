@@ -117,7 +117,6 @@ retry_on_fail() {
 ###############################################################################
 
 printf '\033]2;Welcome to Bails!\a'
-clear -x # Clear the terminal
 pkill tca &>/dev/null # Close tor connection assistant to clean up the screen
 set -m # Enable job control to bring background downloads to the foreground
 
