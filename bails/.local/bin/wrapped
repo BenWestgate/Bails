@@ -29,7 +29,7 @@ export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # shellcheck disable=SC1090
-. ~/.profile
+. "/home/$USER/.profile"
 persistent-setup # Checks needed persistent features are on.
 # Symlink at default datadir to our custom datadir
 ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
