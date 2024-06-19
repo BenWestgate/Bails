@@ -132,7 +132,7 @@ retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VE
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 retry_on_fail get_guix_sigs
 
-for dir in guix.sigs/*/; do [ "${dir#*/}" == "$VER" ] && break; rm -rf "$dir"; done
+for dir in guix.sigs/*/; do [ "${dir#*/}" == "$VER/" ] && break; rm -rf "$dir"; done
 for name in guix.sigs/"$VER"/*; do gpg --show-keys "${name/"$VER"/builder-keys}.gpg"; done > builder-keys
 if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
     action=update
