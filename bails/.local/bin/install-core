@@ -238,28 +238,21 @@ prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
 if [ -e $XDG_STATE_HOME/installed ]; then
-    gtk-launch bitcoin-qt
-    zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128
+    zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
-    (
     if ((prune_MiB)); then
-        prune_text=" and storage limit"
-        prune_text2=" and <i>$prune_GB GB</i>"
+        storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."
+        expected_backup_days=$((prune_GB * 10**9 / (2250000 * 86400 / 600)))
+        prune_explanation="\n\nBails has chosen to limit block chain storage (pruning) to $prune_GB GB (sufficient to restore backups $expected_backup_days days old), the historical data must still be downloaded and processed, but will be deleted afterward to keep your disk usage low."
+    else
+        storageRequiresMsg="At least $((assumed_blockchain_size + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage, and it will grow over time."
     fi
+    zenity --info --title Welcome --icon-name=bitcoin128 --text="<i>Welcome to Bitcoin Core.</i>\n\n
+Bitcoin Core will download and store a copy of the Bitcoin block chain. $storageRequiresMsg\n
+Bitcoin Core has begun to download and process the full Bitcoin block chain ($assumed_blockchain_size GB) starting with the earliest transactions in 2009 when Bitcoin initially launched.\n
+This initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.$prune_explanation" "$ICON" &
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
-    # Temporarily change $HOME directory make Bails's datadir the default
-    HOME=~/Persistent
-    until [ -f $DATA_DIR/bitcoind.pid ]; do
-        zenity --notification --text="Use the default data directory$prune_text.\n<i>$HOME/.bitcoin</i>$prune_text2" --window-icon=bails128
-        pgrep bitcoin || wrapped bitcoin-qt -choosedatadir -prune=$prune_MiB -min
-        bitcoin-cli --rpcwait createwallet test_permissions && stop-btc
-        # grep /strDataDir= $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf && stop-btc
-        sed -i '/strDataDir=/d' $XDG_CONFIG_HOME/Bitcoin/Bitcoin-Qt.conf
-    done
-    )
-    link-dotfiles
-    (( $(find $DATA_DIR/wallets/* | wc -l) < 2 )) && bails-wallet
-    # Display info about IBD, keeping Tails private and extra reading material
-    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
 fi
+wrapped bitcoin-qt -min -startupnotify=link-dotfiles
+wait
 touch $XDG_STATE_HOME/installed
