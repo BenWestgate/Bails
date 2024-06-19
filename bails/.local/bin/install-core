@@ -28,7 +28,6 @@
 
 # Set environment variables and constants
 export PATH="$HOME/.local/bin:$PATH"
-export DOWNLOAD_DIR="$HOME/.local/share/bitcoin"
 export ICON=--window-icon="$HOME/.local/share/icons/bails128.png"
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export TMPDIR=$XDG_RUNTIME_DIR
@@ -116,11 +115,14 @@ retry_on_fail() {
 # Begin execution here
 ###############################################################################
 
-printf '\033]2;Welcome to Bails!\a'
+printf '\033]2;Checking for latest Bitcoin Core version\a'
 pkill tca &>/dev/null # Close tor connection assistant to clean up the screen
 set -m # Enable job control to bring background downloads to the foreground
 
-cd "$DOWNLOAD_DIR" || exit 1
+# Download to Persistent Storage if setup, otherwise amnesia
+cd "$XDG_DATA_HOME/bitcoin" || cd "$HOME/.local/share/bitcoin" || exit 1
+DOWNLOAD_DIR=$PWD
+
 # Download chain parameters in background
 retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
@@ -237,7 +239,7 @@ printf "\033]2;Bitcoin Core %s complete!\a" $action
 
 if [ -e $XDG_STATE_HOME/installed ]; then
     gtk-launch bitcoin-qt
-    zenity --info --title='Update successful' --text="${OLD_VER%Copyright}was updated to $(bitcoind --version)" "$ICON" --icon-name=bitcoin128
+    zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128
 else
     (
     if ((prune_MiB)); then
