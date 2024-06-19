@@ -44,6 +44,7 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
 else
+  printf '\033]2;Welcome to Bails!\a'
   # Install Bails to tmpfs
   rsync -rvh "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
