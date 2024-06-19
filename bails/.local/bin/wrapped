@@ -28,15 +28,17 @@ export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
-/live/persistence/TailsData_unlocked/dotfiles/.local/bin/link-dotfiles
 # shellcheck disable=SC1090
-. ~/.profile
+. "/home/$USER/.profile"
 persistent-setup # Checks needed persistent features are on.
 # Symlink at default datadir to our custom datadir
 ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
 
 # Update favorite apps list
-gsettings set org.gnome.shell favorite-apps "['bails.desktop', 'sparrow-Sparrow.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'whisperback.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
+
+favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'whisperback.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
+which Sparrow && favorites=${favorites/bitcoin-qt/sparrow-Sparrow}
+gsettings set org.gnome.shell favorite-apps "$favorites"
 
 space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
   $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
@@ -77,7 +79,7 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
     fi
     if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
         notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
-        xdg-open bitcoin:$bitcoin_address
+        xdg-open "bitcoin:$bitcoin_address"
         exit 0
     fi
 fi

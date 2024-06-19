@@ -54,8 +54,8 @@ for _ in 1 2 3; do
     fi
 done
 
-if (($(lsblk $loop_device | wc -l) < 3)); then
-    udisksctl loop-delete -b $loop_device
+if (($(lsblk "$loop_device" | wc -l) < 3)); then
+    udisksctl loop-delete -b "$loop_device"
 fi
 [ -z "$wallet" ] && exit 0
 exit 1

@@ -32,9 +32,6 @@ export DOTFILES="/live/persistence/TailsData_unlocked/dotfiles"
 export LOCAL_DIR="$DOTFILES/.local/"
 export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
 
-# Fetch installed version
-# shellcheck disable=SC1091
-. $LOCAL_DIR/share/bails/b --help
 
 onlynet_onion() {
     zenity --question --title='Network Privacy' --text='Bails offers two settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
@@ -93,7 +90,7 @@ case "$response2" in
     "Donate") xdg-open bitcoin: ;; # FIXME: change address
     "Report a Bug") tor-browser https://github.com/BenWestgate/Bails/issues ;;
     "About") zenity --info --window-icon="$LOCAL_DIR/share/icons/bails128.png" \
-        --title="About Bails" --icon-name=bails128 --text="Bails version $VERSION\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; bails-menu ;;
+        --title="About Bails" --icon-name=bails128 --text="$($LOCAL_DIR/share/bails/b --version)\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; bails-menu ;;
     "Online Help") xdg-open https://bitcoin-core-on-tails.slack.com/ && \
         xdg-open https://t.me/bails_support ;;
     "Update Bitcoin Core") gnome-terminal --title="Updating Bitcoin Core..." --hide-menubar \
