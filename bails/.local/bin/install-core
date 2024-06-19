@@ -40,8 +40,8 @@ export LOCAL_DIR="$DOTFILES/.local"
 export XDG_STATE_HOME="$LOCAL_DIR/state"
 readonly XDG_DATA_HOME="$LOCAL_DIR/share"
 readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
-readonly SECURITY_IN_A_BOX_TOR_URL="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/"
 readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp"
+readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
 
 
 # Look for good signatures
@@ -97,7 +97,7 @@ get_guix_sigs() (
     if cd guix.sigs 2>/dev/null; then
         git pull -v # Update guix.sigs
     else
-        git clone https://github.com/bitcoin-core/guix.sigs --depth=1
+        git clone $GUIX_SIGS_REPO_URL --depth=1
     fi 
 )
 
@@ -122,9 +122,6 @@ set -m # Enable job control to bring background downloads to the foreground
 # Download to Persistent Storage if setup, otherwise amnesia
 cd "$XDG_DATA_HOME/bitcoin" || cd "$HOME/.local/share/bitcoin" || exit 1
 DOWNLOAD_DIR=$PWD
-
-# Download chain parameters in background
-retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
 VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
 # Download Bitcoin core checksums and signatures in background
@@ -149,6 +146,8 @@ else # Import a trusted set on first-run.
             echo "Warning: Bails trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
+    # Download chain parameters in background to set prune
+    retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
@@ -189,13 +188,12 @@ ps -p $get_core &>/dev/null && fg %"$(jobs -l | grep $get_core | cut -f1 -d' ' |
 # Verify download integrity
 if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
+    stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
     zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
     install-core	# Launch this script again
     exit 1
 fi
-
-stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 # Move completed verified download to persistent storage
@@ -210,36 +208,33 @@ sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
 link-dotfiles
-[ -e $DATA_DIR/wallets ] || mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
-ln --symbolic --force -b /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
-chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
-ln --symbolic --force -b {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
-ln --symbolic --force -b $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
-# Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
-ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-# Calculate space available for block file storage
-space=$(($(df --output=avail $SOURCE | tail -1) * 1024 / 10 ** 9 - assumed_chain_state_size - 10))
-prune_GB=$((space > 2 ? space : 2 ))
-# Disable pruning if USB stick is large enough
-prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
-# Enable proxies for Tor and prune
-[ -f $DATA_DIR/settings.json ] || echo '{
-    "dbcache": "450",
-    "onion": "127.0.0.1:9050",
-    "proxy": "127.0.0.1:9050",
-    "prune": "'$prune_MiB'",
-    "server": true
-}' > $DATA_DIR/settings.json
-# Update $PATH environment variable to include new user bin
-# shellcheck source=/dev/null
-. "$HOME"/.profile
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
-if [ -e $XDG_STATE_HOME/installed ]; then
+if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
+    mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
+    ln --symbolic --force -b /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
+    chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
+    ln --symbolic --force -b {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
+    ln --symbolic --force -b $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
+    # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
+    ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+    assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    # Calculate space available for block file storage
+    space=$(($(df --output=avail $SOURCE | tail -1) * 1024 / 10 ** 9 - assumed_chain_state_size - 10))
+    prune_GB=$((space > 2 ? space : 2 ))
+    # Disable pruning if USB stick is large enough
+    prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
+    echo '{
+        "dbcache": "450",
+        "onion": "127.0.0.1:9050",
+        "proxy": "127.0.0.1:9050",
+        "prune": "'$prune_MiB'",
+        "server": true
+    }' > $DATA_DIR/settings.json # Enable server, proxies for Tor and prune
+    
     if ((prune_MiB)); then
         storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."
         expected_backup_days=$((prune_GB * 10**9 / (2250000 * 86400 / 600)))
@@ -251,6 +246,9 @@ else
 Bitcoin Core will download and store a copy of the Bitcoin block chain. $storageRequiresMsg\n
 Bitcoin Core has begun to download and process the full Bitcoin block chain ($assumed_blockchain_size GB) starting with the earliest transactions in 2009 when Bitcoin initially launched.\n
 This initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.$prune_explanation" "$ICON" &
+    # Update $PATH environment variable to include new user bin
+    # shellcheck source=/dev/null
+    . "$HOME"/.profile
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
 wrapped bitcoin-qt -min -startupnotify=link-dotfiles
