@@ -196,10 +196,8 @@ else
 fi
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
-# Move completed verified download to persistent storage
 rm -Rvf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
 until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure Bails installed
-rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
@@ -213,6 +211,8 @@ printf "\033]2;Bitcoin Core %s complete!\a" $action
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
+    # Move completed verified download to persistent storage
+    rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
     ln --symbolic --force -b /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
     chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
