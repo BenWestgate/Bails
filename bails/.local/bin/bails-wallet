@@ -140,7 +140,7 @@ display_confirm() {
         while true; do
             zenity --title="Create new a seed backup $progress" --text="Write this codex32 $string legibly:\n\n<big><big>$displayed</big></big>" --info --icon-name=org.gnome.TextEditor --no-wrap $ICON
             choice="Create a new seed"
-            python3 $LOCAL_DIR/lib/python3/site-packages/bails-wallet/codex32_confirm.py "$codex32_string" "${progress:1:-1}" && break
+            python3 $LOCAL_DIR/lib/python3.11/site-packages/bails-wallet/codex32_confirm.py "$codex32_string" "${progress:1:-1}" && break
         done
     done
     unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_array codex32_string share displayed x backup backups_made progress
@@ -347,7 +347,7 @@ get_share() {
     until input_share; do
         displayed="$(echo "$share" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')"
         zenity --warning --title="Invalid codex32 $string $progress" --text="Correct the errors in your invalid codex32 $string:\n\n<big><big>$displayed</big></big>" --no-wrap &
-        corrected_string=$(python3 $LOCAL_DIR/lib/python3/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
+        corrected_string=$(python3 $LOCAL_DIR/lib/python3.11/site-packages/codex32/naive_ms32_ecc.py "$share" "$VALID_IDENTIFIER")
         result=$?
         pkill zenity
         ((result == 0)) && displayed="$(echo "${corrected_string^^}" | sed 's/.\{4\}/& /g' | sed 's/.\{30\}/& /g')"
