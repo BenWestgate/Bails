@@ -67,7 +67,7 @@ if dialog.passphrase:
 else:
     print("")' 2>/dev/null)"
         if [ ! "$passphrase" ]; then
-            zenity --warning --text='No passphrase was entered.\n\nA passphrase is required to send bitcoin.' --title="$1" --ellipsize $ICON
+            zenity --warning --text='No passphrase was entered.\n\nA passphrase is required to send bitcoin.' --title="$1" --ellipsize $ICON || exit 1
         fi
     done
 }
@@ -470,14 +470,13 @@ choice=$(zenity --list --radiolist --title "Create wallet" --column "Select" --c
     TRUE "Create a new seed" FALSE "Recover with codex32 seed backup" FALSE "Import existing wallet descriptors" $ICON --height=250)
 if [ "$choice" == "Create a new seed" ]; then
     printf '\033]2;Create a new seed\a'
-    zenity --warning --title='Important: Safeguard your bitcoin' --text="With Bails, you are in control of your bitcoin funds. No one else has access to your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks and the paper seed backup we help you create, your bitcoin cannot be recovered." --ok-label='I Understand' "$ICON"
-    [ "$?" -ne 0 ] && exit 1
+    zenity --warning --title='Important: Safeguard your bitcoin' --text="With Bails, you are in control of your bitcoin funds. No one else has access to your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks and the paper seed backup we help you create, your bitcoin cannot be recovered." --ok-label='I Understand' "$ICON" || exit 1
     user_entropy="$(if zenity --question --title="Optional: Enhance seed randomness" \
         --cancel-label='Skip' --icon-name=die --ok-label='Add Randomness' --text="A seed is a secret that allows spending your bitcoin as long as you have access to it.\n\nIt is not required but you can provide additional randomness to your seed if paranoid. This step protects your seed against a backdoored random number generator.\n\n\Add extra randomness to your seed?" "$ICON"; then
         until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-sided dice 50+ times or\nflip a coin 128+ times. A fast way is mashing the keyboard." "$ICON"; do :; done
     fi)"
     printf '\033]2;Create a new seed backup\a'
-    zenity --info --title='Create your paper seed backup' --text="Your seed has been created. Bails will now help you create a paper seed backup.\n\nYour paper backup acts as a lifeline, granting access to your funds if something happens to your digital devices." --ok-label="Let's Begin" $ICON
+    zenity --info --title='Create your paper seed backup' --text="Your seed has been created. Bails will now help you create a paper seed backup.\n\nYour paper backup acts as a lifeline, granting access to your funds if something happens to your digital devices." --ok-label="Let's Begin" $ICON || exit 1
     zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and sending amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and sending amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be found by a bad actor or lost.\nIf a single backup location is compromised, your privacy is not jeopardized.' --no-wrap --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && {
         locations=4
         threshold=3
