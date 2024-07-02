@@ -27,53 +27,51 @@
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
 export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
+export PASS_TESTER="/live/persistence/TailsData_unlocked/Persistent/Persistent Storage.img"
 
-# Check if user password is already set
-PASSWD_UNSET=$(passwd -S "$USER" | grep -c NP)
+new_passphrase_helper() {
+    # Check if user password is already set
+    if passwd -S "$USER" | grep NP; then
+    # Change user account password to Persistent Storage passphrase for spaced repetition practice.
+        printf '%s\n%s' "$1" "$1" | passwd || { echo "FAILURE to change passphrase"; return 1; }
+    fi
+    # Estimate passphrase entropy to see if we can proceed
+    entropy=$(keepassxc-cli estimate "${1// /}" | cut -f2 | tr -C -d '[:digit:]')
+    if ((entropy >= 65000)) || { ((entropy > 50000)) && zenity --question --icon-name=dialog-warning --title='Warning: Weak Passphrase Detected' \
+            --text="<b>Your passphrase is too weak to protect against a state-sponsored attacker with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nIf a state-sponsored attacker with physical access to your device is part of your <a href='https://ssd.eff.org/module/your-security-plan'>threat model</a>, you MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue' --default-cancel --cancel-label='Restart Now'; }; then
+        unset entropy
+        until fallocate -l 32MiB "$PASS_TESTER"; do # Wait for Partition to be turned on.
+            sleep 1
+        done
+        printf '%s' "$1" | /sbin/cryptsetup --batch-mode luksFormat "$PASS_TESTER"
+        return $?
+    else
+        zenity --warning --title='WARNING: Weak Passphrase Detected' \
+            --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
+    fi
+    exit 1
+    # TODO remove comment when done testing 
+    # systemctl reboot
+}
 
 # Display welcome message
 [ -f $SET_UP ] || { zenity --title='Welcome to Bails' --info \
     --text="Thank you for choosing Bails, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
-    mkdir -vp "$HOME/.local/state/bails"
-    cd "$HOME/.local/state/bails" || exit 1
-    fallocate -l 32MiB Persistent_Storage.img
 }
 
 # Check for already unlocked Persistent Storage
-
 pgrep -f spaced-repetition > /dev/null || if /usr/local/lib/tpscli is-unlocked; then
     # Check for existing Persistent Storage passphrase
     until [ -f $SET_UP ]; do
-        existing_passphrase="$(python3 -c 'from bails import set_pass
+        new_passphrase_helper "$(python3 -c 'from bails import set_pass
 box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
 if box.passphrase:
     print(box.passphrase)
 else:
-    print("")' 2>/dev/null)"
-        if [ -z "$existing_passphrase" ]; then
+    print("")' 2>/dev/null)" || \
             zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
-        else
-            if ((PASSWD_UNSET)); then
-                # Change user account password to Persistent Storage passphrase for spaced repetition practice.
-                printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
-            fi
-            # Estimate passphrase entropy to see if we can proceed
-            entropy=$(keepassxc-cli estimate "${existing_passphrase// /}" | cut -f2 | tr -C -d '[:digit:]')
-            if ((entropy >= 65000)); then
-                break
-            elif ((entropy > 50000)); then
-                zenity --question --icon-name=dialog-warning --title='Warning: Weak Passphrase Detected' \
-                  --text="<b>Your passphrase is too weak to protect against a state-sponsored attacker with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nIf a state-sponsored attacker with physical access to your device is part of your <a href='https://ssd.eff.org/module/your-security-plan'>threat model</a>, you MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue' --default-cancel --cancel-label='Restart Now' && break
-            else
-                zenity --warning --title='WARNING: Weak Passphrase Detected' \
-                  --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
-            fi
-            systemctl reboot
-        fi
     done
-    printf '%s' "$existing_passphrase" | /sbin/cryptsetup --batch-mode luksFormat Persistent_Storage.img
-    unset entropy existing_passphrase
 else
     printf '\033]2;Setup the Persistent Storage\a'
     # Choose passphrase
@@ -87,32 +85,31 @@ To help you remember, write it on paper, seal in an envelope, secure it for a fe
 Write on a hard surface to avoid leaving an imprint of the secret.' \
         --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
     # Persistent storage creation
-    until /usr/local/lib/tpscli is-unlocked; do
+    while /usr/local/lib/tpscli is-created; do
+        sleep 1
+    done # Dont continue setup if a tps exists but don't tell to delete
+    until /usr/local/lib/tpscli is-created; do
         sleep 12
         notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
-    done & notifying+=($!)
+    done &
 
-    until /usr/local/lib/tpscli is-unlocked; do
+    until /usr/local/lib/tpscli is-created; do
         grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
             { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
         sleep 1
     done
-
-    # Clear notifications
-    kill "${notifying[@]}" &>/dev/null
-
 
     # Memorization help
     until {
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
             --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
-        python3 -c 'from bails import set_pass
+        new_passphrase_helper "$(python3 -c 'from bails import set_pass
 import subprocess
 
 box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
 if box.passphrase:
-    print(box.passphrase)' 2>/dev/null | /sbin/cryptsetup --batch-mode luksFormat Persistent_Storage.img
+    print(box.passphrase)' 2>/dev/null)"
     }; do
         zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
             --ok-label='Try Again' --ellipsize
@@ -138,16 +135,14 @@ if ! [ -f "$SET_UP" ]; then
      • destroy it once memorized." \
             --ok-label='I Will Destroy It Once Memorized' "$ICON"
 fi
-
 # Check features of the Persistent Storage
 if /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; then
         :
 else
-    grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
+    grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null || \
         { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
-
     zenity --info --title='Features of the Persistent Storage' \
         --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
         --icon-name=tails-persistent-storage "$ICON" --no-wrap &
@@ -179,7 +174,4 @@ done
 # Close the Persistent Storage window
 pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
 pkill -f 'zenity --notification' &>/dev/null
-mkdir -vp $XDG_STATE_HOME/bails
-rsync -vP --remove-source-files Persistent_Storage.img $XDG_STATE_HOME/bails
 touch $SET_UP
-link-dotfiles
