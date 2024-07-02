@@ -52,8 +52,7 @@ check_passphrase() {
         printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open "$PASS_TESTER"
     fi
 }
-mkdir -p "$XDG_STATE_HOME/bails"
-cd "$XDG_STATE_HOME/bails" || exit 1
+cd "$XDG_STATE_HOME" || exit 1
 # Initialize variables
 min_interval=5
 interval=$(<last_spaced_repetition_interval) # initial value is 30 sec

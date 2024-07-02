@@ -25,7 +25,7 @@
 ###############################################################################
 
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
-export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
+XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 export PASS_TESTER="/live/persistence/TailsData_unlocked/Persistent/Persistent Storage.img"
 
@@ -116,7 +116,7 @@ if box.passphrase:
     done
 fi
 # Spaced repetition training
-pgrep spaced-repetition > /dev/null || spaced-repetition &
+pgrep -f spaced-repetition > /dev/null || spaced-repetition &
 
 if ! [ -f "$SET_UP" ]; then
     # Display memorization tips
