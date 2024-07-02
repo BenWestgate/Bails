@@ -86,6 +86,8 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
         --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
     # Persistent storage creation
     while /usr/local/lib/tpscli is-created; do
+        grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
+            { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Restart Tails or Delete your Persistent Storage'; }
         sleep 1
     done # Dont continue setup if a tps exists but don't tell to delete
     until /usr/local/lib/tpscli is-created; do
