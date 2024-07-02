@@ -35,7 +35,7 @@ PASSWD_UNSET=$(passwd -S "$USER" | grep -c NP)
 [ -f $SET_UP ] || { zenity --title='Welcome to Bails' --info \
     --text="Thank you for choosing Bails, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
-    mkdir -p "$HOME/.local/state/bails"
+    mkdir -vp "$HOME/.local/state/bails"
     cd "$HOME/.local/state/bails" || exit 1
     fallocate -l 32MiB Persistent_Storage.img
 }
@@ -180,6 +180,6 @@ done
 pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
 pkill -f 'zenity --notification' &>/dev/null
 mkdir -vp $XDG_STATE_HOME/bails
-rsync -vP --remove-source-files Persistent_Storage.img $XDG_STATE_HOME/bails/Persistent_Storage.img
+rsync -vP --remove-source-files Persistent_Storage.img $XDG_STATE_HOME/bails
 touch $SET_UP
 link-dotfiles
