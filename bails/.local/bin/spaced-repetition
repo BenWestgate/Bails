@@ -41,27 +41,22 @@ get_passphrase() {
 
 check_passphrase() {
     read -rs passphrase
-    passwd_unset=$(passwd -S "$USER" | grep -c NP)
-    if ((passwd_unset)); then
-        printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open Persistent_Storage.img && \
+    if passwd -S "$USER" | grep NP; then
+        printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open "$PASS_TESTER" && \
         printf '%s\n%s' "$passphrase" "$passphrase" | passwd
     else
         temp_passw="$(head -c16 /dev/urandom | xxd -p)"
-        if ! { printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
-            printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd;
-        }; then
-            printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open Persistent_Storage.img
-        fi
+        # shellcheck disable=SC2015
+        printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
+        printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd || \
+        printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open "$PASS_TESTER"
     fi
 }
-
+mkdir -p "$XDG_STATE_HOME/bails"
 cd "$XDG_STATE_HOME/bails" || exit 1
 # Initialize variables
 min_interval=5
-if ! [ -e last_spaced_repetition_interval ]; then
-    echo 30 > last_spaced_repetition_interval # initial value
-fi
-interval=$(<last_spaced_repetition_interval)
+interval=$(<last_spaced_repetition_interval) # initial value is 30 sec
 exp=0
 enter='Enter'
 sleep "$interval"
