@@ -40,17 +40,8 @@ get_passphrase() {
 }
 
 check_passphrase() {
-    read -rs passphrase
-    if passwd -S "$USER" | grep NP; then
-        printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open "$PASS_TESTER" && \
-        printf '%s\n%s' "$passphrase" "$passphrase" | passwd
-    else
-        temp_passw="$(head -c16 /dev/urandom | xxd -p)"
-        # shellcheck disable=SC2015
-        printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
-        printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd || \
-        printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open "$PASS_TESTER"
-    fi
+    printf '%s' "$1" | /sbin/cryptsetup --test-passphrase open "$PASS_TESTER" && \
+    passwd -S "$USER" | grep NP && printf '%s\n%s' "$1" "$1" | passwd
 }
 cd "$XDG_STATE_HOME" || exit 1
 # Initialize variables
@@ -69,7 +60,7 @@ while true; do
         sleep 2
         continue
     fi
-    if check_passphrase &>/dev/null <<< "$passphrase"; then
+    if check_passphrase "$passphrase" &>/dev/null; then
         unset passphrase temp_passw passwd_unset
         interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
         (( interval < min_interval )) && interval=$min_interval
