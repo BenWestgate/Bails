@@ -30,21 +30,26 @@ SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 export PASS_TESTER="/live/persistence/TailsData_unlocked/Persistent/Persistent Storage.img"
 
 new_passphrase_helper() {
+    local passphrase
+    passphrase=$(python3 -c 'from bails import set_pass
+box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
+if box.passphrase:
+    print(box.passphrase)' 2>/dev/null)
+    [ -z "$passphrase" ] && return 1
     # Check if user password is already set
     if passwd -S "$USER" | grep NP; then
     # Change user account password to Persistent Storage passphrase for spaced repetition practice.
-        printf '%s\n%s' "$1" "$1" | passwd || { echo "FAILURE to change passphrase"; return 1; }
+        printf '%s\n%s' "$passphrase" "$passphrase" | passwd || { echo "FAILURE to change passphrase"; return 1; }
     fi
     # Estimate passphrase entropy to see if we can proceed
-    entropy=$(keepassxc-cli estimate "${1// /}" | cut -f2 | tr -C -d '[:digit:]')
+    entropy=$(keepassxc-cli estimate "${passphrase// /}" | cut -f2 | tr -C -d '[:digit:]')
     if ((entropy >= 65000)) || { ((entropy > 50000)) && zenity --question --icon-name=dialog-warning --title='Warning: Weak Passphrase Detected' \
             --text="<b>Your passphrase is too weak to protect against a state-sponsored attacker with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nIf a state-sponsored attacker with physical access to your device is part of your <a href='https://ssd.eff.org/module/your-security-plan'>threat model</a>, you MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue' --default-cancel --cancel-label='Restart Now'; }; then
         unset entropy
         until fallocate -l 32MiB "$PASS_TESTER"; do # Wait for Partition to be turned on.
             sleep 1
         done
-        printf '%s' "$1" | /sbin/cryptsetup --batch-mode luksFormat "$PASS_TESTER"
-        return $?
+        printf '%s' "$passphrase" | /sbin/cryptsetup --batch-mode luksFormat "$PASS_TESTER" && return 0
     else
         zenity --warning --title='WARNING: Weak Passphrase Detected' \
             --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
@@ -63,14 +68,8 @@ new_passphrase_helper() {
 # Check for already unlocked Persistent Storage
 pgrep -f spaced-repetition > /dev/null || if /usr/local/lib/tpscli is-unlocked; then
     # Check for existing Persistent Storage passphrase
-    until [ -f $SET_UP ]; do
-        new_passphrase_helper "$(python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
-if box.passphrase:
-    print(box.passphrase)
-else:
-    print("")' 2>/dev/null)" || \
-            zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
+    [ -f $SET_UP ] || until new_passphrase_helper; do
+        zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
     done
 else
     printf '\033]2;Setup the Persistent Storage\a'
@@ -106,12 +105,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
             --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
-        new_passphrase_helper "$(python3 -c 'from bails import set_pass
-import subprocess
-
-box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
-if box.passphrase:
-    print(box.passphrase)' 2>/dev/null)"
+        new_passphrase_helper
     }; do
         zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
             --ok-label='Try Again' --ellipsize
