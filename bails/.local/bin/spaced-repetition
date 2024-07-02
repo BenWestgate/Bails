@@ -24,8 +24,11 @@
 # Prompts the user for their user account password as spaced repetition.
 ###############################################################################
 
+XDG_STATE_HOME="$HOME/.local/state"
+
 screen_is_locked() {
     # Check if the current session is locked
+    # shellcheck disable=SC2046
     session_state=$(loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p LockedHint | cut -d= -f2)
     [ "$session_state" = "yes" ]
 }
@@ -38,20 +41,33 @@ get_passphrase() {
 
 check_passphrase() {
     read -rs passphrase
-    temp_passw="$(head -c16 /dev/urandom | xxd -p)"
-    printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
-    printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd
+    passwd_unset=$(passwd -S "$USER" | grep -c NP)
+    if ((passwd_unset)); then
+        printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open Persistent_Storage.img && \
+        printf '%s\n%s' "$passphrase" "$passphrase" | passwd
+    else
+        temp_passw="$(head -c16 /dev/urandom | xxd -p)"
+        if ! { printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
+            printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd;
+        }; then
+            printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open Persistent_Storage.img
+        fi
+    fi
 }
 
+cd "$XDG_STATE_HOME/bails" || exit 1
 # Initialize variables
 min_interval=5
-interval=30 # initial value
+if ! [ -e last_spaced_repetition_interval ]; then
+    echo 30 > last_spaced_repetition_interval # initial value
+fi
+interval=$(<last_spaced_repetition_interval)
 exp=0
 enter='Enter'
-sleep $interval
+sleep "$interval"
 while true; do
     if screen_is_locked; then
-        sleep $interval
+        sleep "$interval"
         continue
     fi
     if ! get_passphrase; then
@@ -60,9 +76,10 @@ while true; do
         continue
     fi
     if check_passphrase &>/dev/null <<< "$passphrase"; then
-        unset passphrase temp_passw
+        unset passphrase temp_passw passwd_unset
         interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
         (( interval < min_interval )) && interval=$min_interval
+        echo "$interval" > last_spaced_repetition_interval
         sleep $interval
         exp=0
         enter='Enter'
