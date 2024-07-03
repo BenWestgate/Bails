@@ -122,7 +122,7 @@ set -m # Enable job control to bring background downloads to the foreground
 # Download to Persistent Storage if setup, otherwise amnesia
 cd "$XDG_DATA_HOME/bitcoin" || cd "$HOME/.local/share/bitcoin" || exit 1
 DOWNLOAD_DIR=$PWD
-retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
+retry_on_fail wget -c "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
 VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
 # Download Bitcoin core checksums and signatures in background
 retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/SHA256SUMS"{,.asc} & sig_dl=$!
@@ -147,7 +147,7 @@ else # Import a trusted set on first-run.
         fi
     done
     # Download chain parameters in background to set prune
-    retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
+    retry_on_fail wget -c -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
