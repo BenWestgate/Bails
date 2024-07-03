@@ -66,7 +66,7 @@ if box.passphrase:
 }
 
 # Check for already unlocked Persistent Storage
-pgrep -f spaced-repetition > /dev/null || if /usr/local/lib/tpscli is-unlocked; then
+if /usr/local/lib/tpscli is-unlocked; then
     # Check for existing Persistent Storage passphrase
     [ -f $SET_UP ] || until new_passphrase_helper; do
         zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
@@ -112,7 +112,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     done
 fi
 # Spaced repetition training
-pgrep -f spaced-repetition > /dev/null || spaced-repetition &
+pgrep -xf spaced-repetition > /dev/null || spaced-repetition &
 
 if ! [ -f "$SET_UP" ]; then
     # Display memorization tips
