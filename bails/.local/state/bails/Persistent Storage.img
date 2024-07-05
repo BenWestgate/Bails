@@ -1,0 +1,3 @@
+# This is a placeholder file it will be formated into a luk2 encrypted
+# loopback file for spaced repetition training because amnesia can not
+# cryptsetup --test-passphrase the Persistent Storage volume directly.
