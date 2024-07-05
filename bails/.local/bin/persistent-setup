@@ -182,5 +182,5 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
 done
 # Close the Persistent Storage window
 pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
-rsync -vP --remove-source-files {$HOME/.local/state,$XDG_STATE_HOME}/bails/Persistent Storage.interval
+rsync -vP --remove-source-files {"$HOME/.local/state",$XDG_STATE_HOME}/bails/"Persistent Storage.interval"
 touch $SET_UP
