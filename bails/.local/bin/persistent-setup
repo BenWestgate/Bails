@@ -61,7 +61,7 @@ if box.passphrase:
 }
 
 wait_for_persistent_folder() {
-    until [ -f $PERSISTENT ]; do
+    until [ -d $PERSISTENT ]; do
         sleep 1
     done
     if [ -e "$IMAGE_FILE" ]; then # move it to the Persistent location
@@ -185,4 +185,5 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
 done
 # Close the Persistent Storage window
 pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
+wait
 touch $SET_UP
