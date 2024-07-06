@@ -49,7 +49,7 @@ ask_pass() {
     pw=$(grep D <<< "$reply") || { \
     zenity --info --text="Enter your passphrase to train your memory." \
         --title="No passphrase entered" --timeout=3; ask_pass; return; }
-    printf "%s" "${pw:3}" | /sbin/cryptsetup --test-passphrase open "$IMG" || \
+    printf "%s" "${pw:2}" | /sbin/cryptsetup --test-passphrase open "$IMG" || \
         return 1
     passwd -S "$USER" | grep NP && printf '%s\n%s' "${pw:3}" "${pw:3}" | \
         passwd && passwd_is_passphrase=1
