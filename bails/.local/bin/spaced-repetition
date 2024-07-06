@@ -66,9 +66,8 @@ set_interval() {
 enter='Enter'
 exp=0
 cd "$XDG_STATE_HOME/bails" || exit 1
-[ -e "$volume_name.interval" ] || set_interval 15 # Initially 20-45s
-while true; do
-    interval=$(<"$volume_name.interval")
+while true; do 
+    interval=$(<"$volume_name.interval") || set_interval 15
     next_test_due=$(date -d "$(date -r "$volume_name.interval")+$interval" +%s)
     sleep_time=$((next_test_due - $(date +%s)))
     ((sleep_time > 0)) && sleep $sleep_time
