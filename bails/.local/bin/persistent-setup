@@ -29,7 +29,7 @@
 XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 export PERSISTENT="/live/persistence/TailsData_unlocked/Persistent"
-IMAGE_FILE="$XDG_RUNTIME_DIR/bails/Persistent Storage.img"
+IMAGE_FILE="$PERSISTENT/Persistent Storage.img"
 if [ "$1" == "--test" ]; then
     DONT_ENFORCE_ENTROPY=1
 fi
@@ -53,7 +53,7 @@ if box.passphrase:
         unset entropy
         mkdir "$XDG_RUNTIME_DIR/bails"
         dd if=/dev/urandom of="$IMAGE_FILE" bs=4096 count=8192
-        printf '%s' "$passphrase" | /sbin/cryptsetup --batch-mode luksFormat "$IMAGE_FILE" && return 0
+        printf '%s' "$passphrase" | /sbin/cryptsetup luksFormat "$IMAGE_FILE" && return 0
     else
         zenity --warning --title='WARNING: Weak Passphrase Detected' \
             --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
@@ -61,16 +61,6 @@ if box.passphrase:
     exit 1
     # TODO remove comment when done testing 
     # systemctl reboot
-}
-
-wait_for_persistent_folder() {
-    until [ -d $PERSISTENT ]; do
-        sleep 1
-    done
-    if [ -e "$IMAGE_FILE" ]; then # move it to the Persistent location
-        rsync -vP --remove-source-files "$IMAGE_FILE" $PERSISTENT
-        ln -s $PERSISTENT/"Persistent Storage.img" "$IMAGE_FILE"
-    fi # add symlink so spaced repetition can find it at originally passed location
 }
 
 # Display welcome message
@@ -103,17 +93,20 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
             { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Restart Tails or Delete your Persistent Storage'; }
         sleep 1
     done # Dont continue setup if a tps exists but don't tell to delete
-    until /usr/local/lib/tpscli is-created; do
-        sleep 12
-        notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
-    done &
 
     until /usr/local/lib/tpscli is-created; do
         grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
             { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
+        sleep 10
+        until /usr/local/lib/tpscli is-created; do
+            notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
+            sleep 12
+        done &
+    done
+    until /usr/local/lib/tpscli is-active PersistentDirectory; do
         sleep 1
     done
-
+    pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
     # Memorization help
     until {
         zenity --info --title='Spaced repetition trainer' \
@@ -126,13 +119,10 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     done
 fi
 # Spaced repetition training
-
-(
-    wait_for_persistent_folder
-    for image in "$PERSISTENT"/*.img; do
-        pgrep -xf spaced-repetition "$image" > /dev/null || spaced-repetition "$image"
-    done
-) &
+for image in "$PERSISTENT"/*.img; do
+    ((DONT_ENFORCE_ENTROPY)) && break
+    pgrep -f "spaced-repetition $image" > /dev/null || spaced-repetition "$image"
+done &
 
 if ! [ -f "$SET_UP" ]; then
     # Display memorization tips
