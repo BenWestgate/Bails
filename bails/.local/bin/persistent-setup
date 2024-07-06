@@ -96,10 +96,10 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
     until /usr/local/lib/tpscli is-created; do
         if pgrep -f 'python3 /usr/local/lib/tps-frontend' >/dev/null; then
+            notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
+        else
             tails-persistent-storage &
             notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'
-        else
-            notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
         fi
         sleep 12
     done
