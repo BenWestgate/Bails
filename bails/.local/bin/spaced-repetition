@@ -23,7 +23,7 @@
 ###############################################################################
 # Prompts user for the luks2 passphrase of an image file as spaced repetition.
 ###############################################################################
-VOLUME_PATH="$1"
+IMG="$1"
 XDG_STATE_HOME="$HOME/.local/state" # Temporarily used during setup
 /usr/local/lib/tpscli is-active Dotfiles && \
 XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
@@ -40,23 +40,20 @@ wait_if_locked_or_typing() {
     done # TODO: add codex32_entry.py
 }
 
-get_passphrase() {
-    local reply
+ask_pass() {
+    local reply pw
     reply=$(echo -e "SETPROMPT $enter $volume_name passphrase:\nGETPIN" | \
         pinentry-gnome3 2>&1)
-    grep Operation cancelled <<< "$reply" && \
-        [ "$volume_name" == "Persistent Storage" ] || return 1
-    passphrase=$(grep D <<< "$reply") && return 0
-    zenity --info --title="No passphrase entered" --timeout=3 \
-        --text="Enter your passphrase to train your memory."
-    get_passphrase
-}
-
-check_passphrase() {
-    unset passphrase
-    printf "%s" "$1" | /sbin/cryptsetup --test-passphrase open "$VOLUME_PATH" && \
-        passwd -S "$USER" | grep NP && printf '%s\n%s' "$1" "$1" | passwd && \
-        passwd_is_passphrase=1
+    grep "Operation cancelled" <<< "$reply" && \
+        [ "$volume_name" != "Persistent Storage" ] && return 0
+    pw=$(grep D <<< "$reply") || { \
+    zenity --info --text="Enter your passphrase to train your memory." \
+        --title="No passphrase entered" --timeout=3; ask_pass; return; }
+    printf "%s" "${pw:3}" | /sbin/cryptsetup --test-passphrase open "$IMG" || \
+        return 1
+    passwd -S "$USER" | grep NP && printf '%s\n%s' "${pw:3}" "${pw:3}" | \
+        passwd && passwd_is_passphrase=1
+    return 0
 }
 
 set_interval() {
@@ -64,19 +61,18 @@ set_interval() {
     echo "$interval" > "$volume_name.interval"
 }
 
-enter='Enter'
-exp=0
 cd "$XDG_STATE_HOME/bails" || exit 1
-while true; do 
+while enter='Enter'; do
+    exp=0
     interval=$(<"$volume_name.interval") || set_interval 15
-    next_test_due=$(date -d "$(date -r "$volume_name.interval")+$interval" +%s)
+    next_test_due=$(date -d "$(date -r "$volume_name.interval")+$interval seconds" +%s)
     sleep_time=$((next_test_due - $(date +%s)))
     ((sleep_time > 0)) && sleep $sleep_time
     wait_if_locked_or_typing 0.1
-    while get_passphrase && ! check_passphrase "${passphrase:3}"; do
+    until ask_pass; do
         zenity --info --title="Passphrase does not match" --text="Try again." --timeout=2
-        enter='Re-enter'
         ((exp = (exp == 0) ? 2 : exp + 1))
+        enter='Re-enter'
     done
     set_interval "$interval"
 done
