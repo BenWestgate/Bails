@@ -36,7 +36,7 @@ wait_if_locked_or_typing() {
     loginctl show-session "$XDG_SESSION_ID" -p LockedHint | grep "yes" && \
         wait_if_locked_or_typing $((passwd_is_passphrase ? interval : 10))
     for entry in pinentry-gnome3 {codex32_confirm,set_pass,passphrase}.py; do
-        pgrep "$entry" && wait_if_locked_or_typing 3
+        pgrep -f "$entry" && wait_if_locked_or_typing 3
     done # TODO: add codex32_entry.py
 }
 
