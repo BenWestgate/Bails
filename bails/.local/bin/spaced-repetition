@@ -23,65 +23,60 @@
 ###############################################################################
 # Prompts user for the luks2 passphrase of an image file as spaced repetition.
 ###############################################################################
-VOLUME_NAME="${1%.img}"
-FIRST_RUN="$2"
+VOLUME_PATH="$1"
 XDG_STATE_HOME="$HOME/.local/state" # Temporarily used during setup
 /usr/local/lib/tpscli is-active Dotfiles && \
 XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
+volume_name="${1##*/}"
+volume_name="${volume_name%.img}"
 
-screen_is_locked() {
-    # Check if the current session is locked
-    # shellcheck disable=SC2046
-    session_state=$(loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p LockedHint | cut -d= -f2)
-    [ "$session_state" = "yes" ]
+wait_if_locked_or_typing() {
+    sleep "$1"
+    XDG_SESSION_ID=$(loginctl | awk /$UID/'{print $1}')
+    loginctl show-session "$XDG_SESSION_ID" -p LockedHint | grep "yes" && \
+        wait_if_locked_or_typing $((passwd_is_passphrase ? interval : 10))
+    for entry in pinentry-gnome3 {codex32_confirm,set_pass,passphrase}.py; do
+        pgrep "$entry" && wait_if_locked_or_typing 3
+    done # TODO: add codex32_entry.py
 }
 
 get_passphrase() {
-    reply=$(echo -e "SETPROMPT $enter ${VOLUME_NAME##*/} passphrase:\nGETPIN" | pinentry-gnome3 2>&1)
-    grep Operation cancelled <<< "$reply" && volume_is_tps || return 1
+    reply=$(echo -e "SETPROMPT $enter $volume_name passphrase:\nGETPIN" | \
+        pinentry-gnome3 2>&1)
+    grep Operation cancelled <<< "$reply" && \
+        [ "$volume_name" == "Persistent Storage" ] || return 1
     passphrase=$(grep D <<< "$reply") && return 0
-    zenity --info --title="No passphrase entered" --text="Enter your passphrase to train your memory." --timeout=3
+    zenity --info --title="No passphrase entered" --timeout=3 \
+        --text="Enter your passphrase to train your memory."
     get_passphrase
 }
 
 check_passphrase() {
     unset passphrase
-    printf '%s' "$1" | /sbin/cryptsetup --test-passphrase open "$VOLUME_NAME".img && \
-    passwd -S "$USER" | grep NP && printf '%s\n%s' "$1" "$1" | passwd
-}
-
-entry_is_open() {
-    for entry in pinentry-gnome3 {codex32_confirm,set_pass,passphrase}.py; do
-        pgrep "$entry" && return 0
-    done # TODO: could be combined with screen is locked
-}
-
-volume_is_tps() {
-    [ "$VOLUME_NAME" == "Persistent Storage" ]
+    echo "$1" | /sbin/cryptsetup --test-passphrase open "$VOLUME_PATH" && \
+        passwd -S "$USER" | grep NP && printf '%s\n%s' "$1" "$1" | passwd && \
+        passwd_is_passphrase=1
 }
 
 set_interval() {
-    interval=$(($1 * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
-    (( interval < 5 )) && interval=5 # Set a minimum
-    echo "$interval" > "$VOLUME_NAME.interval"
-    interval=$(<"$VOLUME_NAME.interval")
+    interval=$(($1 < 5 ? 5 : $1 * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
+    echo "$interval" > "$volume_name.interval"
 }
 
-cd "$XDG_STATE_HOME/bails" || exit 1
-exp=0
 enter='Enter'
-[ -e "$VOLUME_NAME.interval" ] || set_interval 15 # Initially 20-45s
-interval=$(<"$VOLUME_NAME.interval")
-# Login counts as a successful rehearsal
-volume_is_tps && [ "$FIRST_RUN" == 'True' ] && set_interval "$interval"
-next_test_due=$(date -d "$(date -r "$VOLUME_NAME.interval")+$interval" +%s)
-sleep_time=$((next_test_due - $(date +%s)))
-((sleep_time > 0)) && sleep $sleep_time
-while screen_is_locked || entry_is_open; do sleep 5; done
-while get_passphrase && ! check_passphrase "${passphrase:3}" &>/dev/null; do
-    zenity --info --title="Passphrase does not match" --text="Try again." --timeout=2
-    enter='Re-enter'
-    ((exp = (exp == 0) ? 2 : exp + 1))
+exp=0
+cd "$XDG_STATE_HOME/bails" || exit 1
+[ -e "$volume_name.interval" ] || set_interval 15 # Initially 20-45s
+while true; do
+    interval=$(<"$volume_name.interval")
+    next_test_due=$(date -d "$(date -r "$volume_name.interval")+$interval" +%s)
+    sleep_time=$((next_test_due - $(date +%s)))
+    ((sleep_time > 0)) && sleep $sleep_time
+    wait_if_locked_or_typing 0.1
+    while get_passphrase && ! check_passphrase "${passphrase:3}" &>/dev/null; do
+        zenity --info --title="Passphrase does not match" --text="Try again." --timeout=2
+        enter='Re-enter'
+        ((exp = (exp == 0) ? 2 : exp + 1))
+    done
+    set_interval "$interval"
 done
-set_interval
-spaced-repetition "$VOLUME_NAME".img
