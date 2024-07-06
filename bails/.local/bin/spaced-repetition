@@ -41,6 +41,7 @@ wait_if_locked_or_typing() {
 }
 
 get_passphrase() {
+    local reply
     reply=$(echo -e "SETPROMPT $enter $volume_name passphrase:\nGETPIN" | \
         pinentry-gnome3 2>&1)
     grep Operation cancelled <<< "$reply" && \
@@ -53,7 +54,7 @@ get_passphrase() {
 
 check_passphrase() {
     unset passphrase
-    echo "$1" | /sbin/cryptsetup --test-passphrase open "$VOLUME_PATH" && \
+    printf "%s" "$1" | /sbin/cryptsetup --test-passphrase open "$VOLUME_PATH" && \
         passwd -S "$USER" | grep NP && printf '%s\n%s' "$1" "$1" | passwd && \
         passwd_is_passphrase=1
 }
@@ -72,7 +73,7 @@ while true; do
     sleep_time=$((next_test_due - $(date +%s)))
     ((sleep_time > 0)) && sleep $sleep_time
     wait_if_locked_or_typing 0.1
-    while get_passphrase && ! check_passphrase "${passphrase:3}" &>/dev/null; do
+    while get_passphrase && ! check_passphrase "${passphrase:3}"; do
         zenity --info --title="Passphrase does not match" --text="Try again." --timeout=2
         enter='Re-enter'
         ((exp = (exp == 0) ? 2 : exp + 1))
