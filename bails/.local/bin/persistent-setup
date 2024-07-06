@@ -49,9 +49,7 @@ if box.passphrase:
             --text="<b>Your passphrase is too weak to protect against a state-sponsored attacker with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nIf a state-sponsored attacker with physical access to your device is part of your <a href='https://ssd.eff.org/module/your-security-plan'>threat model</a>, you MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue' --default-cancel --cancel-label='Restart Now'; }; then
         unset entropy
         dd if=/dev/urandom of="$IMAGE_FILE" bs=4096 count=8192
-        echo "$passphrase" | /sbin/cryptsetup --batch-mode luksFormat "$IMAGE_FILE" || exit 1
-        { wait_for_persistent_folder && rsync -vP --remove-source-files "$IMAGE_FILE" $PERSISTENT; } &
-        return 0
+        echo "$passphrase" | /sbin/cryptsetup --batch-mode luksFormat "$IMAGE_FILE" && return 0
     else
         zenity --warning --title='WARNING: Weak Passphrase Detected' \
             --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
@@ -65,6 +63,10 @@ wait_for_persistent_folder() {
     until [ -f $PERSISTENT ]; do
         sleep 1
     done
+    if [ -e "$IMAGE_FILE" ]; then # move it to the Persistent location
+        rsync -vP --remove-source-files "$IMAGE_FILE" $PERSISTENT
+        ln -s $PERSISTENT/"Persistent Storage.img" "$IMAGE_FILE"
+    fi # add symlink so spaced repetition can find it at originally passed location
 }
 
 # Display welcome message
@@ -124,7 +126,7 @@ fi
 (
     wait_for_persistent_folder
     for image in "$PERSISTENT"/*.img; do
-        pgrep -xf spaced-repetition "$image" > /dev/null || spaced-repetition "$image" "True"
+        pgrep -xf spaced-repetition "$image" > /dev/null || spaced-repetition "$image"
     done
 ) &
 
