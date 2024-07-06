@@ -29,7 +29,7 @@
 XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 export PERSISTENT="/live/persistence/TailsData_unlocked/Persistent"
-IMAGE_FILE="$HOME/.local/state/bails/Persistent Storage.img"
+IMAGE_FILE="$XDG_RUNTIME_DIR/bails/Persistent Storage.img"
 
 new_passphrase_helper() {
     local passphrase
@@ -48,6 +48,7 @@ if box.passphrase:
     if ((entropy >= 65000)) || { ((entropy > 50000)) && zenity --question --icon-name=dialog-warning --title='Warning: Weak Passphrase Detected' \
             --text="<b>Your passphrase is too weak to protect against a state-sponsored attacker with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nIf a state-sponsored attacker with physical access to your device is part of your <a href='https://ssd.eff.org/module/your-security-plan'>threat model</a>, you MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue' --default-cancel --cancel-label='Restart Now'; }; then
         unset entropy
+        mkdir "$XDG_RUNTIME_DIR/bails"
         dd if=/dev/urandom of="$IMAGE_FILE" bs=4096 count=8192
         echo "$passphrase" | /sbin/cryptsetup --batch-mode luksFormat "$IMAGE_FILE" && return 0
     else
@@ -184,5 +185,4 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
 done
 # Close the Persistent Storage window
 pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
-rsync -vP --remove-source-files {"$HOME/.local/state",$XDG_STATE_HOME}/bails/"Persistent Storage.interval"
 touch $SET_UP
