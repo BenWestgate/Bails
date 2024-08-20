@@ -17,17 +17,21 @@ Bails does not make the most secure setup possible yet: offline multi-sig airgap
 
 This would be appropriate for up to half a year's expenses. Life savings need multi-signature and offline, airgapped, stateless signers.
 
-## What is the difference between Codex32, Shamir Secret Sharing and Multisig?
-
-[Andrew Polestra: What is Shamir Secret Sharing and how does it compare to Multisig?](https://youtu.be/jDjEEX0ASxY?si=vooa8JA858EmRME6&t=1209)
-
 ## How much storage do I need on my test laptop?
 
 You don't need any storage free on your test laptop. You just need a 32+ GB USB stick, the whole thing runs from that USB and leaves your laptop storage untouched.
 
+## How does it run on 32GB USB sticks, I thought the blockchain was 600GB?
+
+Bails uses [pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning) when the USB stick is less than 1 TB. All block chain data will be downloaded and verified but the oldest blocks will be removed so your USB stick does not run out of space. Unless you wish to restore an old wallet, this doesn't matter.
+
+## What is the difference between Codex32, Shamir Secret Sharing and Multisig?
+
+[Andrew Polestra: What is Shamir Secret Sharing and how does it compare to Multisig?](https://youtu.be/jDjEEX0ASxY?si=vooa8JA858EmRME6&t=1209)
+
 ## I don't have a USB stick, what one should I get?
 
-Bails will work well on most USB sticks if your computer has at least 8 GB of memory. Tails will start and Bitcoin Core will sync and shutdown much faster if the drive has high IOPS. This performance is not commonly advertised on the package so here are some models that are top performers, using one of these will reduce your startup and initial sync time by 50-90%:
+Bails will work well on most USB sticks if your computer has at least 8 GB of memory. Tails will start and Bitcoin Core will sync and shutdown much faster if the drive has high "IOPS". This performance is not commonly advertised on the package so here are some models that are top performers, using one of these will reduce your startup and initial sync time by 50-90%:
 
 USB sticks with SSD-like performance:
 - [Kingston DataTraveler Max Type-C USB](https://amzn.to/3OpMELw)
