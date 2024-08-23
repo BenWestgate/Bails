@@ -101,7 +101,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
             tails-persistent-storage &
             notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'
         fi
-        sleep 12
+        sleep 8
     done
     until /usr/local/lib/tpscli is-active PersistentDirectory; do
         sleep 1
@@ -120,7 +120,6 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
 fi
 # Spaced repetition training
 for image in "$PERSISTENT"/*.img; do
-    ((DONT_ENFORCE_ENTROPY)) && break
     pgrep -f "spaced-repetition $image" > /dev/null || spaced-repetition "$image"
 done &
 

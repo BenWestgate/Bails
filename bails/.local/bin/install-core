@@ -191,6 +191,7 @@ if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
     stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
     zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
+    rm ./*
     install-core	# Launch this script again
     exit 1
 fi

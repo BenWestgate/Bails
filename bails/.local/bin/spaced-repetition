@@ -70,7 +70,7 @@ while enter='Enter'; do
     ((sleep_time > 0)) && sleep $sleep_time
     wait_if_locked_or_typing 0.1
     until ask_pass; do
-        zenity --info --title="Passphrase does not match" --text="Try again." --timeout=2
+        zenity --info --title="Try again" --text="Passphrase does not match." --timeout=2
         ((exp = (exp == 0) ? 2 : exp + 1))
         enter='Re-enter'
     done
