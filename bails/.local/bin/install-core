@@ -93,15 +93,6 @@ search_key() {
 }
 
 
-get_guix_sigs() (
-    if cd guix.sigs 2>/dev/null; then
-        git pull -v # Update guix.sigs
-    else
-        git clone $GUIX_SIGS_REPO_URL --depth=1
-    fi 
-)
-
-
 retry_on_fail() {
     echo "Running $*"
     until "$@"; do
@@ -120,7 +111,7 @@ pkill tca &>/dev/null # Close tor connection assistant to clean up the screen
 set -m # Enable job control to bring background downloads to the foreground
 
 # Download to Persistent Storage if setup, otherwise amnesia
-cd "$XDG_DATA_HOME/bitcoin" || cd "$HOME/.local/share/bitcoin" || exit 1
+cd "$XDG_DATA_HOME/bitcoin" 2>/dev/null || cd "$HOME/.local/share/bitcoin" || exit 1
 DOWNLOAD_DIR=$PWD
 retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
 VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
@@ -129,7 +120,11 @@ retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VE
 # Download Bitcoin core binary in background
 retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/bitcoin-$VER-x86_64-linux-gnu.tar.gz" & get_core=$!
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
-retry_on_fail get_guix_sigs
+if cd guix.sigs 2>/dev/null; then
+    retry_on_fail git pull -v # Update guix.sigs
+else
+    retry_on_fail git clone $GUIX_SIGS_REPO_URL --depth=1
+fi 
 
 for dir in guix.sigs/*/; do [ "${dir#*/}" == "$VER/" ] && break; rm -rf "$dir"; done
 for name in guix.sigs/"$VER"/*; do gpg --show-keys "${name/"$VER"/builder-keys}.gpg"; done > builder-keys
