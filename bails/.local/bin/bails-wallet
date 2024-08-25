@@ -39,7 +39,7 @@
 
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
-export CLI="bitcoin-cli" # rpcport=17600 must be set in bitcoin.conf for Tails
+export CLI="bitcoin-cli -rpcwait" # rpcport=17600 must be set in bitcoin.conf for Tails
 export SOURCE='/live/persistence/TailsData_unlocked'
 export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export DOTFILES=$SOURCE/dotfiles
@@ -72,56 +72,78 @@ else:
     done
 }
 
+
+# Return s if a $1 is greater than 1, add is/are if $2 is 'helper'
+plural() {
+    local helper_verb='is'
+    if (($1 > 1)); then
+        printf "s"
+        helper_verb='are'
+    fi
+    if [ "$2" == "helper" ]; then
+        printf " %s" "$helper_verb"
+    fi
+}
+
+
+# Set global variables for grammar
+tn_grammar() {
+    string='secret'
+    unset password_derived password_steal password_loss
+    max_safe=$((threshold > 1 ? threshold - 1 : 1))
+    max_loss=$((locations - max_safe))
+    if ((threshold > 1)); then
+        string='share'
+        password_derived="An additional <b>1</b> share is formed by a <b>seed backup passphrase</b>."
+        password_steal=", OR <b>$max_safe</b> share$(plural $max_safe) and your <b>passphrase</b>"
+        password_loss=", OR <b>$max_loss</b> location$(plural $max_loss) and your <b>passphrase</b>"
+    fi
+    min_sep_locations=$(((locations + max_safe - 1) / max_safe))
+    min_offsite=$((min_sep_locations - 1 ? min_sep_locations : 1))
+}
+
+# Bitcoin wallet which is able to import codex32
+# to be stored across <b>$locations location$n_plural_suffix</b>,
+
+
 ask_t_and_n() {
     # Explain the seed backup and what conditions will recover the seed
     # allows tweaking it or skipping it in a 'Change Something' dialog, TODO decide best formatting in Tails
     tn_grammar
     until zenity --question --icon-name=org.gnome.TextEditor --title="$threshold-of-$locations codex32 seed backup" \
-        --text="In case all Bails USBs fail or you lose the passphrase of your Persistent Storage, we will split your seed into <b>$locations</b> codex32 $string$plurs across <b>$locations location$plurs</b>, with <b>any $threshold</b> of those ${string}s able to restore your seed by typing $pronoun into a codex32-enabled wallet such as Bails.$password_derived\n\nYou will need:\n\t• $locations piece$plurs of paper\n\t• Pen or pencil\n\t• Hard surface to write on to avoid leaving an imprint of the secret\n\nOne $string can stay hidden near this Bails USB and the others will go offsite, one to each of your backup locations.\n\n-If <b>$threshold</b> $string$plurtss $plurts stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n\n-If <b>$((locations - threshold + 2 > locations ? locations : locations - threshold + 2))</b> location$plurs are lost$password_loss, you will <b>NOT</b> be able to restore your seed.\n\nDo you understand?" \
+        --text="In case all Bails USBs are lost or damaged or you forget the passphrase of your Persistent Storage, we will back up your seed as <b>$locations</b> codex32 $string$(plural $locations).
+        $password_derived
+        To restore your seed, enter <b>any $threshold</b> $string$(plural $threshold) into a codex32-enabled wallet such as Bails.\n
+        You need:
+        \t• At least $locations piece$(plural $locations) of paper
+        \t• Pen or pencil
+        \t• Hard surface to write on to avoid leaving an imprint of the $string$(plural $locations)
+        \t• At least $min_sep_locations <i>separate</i> location$(plural $min_sep_locations) to keep your codex32 $string$(plural $locations) in
+        \t\t- At least $min_offsite should be offsite from this Bails USB stick and more improves redundancy\n
+        ${string^}$(plural $locations) should be separated and kept in multiple locations for security and resilience. No more than $max_safe $string$(plural $max_safe) should be kept in any one place and less is better if you fear the location may become compromised.\n
+        -If <b>$threshold</b> $string$(plural $threshold 'helper') stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n
+        -If <b>$((max_loss + 1))</b> $string$(plural $((max_loss + 1)) 'helper') lost$password_loss, you will <b>NOT</b> be able to restore your seed.\n
+        Do you understand?" \
         --cancel-label='Change Something' $ICON; do
-        backup_choice="$(zenity --title='Change backup parameters' --question --extra-button='Location Quantity' \
-            --extra-button='Threshold' --extra-button='Identifier' --switch --text="Location quantity is how many places you will store a codex32 $string.\n\nThreshold is how many shares are needed to steal or recover your seed.\n\nIdentifier is the 4 bech32 character unique ID for your backup.\n\nWhat would you like to change?" --ellipsize $ICON)"
-        [ "$backup_choice" == 'Location Quantity' ] && locations=$(until zenity --scale --text="How many total locations do you want to store ${string}s at?\n\nMinimum $threshold is for low value data.\nUse $((threshold + 2)) or more for high value data." --min-value=$threshold --value=$locations --max-value=$((locations + threshold * 3 < 31 ? locations + threshold * 3 - 1 : 30)) --title='Location quantity' $ICON; do :; done)
-        [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data.\nUse 3 for high value data.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value=$threshold --title='Recovery threshold' $ICON; do :; done)
-        [ "$backup_choice" == 'Identifier' ] && identifier=$(zenity --entry --title='Recovery code ID')
-        ((threshold < 2)) && { zenity --question --icon-name=dialog-warning --title='Security warning' --text='<b>Caution</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel $ICON || threshold=2; }
+        backup_choice="$(zenity --title='Change backup parameters' --question \
+            --extra-button="${string^} Quantity" --extra-button='Threshold' \
+            --extra-button='Identifier' --switch \
+            --text="${string^} quantity is how many codex32 ${string}s the seed backup produces for redundancy.\n
+            Threshold is how many shares are needed to steal or recover your seed.\n
+            Identifier is the 4 bech32 character unique ID for your backup.\n
+            What would you like to change?" --ellipsize $ICON)"
+        [ "$backup_choice" == "${string^} Quantity" ] && locations=$(until zenity --scale --text="How many total ${string}s do you want to store?\n\nMinimum $((max_safe + 1)) is for low value data.\nUse $((max_safe + 3)) or more for high value data depending on your desire for redundancy." --min-value="$max_safe" --value="$locations" --max-value=$((31 - threshold + max_safe)) --title="{string^} quantity" "$ICON"; do :; done)
+        [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low theft risk.\nUse 3 for high theft risk.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value="$threshold" --title='Recovery threshold' "$ICON"; do :; done)
+        tn_grammar
+        [ "$backup_choice" == 'Identifier' ] && identifier=$(zenity --entry --title='Recovery code ID' --text='Shares of one secret all have the same threshold and identifiers. If you have multiple secrets, you should use distinct identifiers for each to avoid mixing up shares of different secrets with each other. The identifiers are not considered secret themselves.')
+        ((threshold < 2)) && { zenity --question --icon-name=dialog-warning --title='Security warning' --text='<b>Warning</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel $ICON || threshold=2; }
         ((threshold > 3)) && { zenity --question --icon-name=dialog-warning --title='Safety warning' --text="<b>Caution</b>: Higher threshold values than <b>3</b>, in our view, are a bad trade-off between usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel $ICON || threshold=3; }
+        ((locations <= max_safe)) && { zenity --question --icon-name=dialog-warning --title='Safety warning' --text="<b>DANGER</b>: If you lose ANY codex32 $string OR forget your seed backup passphrase, you will <b>NOT</b> be able to restore your seed.\n\n<b>Redundancy is strongly recommended</b>, are you sure you want to use only <b>$locations</b> $string location$(plural $locations) with threshold <b>$threshold<b>?" --default-cancel $ICON || locations=$((max_safe + 1)); }
         # reset the variables to sensible values if exited
         tn_grammar
     done
 }
 
-# Set global variables for grammar
-tn_grammar() {
-    ((locations > 2)) && plur=s || plur=''
-    ((threshold - 2)) && {
-        plurt=s
-        plurtt=are
-    } || {
-        plurt=''
-        plurtt=is
-    }
-    ((locations - threshold)) && plurl='s' || plurl=''
-    ((threshold > 1)) && {
-        string='share'
-        password_derived="\nAn additional <b>1</b> share is formed by a <b>seed backup passphrase</b>."
-        password_steal=", OR <b>$((threshold - 1))</b> share$plurt and your <b>passphrase</b>"
-        password_loss=", OR <b>$((locations - threshold + 1))</b> location$plurl and your <b>passphrase</b>"
-        plurts=are
-        plurtss='s'
-    } || {
-        plurts=is
-        string='secret'
-        unset plurtss password_derived password_steal password_loss
-    }
-    ((locations < 2)) && {
-        plurs=''
-        pronoun='it'
-    } || {
-        plurs='s'
-        pronoun='them'
-    }
-}
 
 ###################
 # Displays strings for user to write and confirms they were written correctly
@@ -388,13 +410,6 @@ rotate_backup() {
 # Modifies a just restored backup to add security or safety #TODO postpone for L1
 ###################
 modify_backup() {
-    ((threshold - 2)) && {
-        plurt=s
-        plurtt=are
-    } || {
-        plurt=''
-        plurtt=is
-    }
     selection=$(zenity --question --title='Modify backup?' --text="Do you know (or suspect) this backup's passphrase or a share is compromised or lost?\n\n-If no, then select 'No'.\n\n-If compromised or to raise threshold you should select 'Add Security'.\n\n-If lost anything or to create extra shares you should select 'Add Safety'." --switch --extra-button='No' --extra-button='Add Security' --extra-button='Add Safety' $ICON)
     if [ "$selection" = 'Add Security' ]; then
         zenity --question --window-icon=warning-dialog --title='Add Security' --text="Backup security is reduced or compromised if a share or passphrase has been compromised.\n\n<b>A new codex32 backup needs to be created immediately and old backups destroyed, if possible.\n\nIMPORTANT: Any previous backups you have made of your seed should be replaced with a newly generated set of codex32 shares and then destroy previous backups, if possible. Previous backups are vulnerable to being restored using compromised data.</b>\n\n-If you know (or suspect) a share or passphrase are compromised AND/OR you know (or suspect) you can not destroy ALL previous shares, select '<b>Create New Seed</b>'. Then immediately sweep all funds to the new wallet using the most urgent transaction fee.\n\n-Otherwise select '<b>Increase Threshold</b>' which improves security but preserves your wallet." --ok-label='Increase Threshold' --default-cancel --cancel-label='Create New Seed' $ICON #TODO make sure it rejects the previously used passphrase
@@ -450,7 +465,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
             $CLI -rpcwallet="$name" walletlock
         done
     done
-    $CLI unloadwallet "$name"   #TODO remove this when Bitcoin Core removes the bug that doesn't load bech32m addresses after importing.
+    $CLI unloadwallet "$name" #TODO remove this when Bitcoin Core removes the bug that doesn't load bech32m addresses after importing.
     $CLI loadwallet "$name"
     kill $lock_if_slow
     pkill python3 &>/dev/null # kills tails-screen-locker
@@ -472,7 +487,7 @@ if [ "$choice" == "Create a new seed" ]; then
     printf '\033]2;Create a new seed\a'
     zenity --warning --title='Important: Safeguard your bitcoin' --text="With Bails, you are in control of your bitcoin funds. No one else has access to your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks and the paper seed backup we help you create, your bitcoin cannot be recovered." --ok-label='I Understand' "$ICON" || exit 1
     user_entropy="$(if zenity --question --title="Optional: Enhance seed randomness" \
-        --cancel-label='Skip' --icon-name=die --ok-label='Add Randomness' --text="A seed is a secret that allows spending your bitcoin as long as you have access to it.\n\nIt is not required but you can provide additional randomness to your seed if paranoid. This step protects your seed against a backdoored random number generator.\n\n\Add extra randomness to your seed?" "$ICON"; then
+        --cancel-label='Skip' --icon-name=die --default-cancel --ok-label='Add Randomness' --text="A seed is a secret that allows spending your bitcoin as long as you have access to it.\n\nIt is not required but if paranoid you can provide additional randomness to your seed. This step protects your seed against a backdoored random number generator.\n\n\Add extra randomness to your seed?" "$ICON"; then
         until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-sided dice 50+ times or\nflip a coin 128+ times. A fast way is mashing the keyboard." "$ICON"; do :; done
     fi)"
     printf '\033]2;Create a new seed backup\a'
@@ -492,11 +507,10 @@ if [ "$choice" == "Create a new seed" ]; then
     # Creates generator wallet, dumps its extended private masterkey, leaves no traces behind
     temp="$(mktemp)" # temporary filename
     trap 'rm -rf -- "$temp"' EXIT
-    shred --remove $temp # delete file to make room for wallet
+    shred --remove $temp                              # delete file to make room for wallet
     key="$(head -c64 /dev/urandom | base64 --wrap=0)" # 64 byte wallet encryption key to crypto-shred the wallet
-    $CLI -rpcwait createwallet "$temp" false false "$key"
-    $CLI -rpcwait -rpcwallet="$temp" walletpassphrase "$key" 60 # unlocks generator wallet for 1 minute
-    $CLI -rpcwait                                             # waits for the RPC server to respond to ensure we get a private masterkey FIXME this needs to be used w/ the commands
+    $CLI createwallet "$temp" false false "$key"
+    $CLI -rpcwallet="$temp" walletpassphrase "$key" 60 # unlocks generator wallet for 1 minute
     extended_private_masterkey="$($CLI -rpcwallet=$temp listdescriptors "true" | grep --max-count=1 -oP '(?<=tr\().*?(?=/)')"
     $CLI -rpcwallet="$temp" walletlock
     $CLI -rpcwallet="$temp" unloadwallet
@@ -517,7 +531,7 @@ if "'$threshold'" == "1":
 else:
     ms32.existing_master_seed(master_seed,"'$threshold'",id,'$locations',"'"$passphrase"'")'))
     display_confirm ${codex32_array[*]}
-    get_codex32_secret  # this should be renamed "recover_seed"
+    get_codex32_secret # this should be renamed "recover_seed"
     # TODO if [ share_list is not in codex32 array ]; then
     # warn: this was not a $string you wrote down earlier! and reject the share for recovery
     #fi	#TODO this should be an until loop so they can fail repeatedly and re-call get_codex32_secret.
