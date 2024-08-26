@@ -44,7 +44,7 @@ export SOURCE='/live/persistence/TailsData_unlocked'
 export DATA_DIR=$SOURCE/Persistent/.bitcoin
 export DOTFILES=$SOURCE/dotfiles
 export LOCAL_DIR=$DOTFILES/.local
-export TMPDIR=$XDG_RUNTIME_DIR
+export TMPDIR=$XDG_RUNTIME_DIR/bails-wallet
 
 BITCOIN_ADDRESS_COMPLETED= #TODO add these
 
@@ -94,7 +94,7 @@ tn_grammar() {
     max_loss=$((locations - max_safe))
     if ((threshold > 1)); then
         string='share'
-        password_derived=", and an additional <b>1</b> share is formed by a <b>seed backup passphrase</b>"
+        password_derived=", with an additional <b>1</b> share formed by a <b>seed backup passphrase</b>"
         password_steal=", OR <b>$max_safe</b> share$(plural $max_safe) and your <b>passphrase</b>"
         password_loss=", OR <b>$max_loss</b> share$(plural $max_loss) and your <b>passphrase</b>"
     fi
@@ -119,7 +119,7 @@ You need:
 \t• At least <b>$min_sep_locations separate location$(plural $min_sep_locations)</b> to keep your codex32 $string$(plural $locations) in
 \t  - At least $min_offsite should be offsite from this Bails USB stick
 \t  - Widely distributing the $string$(plural $locations) increases safety\n
-${string^}s should be kept in separate places for better security and resilience with <b>at most $max_safe</b> $string$(plural $max_safe) in any one place and less if you fear it being compromised.\n
+${string^}s should be kept in separate locations for better security and resilience with <b>at most $max_safe</b> in any one place and less if you fear it being compromised.\n
 -If <b>$threshold</b> $string$(plural $threshold 'helper') stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.
 -If <b>$((max_loss + 1))</b> $string$(plural $((max_loss + 1)) 'helper') lost$password_loss, you will <b>NOT</b> be able to restore your seed.\n
 Do you understand?" --extra-button='Change Something' --extra-button='Yes' --switch $ICON)"
@@ -133,7 +133,7 @@ Threshold is how many shares are needed to steal or recover your seed.\n
 Identifier is the 4 bech32 character unique ID for your backup.\n
 What would you like to change?" --ellipsize $ICON)"
     [ "$backup_choice" == "${string^} Quantity" ] && locations=$(until zenity --scale --text="How many total ${string}s do you want to store?\n\nMinimum $((max_safe + 1)) is for low value data.\nUse $((max_safe + 1 + threshold)) or more for high value data depending on your desire for redundancy." --min-value="$max_safe" --value="$locations" --max-value=$((31 - threshold + max_safe)) --title="${string^} quantity" "$ICON"; do :; done)
-    [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data or low theft risk.\nUse 3 for high value data and high theft risk.' --min-value=1 --max-value=$((locations + 1 < 9 ? locations + 1 : 9)) --value="$threshold" --title='Recovery threshold' "$ICON"; do :; done)
+    [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low theft risk or low value.\nUse 3 for higher fear of theft.' --min-value=1 --max-value=$((locations + 1 < 9 ? locations + 1 : 9)) --value="$threshold" --title='Recovery threshold' "$ICON"; do :; done)
     tn_grammar
     [ "$backup_choice" == 'Identifier' ] && identifier=$(zenity --entry --title='Recovery code ID' --text='Coming Soon...\n\nShares of one secret all have the same threshold and identifiers. If you have multiple secrets, you should use distinct identifiers for each to avoid mixing up shares of different secrets with each other. The identifiers are not considered secret themselves.') # TODO add this feature with python
     ((threshold < 2)) && { zenity --question --icon-name=dialog-warning --title='Security warning' --text='<b>Warning</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel $ICON || threshold=2; }
@@ -164,7 +164,7 @@ display_confirm() {
             python3 $LOCAL_DIR/lib/python3.11/site-packages/bails-wallet/codex32_confirm.py "$codex32_string" "${progress:1:-1}" && break
         done
     done
-    unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_array codex32_string share displayed x backup backups_made progress
+    unset passphrase threshold identifier backups_made share_list choice backup share confirm user_entropy threshold locations extended_private_masterkey codex32_string share displayed x backup backups_made progress
     zenity --info --title='Seed backup complete' --text='You will now restore your new seed with your codex32 backup before your wallet is created.' --ok-label='Restore Seed' $ICON --icon-name=starred
 }
 
@@ -379,12 +379,15 @@ get_share() {
         zenity --notification --text="Invalid checksum. Correct all errors and try again." $ICON
     done
     VALID_IDENTIFIER=${share:3:5}
-    if [[ " ${share_list[*]} " =~ " ${share,,} " ]]; then
+    if [[ " ${share_list[*]} " =~ ${share,,} ]]; then
         zenity --notification --text="You have input the same share twice.\nYou must input a unique share." $ICON
         get_share
+    elif [ -n ${codex32_array[*]} ] && ! [[ " ${codex32_array[*] } " =~ ${share,,} ]]; then
+        zenity --warning --title="${string^} does not match one created" --text="The valid $string you entered did not match one shown during backup creation.\nYou must enter only ${string}s from the new codex32 backup." $ICON
     fi
     share_list+=(${share,,})
 }
+
 
 recover_seed() {
     py_share_list="${share_list[*]}"
@@ -437,7 +440,7 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
     [ "$name" ] || name='Wallet'
     [ "$passphrase" ] || set_passphrase 'Set passphrase for the wallet'
     chmod +w $DATA_DIR/wallets # writes enabled to create wallet
-    until $CLI createwallet "$name" false true "$passphrase" false true $2; do
+    until "$CLI" createwallet "$name" false true "$passphrase" false true $2; do
         name=$(zenity --title='Create failed: name already exists' --entry --text='New Wallet Name:' --entry-text="Wallet $identifier" "$ICON" --width=340)
     done
     chmod -w $DATA_DIR/wallets # write protect folder so wallets w/o seed backups can't be made
@@ -457,15 +460,15 @@ print(y.from_rootseed(bytes(ms32.decode("ms","'$codex32_secret'")[3]), xtype="st
         ((change)) && internal=true || internal=false
         path="h/0h/0h/$change/*)"
         for desc in "pkh($xprv/44$path" "sh(wpkh($xprv/49$path)" "wpkh($xprv/84$path" "tr($xprv/86$path"; do
-            checksum=$($CLI getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
+            checksum=$("$CLI" getdescriptorinfo "$desc" | awk 'NR==3 {print $2}')
             # unlocks wallet 1 minute
-            $CLI -rpcwallet="$name" walletpassphrase "$passphrase" 60
-            $CLI -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc'#'${checksum:1:8}'", "active": true, "timestamp": '$1', "internal": '$internal' }]'
-            $CLI -rpcwallet="$name" walletlock
+            "$CLI" -rpcwallet="$name" walletpassphrase "$passphrase" 60
+            "$CLI" -rpcwallet="$name" importdescriptors '[{ "desc": "'$desc'#'${checksum:1:8}'", "active": true, "timestamp": '$1', "internal": '$internal' }]'
+            "$CLI" -rpcwallet="$name" walletlock
         done
     done
-    $CLI unloadwallet "$name" #TODO remove this when Bitcoin Core removes the bug that doesn't load bech32m addresses after importing.
-    $CLI loadwallet "$name"
+    "$CLI" unloadwallet "$name" #TODO remove this when Bitcoin Core removes the bug that doesn't load bech32m addresses after importing.
+    "$CLI" loadwallet "$name"
     kill $lock_if_slow
     pkill python3 &>/dev/null # kills tails-screen-locker
     wait -f $encryption_info
@@ -504,21 +507,22 @@ if [ "$choice" == "Create a new seed" ]; then
     zenity --notification --text="Generating your codex32 backup..." $ICON
 
     # Creates generator wallet, dumps its extended private masterkey, leaves no traces behind
-    temp="$(mktemp)" # temporary filename
-    trap 'rm -rf -- "$temp"' EXIT
-    shred --remove $temp                              # delete file to make room for wallet
+    mkdir "$TMPDIR"
+    temp="$(mktemp -d)" # temporary wallet folder
+    trap 'rm -rf -- "$TMPDIR"' EXIT
     key="$(head -c64 /dev/urandom | base64 --wrap=0)" # 64 byte wallet encryption key to crypto-shred the wallet
-    $CLI createwallet "$temp" false false "$key"
-    $CLI -rpcwallet="$temp" walletpassphrase "$key" 60 # unlocks generator wallet for 1 minute
-    extended_private_masterkey="$($CLI -rpcwallet=$temp listdescriptors "true" | grep --max-count=1 -oP '(?<=tr\().*?(?=/)')"
-    $CLI -rpcwallet="$temp" walletlock
-    $CLI -rpcwallet="$temp" unloadwallet
-    unset $key # deletes encryption key from memory
+    "$CLI" createwallet "$temp" false false "$key"
+    "$CLI" -rpcwallet="$temp" walletpassphrase "$key" 60 # unlocks generator wallet for 1 minute
+    extended_private_masterkey="$("$CLI" -rpcwallet=$temp listdescriptors "true" | grep --max-count=1 -oP '(?<=tr\().*?(?=/)')"
+    "$CLI" -rpcwallet="$temp" walletlock
+    "$CLI" -rpcwallet="$temp" unloadwallet
+    unset "$key" # deletes encryption key from memory
     if [ "${extended_private_masterkey:0:4}" != 'xprv' ]; then
         zenity --error --title='Failed to get Bitcoin Core entropy' --text='Bitcoin core may not be running or the RPC server is disabled.' "$ICON" &
         exit 1
     fi
     # Unconditionally display app entropy for audits
+    # TODO display this as a QR so a separate machine can get the data without typing
     echo "App Entropy: $extended_private_masterkey"
     codex32_array=($(python3 -c 'from codex32 import ms32
 master_seed = ms32.fresh_master_seed(16,"'"$user_entropy"'","'"$extended_private_masterkey"'")
