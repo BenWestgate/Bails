@@ -94,9 +94,9 @@ tn_grammar() {
     max_loss=$((locations - max_safe))
     if ((threshold > 1)); then
         string='share'
-        password_derived="An additional <b>1</b> share is formed by a <b>seed backup passphrase</b>."
+        password_derived=", and an additional <b>1</b> share is formed by a <b>seed backup passphrase</b>"
         password_steal=", OR <b>$max_safe</b> share$(plural $max_safe) and your <b>passphrase</b>"
-        password_loss=", OR <b>$max_loss</b> location$(plural $max_loss) and your <b>passphrase</b>"
+        password_loss=", OR <b>$max_loss</b> share$(plural $max_loss) and your <b>passphrase</b>"
     fi
     min_sep_locations=$(((locations + max_safe - 1) / max_safe))
     min_offsite=$((min_sep_locations - 1 ? min_sep_locations - 1 : 1))
@@ -111,15 +111,15 @@ ask_t_and_n() {
     # allows tweaking it or skipping it in a 'Change Something' dialog, TODO decide best formatting in Tails
     tn_grammar
     response="$(zenity --question --icon-name=org.gnome.TextEditor --title="$threshold-of-$locations codex32 seed backup" \
-    --text="In case all Bails USBs are lost or damaged or you forget the passphrase of your Persistent Storage, we will back up your seed as <b>$locations</b> codex32 $string$(plural $locations). $password_derived To restore your seed, enter <b>any $threshold</b> $string$(plural $threshold) into a codex32-enabled wallet, such as Bails.\n
+    --text="In case all Bails USB sticks are lost or damaged or you forget the passphrase of your Persistent Storage, we will back up your seed as <b>$locations</b> codex32 $string$(plural $locations)$password_derived. To restore your seed enter <b>any $threshold</b> $string$(plural $threshold) into a codex32-enabled wallet, such as Bails.\n
 You need:
 \t• At least $locations piece$(plural $locations) of paper
 \t• Pen or pencil
 \t• Hard surface to write on to avoid leaving an imprint of the $string$(plural $locations)
-\t• At least $min_sep_locations separate location$(plural $min_sep_locations) to keep your codex32 $string$(plural $locations) in
-\t\t- At least $min_offsite should be offsite from this Bails USB stick
-\t\t- Widely distributing the generated $string$(plural $locations) increases safety\n
-${string^}s should be kept in separate places for better security and resilience with at most $max_safe $string$(plural $max_safe) in any one place and less is better if you fear it may be compromised.\n
+\t• At least <b>$min_sep_locations separate location$(plural $min_sep_locations)</b> to keep your codex32 $string$(plural $locations) in
+\t  - At least $min_offsite should be offsite from this Bails USB stick
+\t  - Widely distributing the $string$(plural $locations) increases safety\n
+${string^}s should be kept in separate places for better security and resilience with <b>at most $max_safe</b> $string$(plural $max_safe) in any one place and less if you fear it being compromised.\n
 -If <b>$threshold</b> $string$(plural $threshold 'helper') stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.
 -If <b>$((max_loss + 1))</b> $string$(plural $((max_loss + 1)) 'helper') lost$password_loss, you will <b>NOT</b> be able to restore your seed.\n
 Do you understand?" --extra-button='Change Something' --extra-button='Yes' --switch $ICON)"
@@ -128,17 +128,17 @@ Do you understand?" --extra-button='Change Something' --extra-button='Yes' --swi
     backup_choice="$(zenity --title='Change backup parameters' --question \
         --extra-button="${string^} Quantity" --extra-button='Threshold' \
         --extra-button='Identifier' --switch \
-        --text="${string^} quantity is how many codex32 ${string}s the seed backup produces for redundancy.\n
-        Threshold is how many shares are needed to steal or recover your seed.\n
-        Identifier is the 4 bech32 character unique ID for your backup.\n
-        What would you like to change?" --ellipsize $ICON)"
-    [ "$backup_choice" == "${string^} Quantity" ] && locations=$(until zenity --scale --text="How many total ${string}s do you want to store?\n\nMinimum $((max_safe + 1)) is for low value data.\nUse $((max_safe + 3)) or more for high value data depending on your desire for redundancy." --min-value="$max_safe" --value="$locations" --max-value=$((31 - threshold + max_safe)) --title="{string^} quantity" "$ICON"; do :; done)
-    [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low theft risk.\nUse 3 for high theft risk.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value="$threshold" --title='Recovery threshold' "$ICON"; do :; done)
+        --text="${string^} quantity is how many codex32 ${string}s are produced for redundancy.\n
+Threshold is how many shares are needed to steal or recover your seed.\n
+Identifier is the 4 bech32 character unique ID for your backup.\n
+What would you like to change?" --ellipsize $ICON)"
+    [ "$backup_choice" == "${string^} Quantity" ] && locations=$(until zenity --scale --text="How many total ${string}s do you want to store?\n\nMinimum $((max_safe + 1)) is for low value data.\nUse $((max_safe + 1 + threshold)) or more for high value data depending on your desire for redundancy." --min-value="$max_safe" --value="$locations" --max-value=$((31 - threshold + max_safe)) --title="${string^} quantity" "$ICON"; do :; done)
+    [ "$backup_choice" == 'Threshold' ] && threshold=$(until zenity --scale --text='How many locations do you want required to recover or steal your seed?\n\nMinimum 2 for low value data or low theft risk.\nUse 3 for high value data and high theft risk.' --min-value=1 --max-value=$((locations < 9 ? locations : 9)) --value="$threshold" --title='Recovery threshold' "$ICON"; do :; done)
     tn_grammar
     [ "$backup_choice" == 'Identifier' ] && identifier=$(zenity --entry --title='Recovery code ID' --text='Coming Soon...\n\nShares of one secret all have the same threshold and identifiers. If you have multiple secrets, you should use distinct identifiers for each to avoid mixing up shares of different secrets with each other. The identifiers are not considered secret themselves.') # TODO add this feature with python
     ((threshold < 2)) && { zenity --question --icon-name=dialog-warning --title='Security warning' --text='<b>Warning</b>: Setting the threshold to <b>1</b> means anyone who finds a single location can <b>STEAL ALL YOUR BITCOIN</b>, even without your passphrase.\n\nThis is not recommended, are you sure you want to do this?' --default-cancel $ICON || threshold=2; }
     ((threshold > 3)) && { zenity --question --icon-name=dialog-warning --title='Safety warning' --text="<b>Caution</b>: Higher threshold values than <b>3</b>, in our view, are a bad trade-off between usability and robustness (which are damaged) and security (which is improved).\n\nThis is not recommended, are you sure you want to use threshold <b>$threshold</b>?" --default-cancel $ICON || threshold=3; }
-    ((locations <= max_safe)) && { zenity --question --icon-name=dialog-warning --title='Safety warning' --text="<b>DANGER</b>: If you lose ANY codex32 $string OR forget your seed backup passphrase, you will <b>NOT</b> be able to restore your seed.\n\n<b>Redundancy is strongly recommended</b>, are you sure you want to use only <b>$locations</b> $string location$(plural $locations) with threshold <b>$threshold<b>?" --default-cancel $ICON || locations=$((max_safe + 1)); }
+    ((locations <= max_safe)) && { zenity --question --icon-name=dialog-warning --title='Safety warning' --text="<b>DANGER</b>: If you lose ANY codex32 $string OR forget your seed backup passphrase, you will <b>NOT</b> be able to restore your seed.\n\n<b>Redundancy is strongly recommended</b>, are you sure you want to use only <b>$locations</b> $string location$(plural $locations) with threshold <b>$threshold</b>?" --default-cancel $ICON || locations=$((max_safe + 1)); }
     # reset the variables to sensible values if exited
     ask_t_and_n
 }
@@ -487,10 +487,10 @@ if [ "$choice" == "Create a new seed" ]; then
     zenity --warning --title='Important: Safeguard your bitcoin' --text="With Bails, you are in control of your bitcoin funds. No one else has access to your private keys.\n\nIt is crucial to understand that if you lose access to your Bails USB sticks and the paper seed backup we help you create, your bitcoin cannot be recovered." --ok-label='I Understand' "$ICON" || exit 1
     user_entropy="$(if zenity --question --title="Optional: Enhance seed randomness" \
         --cancel-label='Skip' --icon-name=die --ok-label='Add Randomness' --text="A seed is a secret that allows spending your bitcoin as long as you have access to it.\n\nIt is not required but you can, if paranoid, provide additional randomness for your seed. This step protects your seed against a backdoored random number generator.\n\n\Add extra randomness to your seed?" "$ICON"; then
-        until zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-sided dice 50+ times or\nflip a coin 128+ times. A fast way is mashing the keyboard." "$ICON"; do :; done
+        zenity --entry --title='Add randomness' --text="Provide additional randomness and click OK.\n\nA good way to create randomness is to roll a 6-sided dice 50+ times or\nflip a coin 128+ times. A fast way is mashing the keyboard." "$ICON"
     fi)"
     printf '\033]2;Create a new seed backup\a'
-    zenity --info --title='Create your paper seed backup' --text="Your seed has been created. Bails will now help you create a paper seed backup.\n\nYour paper backup acts as a lifeline, granting access to your funds if something happens to your digital devices." --ok-label="Let's Begin" $ICON || exit 1
+    zenity --info --title='Create your paper seed backup' --text="Your seed has been created. Bails will now help you create a paper seed backup.\n\nYour paper backup acts as a lifeline, granting access to your funds if something happens to your Bails USB sticks." --ok-label="Let's Begin" $ICON || exit 1
     zenity --question --title='Select backup security level' --text='Bails lets you choose the backup that suits your needs.\n\n<b>Low value</b>: Storing and sending amounts less than <b>2 months of expenses</b>.\nRequires <b>2</b> safe locations.\n\n<b>High value</b>: Storing and sending amounts less than <b>6 months of expenses</b>.\nRequires <b>3</b> or <b>4</b> safe locations.\n\nA safe location is one where it is unlikely to be found by a bad actor or lost.\nPrivacy is <i>not</i> jeopardized even if half the backup locations are compromised.' --no-wrap --cancel-label=Low --ok-label=High $ICON --icon-name=security-medium && {
         locations=4
         threshold=3
