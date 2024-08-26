@@ -111,20 +111,20 @@ ask_t_and_n() {
     # allows tweaking it or skipping it in a 'Change Something' dialog, TODO decide best formatting in Tails
     tn_grammar
     response="$(zenity --question --icon-name=org.gnome.TextEditor --title="$threshold-of-$locations codex32 seed backup" \
-    --text="In case all Bails USBs are lost or damaged or you forget the passphrase of your Persistent Storage, we will encode your seed into <b>$locations</b> codex32 $string$(plural $locations). $password_derived To restore your seed, enter <b>any $threshold</b> $string$(plural $threshold) into a codex32-enabled wallet such as Bails.\n
+    --text="In case all Bails USBs are lost or damaged or you forget the passphrase of your Persistent Storage, we will back up your seed as <b>$locations</b> codex32 $string$(plural $locations). $password_derived To restore your seed, enter <b>any $threshold</b> $string$(plural $threshold) into a codex32-enabled wallet, such as Bails.\n
 You need:
 \t• At least $locations piece$(plural $locations) of paper
 \t• Pen or pencil
 \t• Hard surface to write on to avoid leaving an imprint of the $string$(plural $locations)
 \t• At least $min_sep_locations separate location$(plural $min_sep_locations) to keep your codex32 $string$(plural $locations) in
-\t\t- At least $min_offsite should be offsite from this Bails USB stick\n
-\t\t- Widely distributing the generated $string$(plural $locations) increases safety
-Keep ${string^}s in separate places for better security and/or resilience. At most $max_safe $string$(plural $max_safe) should be kept in any one place and less is better if you fear that location may be compromised.\n
--If <b>$threshold</b> $string$(plural $threshold 'helper') stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.\n
+\t\t- At least $min_offsite should be offsite from this Bails USB stick
+\t\t- Widely distributing the generated $string$(plural $locations) increases safety\n
+${string^}s should be kept in separate places for better security and resilience with at most $max_safe $string$(plural $max_safe) in any one place and less is better if you fear it may be compromised.\n
+-If <b>$threshold</b> $string$(plural $threshold 'helper') stolen$password_steal, an attacker can <b>STEAL</b> your bitcoins.
 -If <b>$((max_loss + 1))</b> $string$(plural $((max_loss + 1)) 'helper') lost$password_loss, you will <b>NOT</b> be able to restore your seed.\n
 Do you understand?" --extra-button='Change Something' --extra-button='Yes' --switch $ICON)"
-    [ $? -ne 0 ] && exit 1
-    [ "$reponse" == 'Yes' ] && return 0    
+    [ -z "$response" ] && exit 1
+    [ "$response" == 'Yes' ] && return 0    
     backup_choice="$(zenity --title='Change backup parameters' --question \
         --extra-button="${string^} Quantity" --extra-button='Threshold' \
         --extra-button='Identifier' --switch \
