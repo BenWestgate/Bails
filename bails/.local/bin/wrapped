@@ -70,14 +70,14 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
     export DONT_ASK_DONATIONS=1 # We already asked for donations NOTE: if this doesn't work use a TEMP file.
     if (( RANDOM % 2 )); then
         # In half of the cases, display a message with benevolent incentive
-        text="Bails needs donations to keep everybody free and safe to use Bitcoin.\n\nEvery bit helps in our fight against surveillance, censorship and confiscation!"
+        text="CipherStick needs donations to keep everybody free and safe to use Bitcoin.\n\nEvery bit helps in our fight against surveillance, censorship and confiscation!"
         bitcoin_address=$BITCOIN_ADDRESS_BENEVOLENT
     else
         # In the other half, display a message with a more selfish incentive
-        text="Bails protects your wallet.\n\nHelp us keep your bitcoins safe!"
+        text="CipherStick protects your wallet.\n\nHelp us keep your bitcoins safe!"
         bitcoin_address=$BITCOIN_ADDRESS_SELFISH
     fi
-    if zenity --question --title "Make Bails stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
+    if zenity --question --title "Make CipherStick stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
         notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
         xdg-open "bitcoin:$bitcoin_address"
         exit 0

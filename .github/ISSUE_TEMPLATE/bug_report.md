@@ -26,7 +26,7 @@ If applicable, add screenshots to help explain your problem.
 **Desktop (please complete the following information):**
  - USB Stick: [e.g. 64 GB SanDisk Cruzer]
  - RAM: [e.g. 16 GB]
- - Bails Installation Date: [e.g. Jan 03, 2024]
+ - CipherStick Installation Date: [e.g. Jan 03, 2024]
 
 **Additional context**
 Add any other context about the problem here.

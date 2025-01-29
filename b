@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# Sets environment variable and launches install-core and/or installs Bails
+# Sets environment variable and launches install-core or installs CipherStick
 ###############################################################################
 
 export VERSION='v0.7.2-alpha'
@@ -32,7 +32,7 @@ readonly SECURITY_IN_A_BOX_TOR_URL="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosu
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ "$1" == "--version" ]; then
-  echo "Bails version $VERSION"
+  echo "CipherStick version $VERSION"
   exit 0
 elif ! grep 'NAME="Tails"' /etc/os-release > /dev/null; then # Check for Tails OS.
     echo "
@@ -45,8 +45,8 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
 else
-  printf '\033]2;Welcome to Bails!\a'
-  # Install Bails to tmpfs
+  printf '\033]2;Welcome to CipherStick!\a'
+  # Install CipherStick to tmpfs
   rsync -rvh "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
@@ -57,7 +57,7 @@ else
       [ -d "$DOTFILES" ] && [ -w "$DOTFILES" ]; do
         sleep 1
     done
-    # Install Bails to Persistent Storage
+    # Install CipherStick to Persistent Storage
     rsync -rvh --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
     rsync -rvh --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     rm -rvf "$BAILS_DIR"
@@ -68,10 +68,10 @@ else
     . install-core && bails-wallet
     wait
     # Display info about IBD, keeping Tails private and extra reading material
-    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your Bails USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
-    zenity --info --title="Bails install successful" --text="Bails $VERSION has been installed." "$ICON" --icon-name=bails128
+    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your CipherStick USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
+    zenity --info --title="CipherStick install successful" --text="CipherStick $VERSION has been installed." "$ICON" --icon-name=bails128
     # Exit by killing controlling terminal
-    echo "Bails installation complete! 
+    echo "CipherStick installation complete! 
 
 Closing this window in 30 seconds, press any key to abort.
 "
@@ -85,7 +85,7 @@ Closing terminal window..."
     PARENT_PID=$(ps -o ppid= -p $$)
     kill -9 "$PARENT_PID"
   else
-    zenity --info --title="Bails update successful" --text="Bails has been updated to $VERSION." "$ICON" --icon-name=bails128
+    zenity --info --title="CipherStick update successful" --text="CipherStick has been updated to $VERSION." "$ICON" --icon-name=bails128
   fi
   exit 0
 fi
