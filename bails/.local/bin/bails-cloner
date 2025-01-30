@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # clones will: tar everything private: .bitcoin/wallets, .electrum, gpg
-# priv keys, everything in ~/Persistent Bails didn't put there. After
+# priv keys, everything in ~/Persistent CipherStick didn't put there. After
 # tar, it will assymmetrically encrypt with a random key with the
 # public key dervived from the user's passphrase+share, this must be
 # stretched as well as the original luks encryption was. Then the

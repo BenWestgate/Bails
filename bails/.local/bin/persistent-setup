@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# Bails Persistent Storage Setup Tutorial
+# Tails Persistent Storage Setup Tutorial
 ###############################################################################
 
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
@@ -32,8 +32,8 @@ SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 passwd_unset=$(passwd -S "$USER" | grep -c NP)
 
 # Display welcome message
-[ -f $SET_UP ] || zenity --title='Welcome to Bails' --info \
-    --text="Thank you for choosing Bails, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
+[ -f $SET_UP ] || zenity --title='Welcome to CipherStick' --info \
+    --text="Thank you for choosing CipherStick, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
 
 # Check for already unlocked Persistent Storage
@@ -99,7 +99,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     ((passwd_unset)) && \
     until {
         zenity --info --title='Spaced repetition trainer' \
-            --text='Enter the <b>exact</b> same passphrase from Persistent Storage so Bails can help you memorize it.' \
+            --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
             --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
         python3 -c 'from bails import set_pass
 box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
@@ -121,7 +121,7 @@ if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
     zenity --info --title='Tips for your new passphrase' \
             --text="You will be prompted to enter your passphrase as spaced repetition training.\n\nPractice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n
     Keep your passphrase safe, DO NOT:
-     • share it with anyone (instead clone them a Bails USB),
+     • share it with anyone (instead clone them a CipherStick),
      • give it when someone emails, calls, or messages,
      • photograph it,
      • re-use for any other account, or type it outside of Bails.
@@ -129,7 +129,7 @@ if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
     DO:
      • be mindful of whether you can be seen or recorded typing,
      • immediately change it when you suspect it is compromised,
-     • store it out of sight away from your Bails USB sticks, and
+     • store it out of sight away from your CipherSticks, and
      • destroy it once memorized." \
             --ok-label='I Will Destroy It Once Memorized' "$ICON"
 fi

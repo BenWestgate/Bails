@@ -34,7 +34,7 @@ XDG_DATA_HOME="$DOTFILES/.local/share"
 
 
 onlynet_onion() {
-    zenity --question --title='Network Privacy' --text='Bails offers two settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
+    zenity --question --title='Network Privacy' --text='CipherStick offers two settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
 
 Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity, speed and can be less stable if you have limited Tor peers.' --icon-name=tor-connection --default-cancel
 
@@ -58,12 +58,12 @@ Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' -
 
 # Display menu and get user response
 response=$(zenity --question --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
-    --icon-name="bails128" --title="Bails menu" \
+    --icon-name="bails128" --title="CipherStick menu" \
     --text="Wallet - Create a new seed backup or recover an existing seed.
 
-Clone - Create a synchronized Bails node for a friend.
+Clone - Create a synchronized CipherStick node for a friend.
 
-Backup - Duplicate your Bails node to protect data.
+Backup - Duplicate your CipherStick node to protect data.
 
 Settings - Updates, add software, and configure." \
     --extra-button="Wallet" --extra-button="Clone" --extra-button="Backup" --extra-button="Settings" --extra-button="Help" \
@@ -77,7 +77,7 @@ case "$response" in
 "Backup") bails-backup ;;
 "Settings") response2=$(zenity --window-icon="$XDG_DATA_HOME/icons/bails128.png" --question \
         --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
-        --extra-button="Update Bitcoin Core" --extra-button="Update Bails" --extra-button="$action Sparrow" --extra-button="Network Privacy" \
+        --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="$action Sparrow" --extra-button="Network Privacy" \
         --switch) ;;
 "Help") response2=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
         --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
@@ -90,12 +90,12 @@ case "$response2" in
     "Donate") xdg-open bitcoin: ;; # FIXME: change address
     "Report a Bug") tor-browser https://github.com/BenWestgate/Bails/issues ;;
     "About") zenity --info --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
-        --title="About Bails" --icon-name=bails128 --text="$($XDG_DATA_HOME/bails/b --version)\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find Bails useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; bails-menu ;;
+        --title="About CipherStick" --icon-name=bails128 --text="$($XDG_DATA_HOME/bails/b --version)\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find CipherStick useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; bails-menu ;;
     "Online Help") xdg-open https://bitcoin-core-on-tails.slack.com/ && \
         xdg-open https://t.me/bails_support ;;
     "Update Bitcoin Core") gnome-terminal --title="Updating Bitcoin Core..." --hide-menubar \
         -- "install-core" ;;
-    "Update Bails") gnome-terminal --title="Updating Bails..." --hide-menubar \
+    "Update CipherStick") gnome-terminal --title="Updating CipherStick..." --hide-menubar \
         -- /bin/bash -c "git clone https://github.com/benwestgate/bails --depth=1 && bails/b --update" ;;
     "$action Sparrow") gnome-terminal --title="$action Sparrow Wallet" --hide-menubar \
         -- "install-sparrow" ;;
