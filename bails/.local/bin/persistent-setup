@@ -32,7 +32,7 @@ passwd_unset=$(passwd -S "$USER" | grep -c NP)  # Check if password already set
     --text="Thank you for choosing CipherStick a self-sovereign covert Bitcoin full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
 # Check for already unlocked Persistent Storage
-pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
+pgrep spaced-repetition >/dev/null || if /usr/local/lib/tpscli is-unlocked; then
     until [ -f $SET_UP ]; do   # Ask for existing Persistent Storage passphrase
         if existing_passphrase="$(spaced-repetition 'Enter')"; then
             # Estimate passphrase entropy to see if we can proceed
@@ -68,7 +68,7 @@ To help you remember, write it on paper, seal in an envelope, secure it for a fe
 Write on a hard surface to avoid leaving an imprint of the secret.' \
         --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
     until /usr/local/lib/tpscli is-unlocked; do
-        if pgrep 'tps-frontend'; then
+        if pgrep 'tps-frontend' >/dev/null; then
             notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
         else
             tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'
