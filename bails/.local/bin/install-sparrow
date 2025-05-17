@@ -57,6 +57,7 @@ if ln -s {$XDG_DATA_HOME,~/.local/share}/icons/Sparrow.png; then
   "mode": "ONLINE",
   "bitcoinUnit": "AUTO",
   "unitFormat": "DOT",
+  "blockExplorer": "https://blockstream.info",
   "feeRatesSource": "ELECTRUM_SERVER",
   "loadRecentWallets": true,
   "validateDerivationPaths": true,
@@ -92,6 +93,7 @@ if ln -s {$XDG_DATA_HOME,~/.local/share}/icons/Sparrow.png; then
   "appWidth": 927.0,
   "appHeight": 922.0
 }' > $PERSISTENT/.sparrow/config
+link-dotfiles
     zenity --info --title="$(Sparrow --version) successfully installed" --text="Installation was successful." --icon-name=Sparrow $ICON &
 else
     zenity --info --title="Successfully upgraded to $(Sparrow --version)" --text="Update was successful." --icon-name=Sparrow $ICON &
