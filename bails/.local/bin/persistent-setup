@@ -32,7 +32,7 @@ passwd_unset=$(passwd -S "$USER" | grep -c NP)  # Check if password already set
     --text="Thank you for choosing CipherStick a self-sovereign covert Bitcoin full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
 # Check for already unlocked Persistent Storage
-pgrep spaced-repetition >/dev/null || if /usr/local/lib/tpscli is-unlocked; then
+pgrep -f 'spaced-repetition' >/dev/null || if /usr/local/lib/tpscli is-unlocked; then
     until [ -f $SET_UP ]; do   # Ask for existing Persistent Storage passphrase
         if existing_passphrase="$(spaced-repetition 'Enter')"; then
             # Estimate passphrase entropy to see if we can proceed
@@ -74,7 +74,7 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
             tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'
         fi
         sleep 10
-    done
+    done & wait
     ((passwd_unset)) && until {
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
