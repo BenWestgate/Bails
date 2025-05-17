@@ -32,7 +32,7 @@ screen_is_locked() {
 
 # Prompt for passphrase using pinentry-gnome3
 get_passphrase() {
-    passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 2>&1 | grep D | cut -c3-)"
+    passphrase="$(echo -e "SETPROMPT $1 Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 2>&1 | grep D | cut -c3-)"
     [ "$passphrase" ]
 }
 
@@ -42,6 +42,11 @@ check_passphrase() {
     printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
     printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd
 }
+
+if [ -n "$1" ]; then
+    get_passphrase $1 && echo "$passphrase"
+    exit
+fi
 
 # Initialize variables
 min_interval=5
@@ -54,7 +59,7 @@ while true; do
         sleep $interval
         continue
     fi
-    if ! get_passphrase; then
+    if ! get_passphrase $enter; then
         zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
         sleep 2
         continue
