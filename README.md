@@ -100,13 +100,6 @@ To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the CipherStick platform.
 
-### CipherStick is the First Codex32-enabled (BIP93) Wallet
-
-Find more information on [Codex32](https://secretcodex32.com/index.html) and [BIP93](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki).
-
-### Compliant with Auditable Bitcoin Wallets Standard
-
-Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
 
 ## Source Code Headers
 

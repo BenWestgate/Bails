@@ -124,7 +124,7 @@ if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
      • share it with anyone (instead clone them a CipherStick),
      • give it when someone emails, calls, or messages,
      • photograph it,
-     • re-use for any other account, or type it outside of Bails.
+     • re-use for any other account, or type it outside of Tails.
 
     DO:
      • be mindful of whether you can be seen or recorded typing,
