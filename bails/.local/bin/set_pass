@@ -115,7 +115,7 @@ class PasswordDialog(object):
         )
         self.entry2.connect("changed", self.on_entry_changed)
         
-        self.show_checkbox = Gtk.CheckButton(label="Show passphrase")
+        self.show_checkbox = Gtk.CheckButton(label="Show Passphrase")
         self.show_checkbox.connect("toggled", self.on_show_checkbox_toggled)
 
 
