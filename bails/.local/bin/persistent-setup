@@ -29,14 +29,13 @@ SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 passwd_unset=$(passwd -S "$USER" | grep -c NP)  # Check if password already set
 
 [ -f $SET_UP ] || zenity --title='Welcome to CipherStick' --info \
-    --text="Thank you for choosing CipherStick, a self-sovereign covert Bitcoin full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
+    --text="Thank you for choosing CipherStick a self-sovereign covert Bitcoin full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
 # Check for already unlocked Persistent Storage
 pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
-    until [ -f $SET_UP ]; do    # Ask for existing Persistent Storage passphrase
-        existing_passphrase="$(spaced-repetition 'Enter')" ||
-            zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase to continue." "$ICON"
-        else    # Estimate passphrase entropy to see if we can proceed
+    until [ -f $SET_UP ]; do   # Ask for existing Persistent Storage passphrase
+        if existing_passphrase="$(spaced-repetition 'Enter')"; then
+            # Estimate passphrase entropy to see if we can proceed
             entropy=$(keepassxc-cli estimate "${existing_passphrase// /}" | cut -f2 | tr -C -d '[:digit:]')
             if ((entropy >= 65000)); then
                 break
@@ -48,13 +47,15 @@ pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
                   --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
             fi
             systemctl reboot
+        else
+            zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase to continue." "$ICON"
         fi
     done
-    unset entropy
     [ -f $SET_UP ] || if ((passwd_unset)); then
         # Change user account password to Persistent Storage passphrase for spaced repetition practice.
         printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
     fi
+    unset entropy existing_passphrase
 else
     printf '\033]2;Setup the Persistent Storage\a'
     zenity --warning --title='Choose a strong passphrase' --no-wrap "$ICON" \
