@@ -246,6 +246,6 @@ This initial synchronisation is very demanding, and may expose hardware problems
     . "$HOME"/.profile
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
-wrapped bitcoin-qt -startupnotify=link-dotfiles
+wrapped bitcoin-qt -min -startupnotify=link-dotfiles
 wait
 touch $XDG_STATE_HOME/installed
