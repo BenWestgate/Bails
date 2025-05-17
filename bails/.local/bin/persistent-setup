@@ -34,7 +34,7 @@ passwd_unset=$(passwd -S "$USER" | grep -c NP)  # Check if password already set
 # Check for already unlocked Persistent Storage
 pgrep -f 'spaced-repetition' >/dev/null || if /usr/local/lib/tpscli is-unlocked; then
     until [ -f $SET_UP ]; do   # Ask for existing Persistent Storage passphrase
-        if existing_passphrase="$(spaced-repetition 'Enter')"; then
+        if existing_passphrase="$(set_pass)"; then
             # Estimate passphrase entropy to see if we can proceed
             entropy=$(keepassxc-cli estimate "${existing_passphrase// /}" | cut -f2 | tr -C -d '[:digit:]')
             if ((entropy >= 65000)); then
@@ -51,11 +51,6 @@ pgrep -f 'spaced-repetition' >/dev/null || if /usr/local/lib/tpscli is-unlocked;
             zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase to continue." "$ICON"
         fi
     done
-    [ -f $SET_UP ] || if ((passwd_unset)); then
-        # Change user account password to Persistent Storage passphrase for spaced repetition practice.
-        printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
-    fi
-    unset entropy existing_passphrase
 else
     printf '\033]2;Setup the Persistent Storage\a'
     zenity --warning --title='Choose a strong passphrase' --no-wrap "$ICON" \
@@ -79,12 +74,17 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
             --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
-        python3 -c 'from bails import set_pass' | passwd
+        existing_passphrase="$(set_pass)"
     }; do
         zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
             --ok-label='Try Again' --ellipsize
     done
 fi
+[ -f $SET_UP ] || if ((passwd_unset)); then
+    # Change user account password to Persistent Storage passphrase for spaced repetition practice.
+    printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
+fi
+unset entropy existing_passphrase
 if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
     spaced-repetition &     # Start spaced repetition training loop
     zenity --info --title='Tips for your new passphrase' \
