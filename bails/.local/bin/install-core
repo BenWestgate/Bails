@@ -77,7 +77,7 @@ search_key() {
         sed -i 's/(1)/   /' "$temp_file"
         # shellcheck disable=SC2086
         if zenity --question --title='Do you trust this individual?' --no-markup --ellipsize \
-        --text="$(<$temp_file)" "$ICON" --icon-name=auth-fingerprint; then
+        --text="$(<$temp_file)" "$ICON" --default-cancel --icon-name=auth-fingerprint; then
             # shellcheck disable=SC2086
             gpg $1 --recv-key "$key"
         else
