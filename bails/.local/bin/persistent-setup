@@ -33,7 +33,7 @@ passwd_unset=$(passwd -S "$USER" | grep -c NP)
 
 # Display welcome message
 [ -f $SET_UP ] || zenity --title='Welcome to CipherStick' --info \
-    --text="Thank you for choosing CipherStick, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
+    --text="Thank you for choosing CipherStick, a covert and self-sovereign Bitcoin full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
 
 # Check for already unlocked Persistent Storage
