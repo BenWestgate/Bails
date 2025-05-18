@@ -69,8 +69,8 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
         else
             tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'
         fi
-        sleep 10
-    done & wait
+        sleep 5
+    done & PID=$! ; wait $PID
     ((passwd_unset)) && until {
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
@@ -110,7 +110,6 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
         tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'
         continue
     fi
-    sleep 4
     /usr/local/lib/tpscli is-active PersistentDirectory ||
         { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; continue; }
     /usr/local/lib/tpscli is-active NetworkConnections ||
