@@ -28,16 +28,16 @@ readonly DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 readonly PERSISTENT='/live/persistence/TailsData_unlocked/Persistent'
 readonly XDG_DATA_HOME=$DOTFILES/.local/share
 readonly ICON="--window-icon=$XDG_DATA_HOME/icons/bails128.png"
-readonly SPARROW_SIGNING_KEY="D4D0D3202FC06849A257B38DE94618334C674B40"
-readonly SPARROW_DOWNLOAD_URL="https://sparrowwallet.com/download"
+readonly SIGNING_KEY="D4D0D3202FC06849A257B38DE94618334C674B40"
+readonly DOWNLOAD_URL="https://sparrowwallet.com/download"
 
 mkdir {$XDG_DATA_HOME/,$PERSISTENT/.}sparrow
-gpg --keyserver=keyserver.ubuntu.com --recv-keys $SPARROW_SIGNING_KEY & keys=$!
+gpg --keyserver=keyserver.ubuntu.com --recv-keys $SIGNING_KEY & keys=$!
 cd $XDG_DATA_HOME/sparrow || exit 1
 wget --continue --no-directories --span-hosts --recursive --level=1 \
     --include-directories=sparrowwallet/sparrow/releases/download/ \
     --reject=sparrow-server* --accept=manifest.txt{,.asc},amd64.deb \
-    --domains={sparrowwallet,github}.com $SPARROW_DOWNLOAD_URL
+    --domains={sparrowwallet,github}.com $DOWNLOAD_URL
 wait -f $keys
 for version in ./*manifest.txt; do
     gpg --verify "$version".asc || exit 1
