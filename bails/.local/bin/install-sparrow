@@ -48,7 +48,6 @@ dpkg-deb -vR "${deb::-4}" . || exit 1
 find . -type f -exec sed -i s,/opt/sparrow,$DOTFILES/.local,g {} \;
 find . -type f -exec sed -i "s,bin/Sparrow,bin/wrapped Sparrow -d $PERSISTENT/.sparrow,g" {} \;
 sed '$ s/$/\nSingleMainWindow=true/' opt/sparrow/lib/sparrow-Sparrow.desktop > $XDG_DATA_HOME/applications/sparrow-Sparrow.desktop
-rsync opt/sparrow/lib/Sparrow.png $XDG_DATA_HOME/icons
 rsync -r --remove-source-files opt/sparrow/ $DOTFILES/.local
 DEBIAN/postinst configure # Install MIME associations and shortcuts
 rsync --remove-source-files {~/.local/share,$XDG_DATA_HOME}/applications/defaults.list # Persist MIME

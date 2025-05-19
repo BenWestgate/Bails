@@ -83,4 +83,7 @@ for deb in ./*.deb; do
     done
     DEBIAN/postinst configure # Install MIME associations and shortcuts
 done
+# cleanup
+cd -
+rm -rf "$tmpdir"
 gtk-launch ${desktop##*/}
