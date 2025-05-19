@@ -13,7 +13,7 @@
 
 zenity --info --title='Coming soon'
 exit 1
-#stop-btc
+stop-btc
 #TODO move file described above into the autostart
 #TODO display temporary passphrase
 #tails-installer --backup

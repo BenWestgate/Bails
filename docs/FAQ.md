@@ -100,7 +100,7 @@ Once you are synced, nearly any computer will be fast enough to stay caught up a
 
 In short, if you know who they are, know their GPG fingerprint belongs to them and believe they could have reviewed the Bitcoin Core source code and built it, then you can trust their signature. If you don't trust anyone on the list, ask someone trustworthy who they would trust. Or go back and click "Skip" to let the CipherStick developers choose whose signatures to trust.
 
-## Does it matter what order I enter shares when restoring?
+## Does it matter what order I enter shares when restoring Bails Wallet?
 No. But currently, you do have to keep your computer on until you’ve reached a threshold. So if you’d have to fetch some by travel or encrypted video calls it makes sense to enter those first so you’re not waiting around with as many shares stored in the computer's memory. For this reason, the seed backup passphrase is always last.
 
 ## How do I make this go faster?
@@ -155,7 +155,7 @@ If you want to use a smaller USB stick for the backup you may have to prune your
 ## How should I handle my backup CipherStick?
 1. Keep it under lock and key and/or hidden and ideally in a tamper evident way.
    - If someone skilled tampers with your CipherStick _**and** you use it without noticing_ they could monitor your activity or steal your bitcoins.
-   - This is true of all Bitcoin wallet hardware, I am just honest, unlike some marketers.
+   - This is true of ALL Bitcoin wallet hardware, I am just honest, unlike some marketers.
 2. Keep it cool, high temperatures can cause premature data loss.
 3. Make your backup CipherStick look different from your current CipherStick.
 4. We recommend using the same passphrase as your current Tails so it is easier to remember.
