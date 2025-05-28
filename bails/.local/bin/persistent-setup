@@ -102,8 +102,8 @@ fi
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
-    if pgrep 'tps-frontend' >/dev/null; then
-        zenity --info --title='Features of the Persistent Storage' \
+    if pgrep 'tps-frontend' >/dev/null && ! ; then
+        ((count++)) || zenity --info --title='Features of the Persistent Storage' \
         --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
         --icon-name=tails-persistent-storage "$ICON" --no-wrap &
     else
