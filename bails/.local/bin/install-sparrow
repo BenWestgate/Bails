@@ -36,7 +36,7 @@ gpg --keyserver=keyserver.ubuntu.com --recv-keys $SIGNING_KEY & keys=$!
 cd $XDG_DATA_HOME/sparrow || exit 1
 wget --continue --no-directories --span-hosts --recursive --level=1 \
     --include-directories=sparrowwallet/sparrow/releases/download/ \
-    --reject=sparrow-server* --accept=manifest.txt{,.asc},amd64.deb \
+    --reject=*server* --accept=manifest.txt{,.asc},amd64.deb \
     --domains={sparrowwallet,github}.com $DOWNLOAD_URL
 wait -f $keys
 for version in ./*manifest.txt; do

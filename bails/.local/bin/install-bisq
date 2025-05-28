@@ -33,9 +33,8 @@ readonly ICON="--window-icon=$XDG_DATA_HOME/icons/bails128.png"
 readonly SIGNING_KEY="B493319106CC3D1F252E19CBF806F422E222AA02"
 readonly DOWNLOAD_URL="https://bisq.network/downloads/"
 
-tmpdir="$(mktemp -d)" || exit 1
 gpg --recv-keys $SIGNING_KEY & keys=$!
-cd $tmpdir || exit 1
+cd $DOTFILES/.cache/bails || exit 1
 wget --continue --no-directories --span-hosts --recursive --level=1 \
     --accept=.deb{,.asc} \
     --domains={bisq.network,github.com} $DOWNLOAD_URL
@@ -43,13 +42,18 @@ wait -f $keys
 #TODO turn this into its own script so that the other installers can call it.
 # explore if it can also save lines in install-core
 # see if I can manually install blockstream green dependencies this way
-for deb in ./*.deb; do
-    find ./* -type d -exec rm -rf {} \;
-    gpg --verify "$deb".asc "$deb" || exit 1
-    dpkg-deb -vR $deb . || exit 1
-    pkgname=$(dpkg-deb -f "$deb" Package)
 
-    bin_dir=$(find * -maxdepth 3 -name "bin")
+for deb in ./*.deb; do
+    gpg --verify "$deb".asc "$deb" || exit 1
+    install_local $deb
+done
+
+install_local() {
+    find ./* -type d -exec rm -rf {} \;
+    pkgname=$(dpkg-deb -f "$deb" Package)
+    dpkg-deb -vR $deb . || exit 1
+
+    bin_dir=$(find * -maxdepth 3 -type d -name "bin")
     install -D $bin_dir/* -t $LOCAL_DIR/bin/
 
     desktop=$(find * -type f -name *.desktop)
@@ -82,7 +86,7 @@ for deb in ./*.deb; do
         fi
     done
     DEBIAN/postinst configure # Install MIME associations and shortcuts
-done
+}
 # cleanup
 cd -
 rm -rf "$tmpdir"
