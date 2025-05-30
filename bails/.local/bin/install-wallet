@@ -1,3 +1,30 @@
+#!/bin/bash
+
+# Copyright (c) 2025 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+###############################################################################
+# Download .deb wallet application from GitHub, install/update it persistently
+###############################################################################
+
+
 readonly DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 readonly PERSISTENT='/live/persistence/TailsData_unlocked/Persistent'
 export LOCAL_DIR="$DOTFILES/.local"
@@ -32,7 +59,7 @@ gpg --keyserver=keyserver.ubuntu.com --recv-keys $SIGNING_KEY & keys=$!
 cd $DOTFILES/.cache/bails
 wget --continue https://github.com/$GITHUB_REPO/releases/latest
 ver=$(grep $GITHUB_REPO/releases/expanded_assets latest | cut -d'"' -f6)
-wget -c -nd -r --reject=*server* --accept=*.deb{,.asc},*.txt{,.asc}} $ver
+wget -c -nd -r --reject=*server* --accept=*.deb{,.asc},*.txt{,.asc} $ver
 wait -f $keys
 signed_data=$(gpg --verify *.asc 2>&1) || exit 1
 deb=$(echo $signed_data | awk -F"'" '{print $2}')
@@ -46,19 +73,20 @@ dpkg-deb -X $deb . || exit 1
 bin_dir=$(find * -maxdepth 3 -type d -name "bin")
 base_dir=${bin_dir%/*}
 chmod -R 700 *
-find */ -type f -exec sed -i s,/$base_dir,$LOCAL_DIR,g {} \;
-find */ -type f -exec sed -i s,/opt/$pkgname,$XDG_DATA_HOME/$pkgname,g {} \;
 desktop=$(find * -type f -name *.desktop)
+sed -i s,/$base_dir,$LOCAL_DIR,g $desktop
+sed -i s,/opt/$pkgname,$XDG_DATA_HOME/$pkgname,g $desktop
 sed "s,Exec=,$WRAPPER,g" $desktop > $XDG_DATA_HOME/applications/${desktop##*/}
-rsync -r --remove-source-files $base_dir/* $LOCAL_DIR
-rsync -r --remove-source-files $(find * -type d -name usr)/* $LOCAL_DIR
-rsync -r --remove-source-files /opt/$pkgname/* $XDG_DATA_HOME/$pkgname
+rsync -r -a --remove-source-files $base_dir/* $LOCAL_DIR
+[ -d usr ] && rsync -r -a --remove-source-files usr/* $LOCAL_DIR
+[ -d opt ] && rsync -r -a --remove-source-files /opt/$pkgname/* $XDG_DATA_HOME/$pkgname
 link-dotfiles
 #install -D $desktop -t $XDG_DATA_HOME/applications
 #install -D $(find * -name *MimeInfo.xml) -t $XDG_DATA_HOME/mime/packages
 
 #xdg-desktop-menu $desktop
 #xdg-mime $mime
+
 gtk-launch ${desktop##*/}
 
 
