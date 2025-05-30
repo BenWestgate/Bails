@@ -17,11 +17,6 @@ jobs:
         uses: ludeeus/action-shellcheck@2.0.0
         env:
           SHELLCHECK_OPTS: -e 2012 -e SC2046 -e SC2086 -e SC2164
-        with:
-          ignore_paths: |
-            ./bails/.local/bin/bails-wallet
-            ./bails/.local/bin/ibd-progress
-            ./bails/.local/bin/backupd
   # python-lint:
   #   name: Check Python code
   #   runs-on: ubuntu-latest

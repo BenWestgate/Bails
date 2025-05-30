@@ -28,16 +28,16 @@ readonly DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 readonly PERSISTENT='/live/persistence/TailsData_unlocked/Persistent'
 readonly XDG_DATA_HOME=$DOTFILES/.local/share
 readonly ICON="--window-icon=$XDG_DATA_HOME/icons/bails128.png"
-readonly SPARROW_SIGNING_KEY="D4D0D3202FC06849A257B38DE94618334C674B40"
-readonly SPARROW_DOWNLOAD_URL="https://sparrowwallet.com/download"
+readonly SIGNING_KEY="D4D0D3202FC06849A257B38DE94618334C674B40"
+readonly DOWNLOAD_URL="https://sparrowwallet.com/download"
 
 mkdir {$XDG_DATA_HOME/,$PERSISTENT/.}sparrow
-gpg --keyserver=keyserver.ubuntu.com --recv-keys $SPARROW_SIGNING_KEY & keys=$!
+gpg --keyserver=keyserver.ubuntu.com --recv-keys $SIGNING_KEY & keys=$!
 cd $XDG_DATA_HOME/sparrow || exit 1
 wget --continue --no-directories --span-hosts --recursive --level=1 \
     --include-directories=sparrowwallet/sparrow/releases/download/ \
-    --reject=sparrow-server* --accept=manifest.txt{,.asc},amd64.deb \
-    --domains={sparrowwallet,github}.com $SPARROW_DOWNLOAD_URL
+    --reject=*server* --accept=manifest.txt{,.asc},amd64.deb \
+    --domains={sparrowwallet,github}.com $DOWNLOAD_URL
 wait -f $keys
 for version in ./*manifest.txt; do
     gpg --verify "$version".asc || exit 1
@@ -48,7 +48,6 @@ dpkg-deb -vR "${deb::-4}" . || exit 1
 find . -type f -exec sed -i s,/opt/sparrow,$DOTFILES/.local,g {} \;
 find . -type f -exec sed -i "s,bin/Sparrow,bin/wrapped Sparrow -d $PERSISTENT/.sparrow,g" {} \;
 sed '$ s/$/\nSingleMainWindow=true/' opt/sparrow/lib/sparrow-Sparrow.desktop > $XDG_DATA_HOME/applications/sparrow-Sparrow.desktop
-rsync opt/sparrow/lib/Sparrow.png $XDG_DATA_HOME/icons
 rsync -r --remove-source-files opt/sparrow/ $DOTFILES/.local
 DEBIAN/postinst configure # Install MIME associations and shortcuts
 rsync --remove-source-files {~/.local/share,$XDG_DATA_HOME}/applications/defaults.list # Persist MIME
@@ -57,6 +56,7 @@ if ln -s {$XDG_DATA_HOME,~/.local/share}/icons/Sparrow.png; then
   "mode": "ONLINE",
   "bitcoinUnit": "AUTO",
   "unitFormat": "DOT",
+  "blockExplorer": "https://blockstream.info",
   "feeRatesSource": "ELECTRUM_SERVER",
   "loadRecentWallets": true,
   "validateDerivationPaths": true,
@@ -92,6 +92,7 @@ if ln -s {$XDG_DATA_HOME,~/.local/share}/icons/Sparrow.png; then
   "appWidth": 927.0,
   "appHeight": 922.0
 }' > $PERSISTENT/.sparrow/config
+link-dotfiles
     zenity --info --title="$(Sparrow --version) successfully installed" --text="Installation was successful." --icon-name=Sparrow $ICON &
 else
     zenity --info --title="Successfully upgraded to $(Sparrow --version)" --text="Update was successful." --icon-name=Sparrow $ICON &

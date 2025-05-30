@@ -1,5 +1,4 @@
-# Ignore everything in this directory
-# This will create a destination in dotfiles later to preserve .cache/fontconfig from Bitcoin Core
+# This will create a destination in dotfiles later to download software to.
 *
 # Except this file
 !.gitignore

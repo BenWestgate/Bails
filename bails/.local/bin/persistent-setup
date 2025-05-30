@@ -24,31 +24,17 @@
 # Tails Persistent Storage Setup Tutorial
 ###############################################################################
 
-# For security reviewing this use: https://explainshell.com/ for commands that are unclear.
 export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
+passwd_unset=$(passwd -S "$USER" | grep -c NP)  # Check if password already set
 
-# Check if user password is already set
-passwd_unset=$(passwd -S "$USER" | grep -c NP)
-
-# Display welcome message
 [ -f $SET_UP ] || zenity --title='Welcome to CipherStick' --info \
-    --text="Thank you for choosing CipherStick, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
+    --text="Thank you for choosing CipherStick a self-sovereign covert Bitcoin full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
     --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
-
 # Check for already unlocked Persistent Storage
-pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
-    # Check for existing Persistent Storage passphrase
-    until [ -f $SET_UP ]; do
-        existing_passphrase="$(python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
-if box.passphrase:
-    print(box.passphrase)
-else:
-    print("")' 2>/dev/null)"
-        if [ -z "$existing_passphrase" ]; then
-            zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
-        else
+pgrep -f 'spaced-repetition' >/dev/null || if /usr/local/lib/tpscli is-unlocked; then
+    until [ -f $SET_UP ]; do   # Ask for existing Persistent Storage passphrase
+        if existing_passphrase="$(set_pass)"; then
             # Estimate passphrase entropy to see if we can proceed
             entropy=$(keepassxc-cli estimate "${existing_passphrase// /}" | cut -f2 | tr -C -d '[:digit:]')
             if ((entropy >= 65000)); then
@@ -61,16 +47,13 @@ else:
                   --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
             fi
             systemctl reboot
+        else
+            zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase to continue." "$ICON"
         fi
     done
-    unset entropy
-    [ -f $SET_UP ] || if ((passwd_unset)); then
-        # Change user account password to Persistent Storage passphrase for spaced repetition practice.
-        printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
-    fi
+    unset entropy existing_passphrase
 else
     printf '\033]2;Setup the Persistent Storage\a'
-    # Choose passphrase
     zenity --warning --title='Choose a strong passphrase' --no-wrap "$ICON" \
         --text='It is important to select a strong passphrase to protect your Bitcoin data.\n
 We recommend using a suggested passphrase from the Persistent Storage dialog.' \
@@ -80,99 +63,62 @@ We recommend using a suggested passphrase from the Persistent Storage dialog.' \
 To help you remember, write it on paper, seal in an envelope, secure it for a few days in a place like a safe or your wallet, then destroy it once you know it well.\n
 Write on a hard surface to avoid leaving an imprint of the secret.' \
         --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
-    # Persistent storage creation
     until /usr/local/lib/tpscli is-unlocked; do
-        sleep 12
-        notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
-    done & notifying+=($!)
-
-    until /usr/local/lib/tpscli is-unlocked; do
-        grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-            { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
-        sleep 1
-    done
-
-    # Clear notifications
-    kill "${notifying[@]}" &>/dev/null
-
-    # Memorization help
-    ((passwd_unset)) && \
-    until {
+        if pgrep 'tps-frontend' >/dev/null; then
+            notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
+        else
+            tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'
+        fi
+        sleep 5
+    done & PID=$! ; wait $PID
+    ((passwd_unset)) && until {
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
             --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
-        python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
-if box.passphrase:
-    print(box.passphrase+"\n"+box.passphrase)
-else:
-    print("\n")' 2>/dev/null | passwd
+        set_pass
     }; do
         zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
             --ok-label='Try Again' --ellipsize
     done
-
 fi
 if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
-    # Spaced repetition training loop
-    spaced-repetition &
-
-    # Display memorization tips
+    spaced-repetition &     # Start spaced repetition training loop
     zenity --info --title='Tips for your new passphrase' \
             --text="You will be prompted to enter your passphrase as spaced repetition training.\n\nPractice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n
     Keep your passphrase safe, DO NOT:
      • share it with anyone (instead clone them a CipherStick),
      • give it when someone emails, calls, or messages,
      • photograph it,
-     • re-use for any other account, or type it outside of Bails.
+     • re-use for any other account, or type it outside of Tails.
 
     DO:
      • be mindful of whether you can be seen or recorded typing,
      • immediately change it when you suspect it is compromised,
      • store it out of sight away from your CipherSticks, and
      • destroy it once memorized." \
-            --ok-label='I Will Destroy It Once Memorized' "$ICON"
+            --ok-label='I Understand' "$ICON"
 fi
-
 # Check features of the Persistent Storage
-if /usr/local/lib/tpscli is-active PersistentDirectory && \
-    /usr/local/lib/tpscli is-active GnuPG && \
-    /usr/local/lib/tpscli is-active Dotfiles; then
-        :
-else
-    grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
-
-    zenity --info --title='Features of the Persistent Storage' \
-        --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
-        --icon-name=tails-persistent-storage "$ICON" --no-wrap &
-    sleep 4
-fi
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
-    grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
-    {
-        /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; false; }
-    } &&
-        {
-            /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=gnome-dev-ethernet --timeout=6; true; }
-        } &&
-        {
-            /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=6; false; }
-        } &&
-        {
-            /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; false; }
-        }
+    if pgrep 'tps-frontend' >/dev/null; then
+        ((count++)) || zenity --info --title='Features of the Persistent Storage' \
+        --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
+        --icon-name=tails-persistent-storage "$ICON" --no-wrap &
+    else
+        tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on Persistent Storage features.'
+        continue
+    fi
+    /usr/local/lib/tpscli is-active PersistentDirectory ||
+        { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; continue; }
+    /usr/local/lib/tpscli is-active NetworkConnections ||
+        { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=gnome-dev-ethernet --timeout=6; }
+    /usr/local/lib/tpscli is-active GnuPG ||
+        { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=6; continue; }
+    /usr/local/lib/tpscli is-active Dotfiles ||
+        { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; continue; }
 done
-
-# Close the Persistent Storage window
-pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
-pkill -f 'zenity --notification' &>/dev/null
+pkill "tps-frontend"    # Close the Persistent Storage window
 mkdir -vp $XDG_STATE_HOME
 touch $SET_UP

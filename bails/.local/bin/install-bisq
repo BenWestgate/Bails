@@ -1,0 +1,93 @@
+#!/bin/bash
+
+# Copyright (c) 2024 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+###############################################################################
+# Downloads/Updates Bisq and Bisq2 and installs them persistently. Starts Bisq.
+###############################################################################
+
+readonly DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
+readonly PERSISTENT='/live/persistence/TailsData_unlocked/Persistent'
+export LOCAL_DIR="$DOTFILES/.local"
+readonly XDG_DATA_HOME=$LOCAL_DIR/share
+readonly WRAPPER="Exec=$LOCAL_DIR/bin/wrapped "
+readonly ICON="--window-icon=$XDG_DATA_HOME/icons/bails128.png"
+readonly SIGNING_KEY="B493319106CC3D1F252E19CBF806F422E222AA02"
+readonly DOWNLOAD_URL="https://bisq.network/downloads/"
+
+gpg --recv-keys $SIGNING_KEY & keys=$!
+cd $DOTFILES/.cache/bails || exit 1
+wget --continue --no-directories --span-hosts --recursive --level=1 \
+    --accept=.deb{,.asc} \
+    --domains={bisq.network,github.com} $DOWNLOAD_URL
+wait -f $keys
+#TODO turn this into its own script so that the other installers can call it.
+# explore if it can also save lines in install-core
+# see if I can manually install blockstream green dependencies this way
+
+for deb in ./*.deb; do
+    gpg --verify "$deb".asc "$deb" || exit 1
+    install_local $deb
+done
+
+install_local() {
+    find ./* -type d -exec rm -rf {} \;
+    pkgname=$(dpkg-deb -f "$deb" Package)
+    dpkg-deb -vR $deb . || exit 1
+
+    bin_dir=$(find * -maxdepth 3 -type d -name "bin")
+    install -D $bin_dir/* -t $LOCAL_DIR/bin/
+
+    desktop=$(find * -type f -name *.desktop)
+    sed -i "s,Exec=/$bin_dir/,$WRAPPER,g" $desktop
+    sed -i "s,${desktop%/*},$XDG_DATA_HOME/applications,g" DEBIAN/postinst
+
+    icon=$(find * -type f -name *.png)
+    sed -i "s,Icon=/$icon,$XDG_DATA_HOME/icons/${icon##*/},g" $desktop
+    install -D $desktop -t $XDG_DATA_HOME/applications
+    install -D $icon -t $XDG_DATA_HOME/icons
+
+    mime=$(find * -name *MimeInfo.xml)
+    install -D $mime -t $XDG_DATA_HOME/mime/packages
+
+    base_dir=${bin_dir%/*}
+
+    doc=$base_dir/share/doc/
+    markdowns=$(find * -name *.md -not -path *share*)
+    install -D $doc $markdowns -t $XDG_DATA_HOME/doc/$pkgname
+
+    dirs=base_dir/*
+
+    for directory in $dirs; do
+        if [ -d ./*/bin/ ]; then
+            install -D $base_dir -t $LOCAL_DIR/; break
+        elif [ -d "./*/$pkgname/" ]; then
+            install -D $base_dir/$directory -t $LOCAL_DIR/$directory/$pkgname
+        else
+            echo "❌ Unknown application type"; exit 1
+        fi
+    done
+    DEBIAN/postinst configure # Install MIME associations and shortcuts
+}
+# cleanup
+cd -
+rm -rf "$tmpdir"
+gtk-launch ${desktop##*/}

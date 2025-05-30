@@ -1,0 +1,5 @@
+# This creates a destination in dotfiles to hold software downloads from bails
+# in .cache/bails
+*
+# Except this file
+!.gitignore
