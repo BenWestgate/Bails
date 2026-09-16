@@ -72,7 +72,7 @@ In the next steps, you will shut down the computer. To be able to follow the res
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
 1.  Type or Paste the following in Terminal, then press Enter:
     ```bash
-    git clone https://github.com/benwestgate/bails; */b
+    git clone https://github.com/benwestgate/bails&&bails/b
     ```
     ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
 1. Follow the instructions on Screen.
