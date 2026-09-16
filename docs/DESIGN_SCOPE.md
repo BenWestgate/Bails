@@ -62,5 +62,5 @@ _No code has been written for any of the following, unclear value proposition an
 - Coordinate multi-party multi-sigs between multiple CipherStick/2-of-2 users for inheritance. Threshold must require at least 1 offline signature
   - Almost certainly going to use an existing GUI coordinator for this than write new code. Open an issue with recommended multisig coordinators.
 - Option to decay the CipherStick/2-of-2 to 1-of-2 or the multi-party multi sig to reduce lost risk after LONG time spans (5 years recommended)
-  - Almost certainly going to use an existing GUI coordinator for this than write new code. Such as Liana or maybe Arctica.
+  - For now, Sparrow is the only supported GUI coordinator.
 - This will also be the way to include even more signing devices in a multisig than CipherStick/2-of-2, it's recommended the other keys in the multisig are backed up with codex32 and managed with Bitcoin Core but not enforced.
