@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Name=CipherStick
-Comment=Create and Restore Codex32 Backups, Configure Settings and Clone CipherStick shareware for a friend.
+Comment=Configure Bitcoin Core on Tails and manage CipherStick.
 Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/wrapped bails-menu
 Terminal=false
 Type=Application

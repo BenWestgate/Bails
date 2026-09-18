@@ -100,8 +100,8 @@ Once you are synced, nearly any computer will be fast enough to stay caught up a
 
 In short, if you know who they are, know their GPG fingerprint belongs to them and believe they could have reviewed the Bitcoin Core source code and built it, then you can trust their signature. If you don't trust anyone on the list, ask someone trustworthy who they would trust. Or go back and click "Skip" to let the CipherStick developers choose whose signatures to trust.
 
-## Does it matter what order I enter shares when restoring?
-No. But currently, you do have to keep your computer on until you’ve reached a threshold. So if you’d have to fetch some by travel or encrypted video calls it makes sense to enter those first so you’re not waiting around with as many shares stored in the computer's memory. For this reason, the seed backup passphrase is always last.
+## How do I restore a Codex32 backup?
+The legacy Bails Wallet restore interface is disabled because it is incompatible with current Tails. A replacement based on [`python-codex32`](https://github.com/benwestgate/python-codex32) is tracked in [issue #215](https://github.com/BenWestgate/Bails/issues/215). Until that integration lands, CipherStick does not provide a supported Codex32 restore interface.
 
 ## How do I make this go faster?
 1. Check that your internet bandwidth is not slow. You can't sync faster than you can download and the blockchain is around 600 GB.
