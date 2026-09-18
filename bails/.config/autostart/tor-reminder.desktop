@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CipherStick Tor reminder
+Comment=Remind the user to connect to Tor when Bitcoin Core cannot sync
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/tor-reminder
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
