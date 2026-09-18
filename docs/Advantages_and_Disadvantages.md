@@ -1,6 +1,8 @@
 # CipherStick Bitcoin Wallet and Cold Storage
 
-CipherStick is a script that installs Bitcoin Core on Tails. It then walks the user though setup of an anonymous transaction and cold storage solution offering several advantages:
+CipherStick is a script that installs Bitcoin Core on Tails. Security assumptions and project-owned trust boundaries are documented in the [CipherStick threat model](THREAT_MODEL.md).
+
+It then walks the user though setup of an anonymous transaction and cold storage solution offering several advantages:
 
 ## Advantages
 

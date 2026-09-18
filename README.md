@@ -4,6 +4,8 @@
 
 CipherStick is the most private way to transact and store bitcoin. It ensures your money is protected from surveillance, censorship, and confiscation, leaving no trace of your Bitcoin use on the computer or the Internet. Combining Bitcoin Core and Tails, CipherStick offers strong anonymity for transactions and secure encrypted storage.
 
+Security assumptions, project-owned trust boundaries, inherited upstream risks, and non-goals are documented in the [CipherStick threat model](docs/THREAT_MODEL.md).
+
 ## Bitcoin Core on Tails
 
 Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails and create a wallet backup.
@@ -98,7 +100,7 @@ To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 ## Advantages and Disadvantages
 
-For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the CipherStick platform.
+For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the CipherStick platform. The same document links the [threat model](docs/THREAT_MODEL.md) used to bound security claims.
 
 ### CipherStick is the First Codex32-enabled (BIP93) Wallet
 
