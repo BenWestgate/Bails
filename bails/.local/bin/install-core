@@ -40,7 +40,6 @@ export LOCAL_DIR="$DOTFILES/.local"
 export XDG_STATE_HOME="$LOCAL_DIR/state"
 readonly XDG_DATA_HOME="$LOCAL_DIR/share"
 readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
-readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp"
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
 
 
@@ -141,8 +140,11 @@ else # Import a trusted set on first-run.
             echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
-    # Download chain parameters in background to set prune
-    retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
+    # Download the release source tarball so pruning metadata can be checked
+    # against the same signed SHA256SUMS used for the Bitcoin Core binary.
+    source_tar="$DOWNLOAD_DIR/bitcoin-$VER.tar.gz"
+    retry_on_fail wget --continue -O "$source_tar" \
+        "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/bitcoin-$VER.tar.gz" & get_size=$!
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
@@ -206,10 +208,26 @@ printf "\033]2;Bitcoin Core %s complete!\a" $action
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
-    # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
+    # Verify the release source against the authenticated checksum manifest,
+    # then read pruning metadata from that exact Bitcoin Core release.
     ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+    source_name="bitcoin-$VER.tar.gz"
+    source_hash=$(awk -v file="$source_name" '$2 == file { print $1; exit }' SHA256SUMS)
+    if [[ ! "$source_hash" =~ ^[[:xdigit:]]{64}$ ]] || \
+        ! printf '%s  %s\n' "$source_hash" "$source_tar" | sha256sum --check --status; then
+        zenity --error --title="Bitcoin Core source verification failed" \
+            --text="Could not authenticate pruning metadata for Bitcoin Core $VER." "$ICON"
+        exit 1
+    fi
+    tar -xOf "$source_tar" "bitcoin-$VER/src/kernel/chainparams.cpp" >"$DOWNLOAD_DIR/chainparams.cpp" || exit 1
+    rm -f "$source_tar"
     assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
     assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    if ((assumed_chain_state_size <= 0 || assumed_blockchain_size <= assumed_chain_state_size)); then
+        zenity --error --title="Invalid Bitcoin Core storage metadata" \
+            --text="Bitcoin Core $VER contains invalid pruning size metadata." "$ICON"
+        exit 1
+    fi
     # Move completed verified download to persistent storage
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
