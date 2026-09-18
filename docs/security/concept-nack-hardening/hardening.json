@@ -1,0 +1,438 @@
+{
+  "documentType": "codex-security.hardening-analysis",
+  "schemaVersion": "1.0",
+  "analysisId": "hardening_20260918_bails_concept_nack",
+  "sourceEvidence": {
+    "kind": "document_collection",
+    "label": "Supplied Concept NACK and Bails master source snapshot",
+    "collectionSha256": "7d0205c3790ba4294dc078a2bef1c3e00d833fb05ee3f19bca3f22cb7f71be1e",
+    "artifactCount": 2,
+    "targetRevision": "61f7253f4c52fec32f1ac4ec98a302945c524835",
+    "sourceDrift": "none"
+  },
+  "assessment": {
+    "outcome": "opportunities_identified",
+    "summary": "The evidence supports narrowing CipherStick's claims and runtime to a testable, authenticated support boundary; it does not support rejecting all automation or Bash categorically."
+  },
+  "constraints": {
+    "profile": "balanced",
+    "changeHorizons": [
+      "incremental",
+      "medium_term",
+      "foundational"
+    ],
+    "nonNegotiables": [
+      "Sparrow is the only temporarily supported wallet coordinator.",
+      "Unsupported wallet coordinators must not be introduced by surface-reduction work.",
+      "The custom wallet layer is removed from Bails so the supported runtime is installer-focused.",
+      "The Python Codex32 replacement is reviewed separately from the Bails installer.",
+      "Handoff uses fresh Tails and explicit user-selected paths rather than an indiscriminate persistent-state clone."
+    ],
+    "assumptions": [
+      "The project intends to preserve a guided experience on a dedicated Tails USB.",
+      "No measured usability, performance, or user-success evidence was supplied.",
+      "No completed independent audit or mature project release-signing operation was supplied."
+    ]
+  },
+  "opportunities": [
+    {
+      "opportunityId": "align-supported-boundary",
+      "title": "Align claims with the supported trust boundary",
+      "summary": "Make promises derive from implemented controls, remove unfinished paths from supported use, and narrow the project-owned runtime.",
+      "diagnosis": "Security claims, feature status, and operational guidance are not governed by one explicit threat model and support matrix, while a broad local scripting layer owns security-sensitive transitions.",
+      "evidence": [
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "E001",
+          "path": "evidence/concept-nack.md",
+          "claim": "The supplied review identifies overclaiming, single-maintainer trust, cloning, residual operational risks, audience mismatch, and maturity concerns."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E002",
+          "path": "README.md",
+          "claim": "Current user-facing documentation makes absolute privacy and security claims, presents unfinished cloning as available, and mixes implemented and planned behavior."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E003",
+          "path": "bails/.local/bin/bails-cloner",
+          "claim": "The advertised clone flow exits as coming soon, while existing issues and branches separately address unfinished actions, release authentication, tests, and wallet-surface reduction."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "source",
+          "evidenceId": "E004",
+          "path": "docs/DESIGN_SCOPE.md",
+          "claim": "Without a single support boundary, documentation can drift into promising controls that the runtime does not own or implement."
+        }
+      ],
+      "desiredInvariants": [
+        "Every privacy or security claim maps to an implemented control and names its residual risks.",
+        "Planned features are never presented as current supported behavior.",
+        "Unsupported or untested actions are absent from primary installation and menu paths.",
+        "Every executed CipherStick update is authenticated before execution.",
+        "The supported wallet coordinator set is explicit and limited to Sparrow.",
+        "Every optional handoff path is selected explicitly by the person performing the transfer.",
+        "Bails never silently includes or excludes wallet ciphertext or identifying persistent state.",
+        "Maturity, review status, user assumptions, and non-goals appear before installation instructions."
+      ],
+      "proposalPath": "proposals/align-supported-boundary.md",
+      "options": [
+        {
+          "optionId": "calibrate-documentation",
+          "title": "Calibrate documentation around the current implementation",
+          "kind": "baseline",
+          "summary": "Replace guarantees with bounded properties, publish limitations, separate planned features, and replace unfinished cloning claims with a fresh-Tails handoff design.",
+          "diagramPaths": {
+            "before": "diagrams/align-supported-boundary-before.mmd",
+            "after": "diagrams/align-supported-boundary-calibrate-docs-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E001",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "The documentation changes directly address overclaiming, threat-model visibility, unfinished cloning promotion, audience expectations, and maturity disclosure, but do not reduce runtime code risk."
+            },
+            {
+              "evidenceId": "E002",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "The affected user-facing text is the direct subject of this option."
+            },
+            {
+              "evidenceId": "E003",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Replacing the unfinished full-state clone with a fresh-Tails, user-controlled handoff prevents reliance on the absent implementation and avoids silent state transfer."
+            },
+            {
+              "evidenceId": "E004",
+              "effect": "mitigates",
+              "tacticalFixRequired": false,
+              "rationale": "A support matrix and threat model make future documentation drift more visible but rely on ongoing review discipline."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Bounded claims reduce unsafe reliance outside implemented controls, while runtime vulnerabilities remain unchanged.",
+              "validationPlan": "Map every surviving claim to source and residual-risk documentation."
+            },
+            {
+              "dimension": "performance",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Documentation and menu exposure changes add no runtime work.",
+              "validationPlan": "Confirm no executable path changed in the documentation-only commits."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No process or retained data changes are introduced.",
+              "validationPlan": "Confirm the change set contains no runtime modifications."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Removing unsupported actions from primary paths reduces predictable dead-end workflows without changing supported operations.",
+              "validationPlan": "Inspect all menus and setup guides for links to unsupported actions."
+            },
+            {
+              "dimension": "operability",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "hypothetical",
+              "assessment": "The immediate workload is small, but every future claim needs support-matrix review.",
+              "validationPlan": "Add a documentation review item to the release checklist and observe review burden for two releases."
+            },
+            {
+              "dimension": "migration",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No supported data or executable interface changes.",
+              "validationPlan": "Confirm installation instructions retain the current supported path."
+            }
+          ],
+          "residualRisks": [
+            "The project-owned runtime remains broad and insufficiently tested.",
+            "Mutable project updates remain unsafe until the existing release-authentication issue is completed.",
+            "Claims can drift again without release discipline."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "README.md",
+              "docs/Advantages_and_Disadvantages.md",
+              "docs/DESIGN_SCOPE.md",
+              "bails/.local/bin/bails-menu"
+            ],
+            "workPackages": [
+              "Bound comparative and absolute claims.",
+              "Publish the threat model and support matrix.",
+              "Hide the unfinished clone command and document fresh-Tails handoff with explicit optional transfer paths."
+            ],
+            "acceptanceCriteria": [
+              "Every user-facing security claim names an implemented property and limitation.",
+              "Current and planned features are visibly separated.",
+              "Primary installation and menu paths do not expose the unfinished clone command.",
+              "Handoff documentation separates Tails installation, authenticated Bails archive transfer, and user-selected optional data."
+            ],
+            "migrationNotes": [],
+            "rollback": "Revert each focused documentation or menu change independently."
+          }
+        },
+        {
+          "optionId": "narrow-supported-surface",
+          "title": "Narrow and authenticate the supported runtime",
+          "kind": "incremental",
+          "summary": "Include calibrated documentation, remove custom wallet logic, keep Sparrow only, authenticate releases, replace full-state cloning with explicit fresh-Tails handoff, and add regression tests.",
+          "diagramPaths": {
+            "before": "diagrams/align-supported-boundary-before.mmd",
+            "after": "diagrams/align-supported-boundary-narrow-surface-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E001",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "This option addresses the strongest claims, trust-surface, handoff, user-expectation, and maturity concerns while preserving guided setup."
+            },
+            {
+              "evidenceId": "E002",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Documentation calibration and removal of unsupported paths directly resolve the observed source/document mismatch."
+            },
+            {
+              "evidenceId": "E003",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Existing focused work can hide unfinished actions, authenticate releases, establish tests, and remove custom wallet code."
+            },
+            {
+              "evidenceId": "E004",
+              "effect": "mitigates",
+              "tacticalFixRequired": false,
+              "rationale": "Narrow component ownership plus a support matrix reduces drift, though governance discipline remains necessary."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Removing local wallet logic, authenticating updates, and replacing undefined clone flows with explicit handoff choices narrow project-owned attack paths; inherited upstream and user risks remain.",
+              "validationPlan": "Run focused security regression cases for release verification, unsupported actions, and coordinator scope."
+            },
+            {
+              "dimension": "performance",
+              "direction": "improves",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "Fewer bundled components may reduce setup work, but Bitcoin Core IBD still dominates and no measurement exists.",
+              "validationPlan": "Measure setup wall time separately from IBD on representative supported USB hardware before and after."
+            },
+            {
+              "dimension": "memory",
+              "direction": "improves",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "Removing bundled Python wallet code may reduce disk and occasional process use, but Bitcoin Core and Sparrow dominate resource consumption.",
+              "validationPlan": "Compare persistent-storage size and peak RSS for the supported flow."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Fewer supported flows and regression coverage reduce drift and dead ends, while depending on Sparrow adds an upstream compatibility boundary.",
+              "validationPlan": "Exercise clean install, restart, update failure, Core verification, Sparrow launch, and unsupported-action cases."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Release signing, key rotation, CI triage, and Sparrow compatibility become explicit maintainer duties.",
+              "validationPlan": "Dry-run one signed release and key-recovery exercise; record maintenance time for two releases."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Existing custom-wallet users need clear compatibility and recovery guidance, and PR 202 must be split to avoid adding unsupported coordinators.",
+              "validationPlan": "Inventory persisted wallet formats and test documented recovery before removing local wallet code."
+            }
+          ],
+          "residualRisks": [
+            "CipherStick scripts still run inside the user's Tails session and configure Persistent Storage.",
+            "Hardware, firmware, physical compromise, coercion, endpoint correlation, and secret loss remain outside project control.",
+            "Sparrow introduces its own upstream supply-chain and compatibility assumptions."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "README.md",
+              "docs/",
+              "bails/.local/bin/",
+              ".github/workflows/"
+            ],
+            "workPackages": [
+              "Land bounded claims, project-specific threat model, and fresh-Tails handoff documentation as separate reviews.",
+              "Hide unfinished actions using the existing focused branch.",
+              "Split and rebase PR 202 to remove bails-wallet without adding Bisq, Liana, Wasabi, or generic coordinator support.",
+              "Review the Python Codex32 replacement separately from the Bails installer.",
+              "Complete authenticated release updates and the functional test harness."
+            ],
+            "acceptanceCriteria": [
+              "Only implemented and tested features appear in supported paths.",
+              "Sparrow is the sole named supported coordinator.",
+              "Unauthenticated project updates fail closed.",
+              "Functional tests exercise the security-critical supported flow.",
+              "Fresh-Tails handoff authenticates the Bails archive and requires explicit choices for optional data."
+            ],
+            "migrationNotes": [
+              "Document recovery for any wallet material created by the removed local wallet flow.",
+              "Do not merge coordinator additions bundled into the current PR 202 branch."
+            ],
+            "rollback": "Revert each focused branch independently; keep unsupported actions hidden during rollback."
+          },
+          "implementationPlanPath": "implementation/narrow-supported-surface.md"
+        },
+        {
+          "optionId": "upstream-only-guide",
+          "title": "Replace the runtime with an upstream-only guide",
+          "kind": "foundational",
+          "summary": "Remove CipherStick executable code and maintain guidance for experienced users of official Tails and Bitcoin Core tooling.",
+          "diagramPaths": {
+            "before": "diagrams/align-supported-boundary-before.mmd",
+            "after": "diagrams/align-supported-boundary-upstream-guide-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E001",
+              "effect": "mitigates",
+              "tacticalFixRequired": false,
+              "rationale": "Removing project runtime directly reduces single-project executable trust but does not remove upstream, host, operational, or user-error risks."
+            },
+            {
+              "evidenceId": "E002",
+              "effect": "addresses",
+              "tacticalFixRequired": false,
+              "rationale": "A documentation-only project cannot present absent runtime features as implemented, though documentation can still overclaim."
+            },
+            {
+              "evidenceId": "E003",
+              "effect": "addresses",
+              "tacticalFixRequired": false,
+              "rationale": "Unfinished project actions disappear with the runtime."
+            },
+            {
+              "evidenceId": "E004",
+              "effect": "mitigates",
+              "tacticalFixRequired": false,
+              "rationale": "Project-owned control drift is minimized, while users assume the integration decisions and error surface."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "unknown",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Project-specific execution paths disappear, but manual integration errors and direct upstream-verification duties shift to each user.",
+              "validationPlan": "Compare threat-model coverage and observed setup errors in guided user studies for automated and manual flows."
+            },
+            {
+              "dimension": "performance",
+              "direction": "unknown",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "Resulting performance depends on each user's choices; IBD remains dominant.",
+              "validationPlan": "Measure complete manual setups on the same supported hardware used for the automated baseline."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "The final Tails, Bitcoin Core, and coordinator workloads remain, with only the project helper footprint removed.",
+              "validationPlan": "Compare persistent-storage and peak-RSS measurements for equivalent final configurations."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "unknown",
+              "confidence": "medium",
+              "basis": "hypothetical",
+              "assessment": "Fewer local scripts remove their failure modes, but installation and recovery outcomes become more dependent on user execution and documentation freshness.",
+              "validationPlan": "Run observed setup and recovery studies against pinned upstream versions."
+            },
+            {
+              "dimension": "operability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Release signing and runtime CI duties disappear, while upstream documentation tracking and user support remain.",
+              "validationPlan": "Estimate update-review effort across two upstream release cycles."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "This abandons the guided product and changes the intended audience; existing users still need recovery and transition guidance.",
+              "validationPlan": "Inventory existing persisted state and validate a no-CipherStick recovery guide before retiring releases."
+            }
+          ],
+          "residualRisks": [
+            "Manual verification and persistence errors may compromise security or availability.",
+            "Upstream hardware, firmware, Tor, endpoint, physical, and secret-loss risks remain.",
+            "Documentation can still become stale or make unsupported claims."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "All executable project code",
+              "README.md",
+              "docs/"
+            ],
+            "workPackages": [
+              "Document recovery and transition for existing users.",
+              "Replace project instructions with versioned upstream guidance.",
+              "Archive executable releases after a defined support period."
+            ],
+            "acceptanceCriteria": [
+              "Users can recover existing data without project executables.",
+              "Every step links to authenticated upstream artifacts and official guidance.",
+              "The project no longer distributes executable installation or wallet code."
+            ],
+            "migrationNotes": [
+              "This is a product retirement, not a drop-in refactor."
+            ],
+            "rollback": "Restore a supported signed release and its maintenance obligations."
+          }
+        }
+      ],
+      "recommendedOptionId": "narrow-supported-surface",
+      "recommendation": "Retain a guided product only under a narrower authenticated and tested boundary; choose the upstream-only guide if the project cannot sustain release and review operations."
+    }
+  ],
+  "openQuestions": [
+    "What release-signing and key-rotation process can maintainers operate?",
+    "What independent review threshold is required before leaving alpha?",
+    "What interface, if any, should present optional handoff paths without deciding for the user?"
+  ]
+}

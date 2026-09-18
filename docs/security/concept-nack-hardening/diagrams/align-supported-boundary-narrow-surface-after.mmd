@@ -1,0 +1,11 @@
+flowchart LR
+    U["User"] --> D["Bounded claims and threat model"]
+    D --> R["Authenticated CipherStick release"]
+    R --> I["Narrow Tails and Bitcoin Core installer"]
+    I --> T["Tails Persistent Storage"]
+    I --> C["Verified Bitcoin Core release"]
+    I --> S["Verified Sparrow release"]
+    Q["CI and security regression tests"] --> I
+    Z["Custom wallet and full-state clone removed"] -. "Smaller trusted surface" .-> I
+    H["Fresh Tails plus authenticated archive"] --> P["User-selected optional data"]
+    P --> T
