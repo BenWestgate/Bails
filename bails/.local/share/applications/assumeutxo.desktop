@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Load Bitcoin AssumeUTXO Snapshot
+Comment=Verify and load a Bitcoin Core UTXO snapshot for faster bootstrap
+Exec=gnome-terminal --title=AssumeUTXO --hide-menubar -- load-assumeutxo
+Terminal=false
+Type=Application
+Icon=bitcoin128
+Categories=Finance;Network;
