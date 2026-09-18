@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+persistent_root="/live/persistence/TailsData_unlocked/Persistent"
+training_dir="$persistent_root/.cipherstick"
+verifier="$training_dir/Persistent Storage.img"
+state_dir="/live/persistence/TailsData_unlocked/dotfiles/.local/state/bails"
+
+until /usr/local/lib/tpscli is-unlocked 2>/dev/null; do sleep 2; done
+mkdir -p "$training_dir" "$state_dir"
+
+read_secret() {
+    local prompt="$1"
+    printf 'SETPROMPT %s:\nGETPIN\n' "$prompt" | pinentry-gnome3 2>&1 | sed -n 's/^D //p'
+}
+
+if [ ! -f "$verifier" ]; then
+    zenity --info --title='Resume passphrase training' \
+        --text='To continue Persistent Storage passphrase spaced-repetition across later starts, enter the same Persistent Storage passphrase twice. CipherStick will create a local LUKS2 verifier containing no wallet data.' \
+        --ok-label='Continue'
+
+    first="$(read_secret 'Enter Persistent Storage passphrase')" || exit 0
+    [ -n "$first" ] || exit 0
+    second="$(read_secret 'Re-enter Persistent Storage passphrase')" || exit 0
+    [ "$first" = "$second" ] || {
+        unset first second
+        zenity --warning --title='Passphrases did not match' --text='Training was not enabled. Try again on the next start.'
+        exit 1
+    }
+
+    truncate -s 32M "$verifier"
+    if ! printf '%s' "$first" | /sbin/cryptsetup luksFormat --type luks2 --batch-mode --key-file - "$verifier"; then
+        rm -f "$verifier"
+        unset first second
+        zenity --error --title='Could not enable passphrase training' --text='The local passphrase verifier could not be created.'
+        exit 1
+    fi
+    unset first second
+fi
+
+[ -s "$state_dir/Persistent Storage.interval" ] || printf '30\n' > "$state_dir/Persistent Storage.interval"
+exec spaced-repetition "$verifier"

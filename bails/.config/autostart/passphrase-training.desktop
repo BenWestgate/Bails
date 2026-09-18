@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CipherStick passphrase training
+Comment=Resume Persistent Storage passphrase spaced-repetition training
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/start-passphrase-training
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

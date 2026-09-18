@@ -21,56 +21,107 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# Prompts the user for their user account password as spaced repetition.
+# Prompts the user for a passphrase using spaced repetition.
+# With an image argument, verifies the passphrase against that LUKS2 image and
+# persists the interval; without one, preserves the initial-setup account-password
+# behavior used by persistent-setup.
 ###############################################################################
 
+IMG="${1:-}"
+
 screen_is_locked() {
-    # Check if the current session is locked
-    session_state=$(loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p LockedHint | cut -d= -f2)
-    [ "$session_state" = "yes" ]
+    session_id="$(loginctl | awk -v uid="$UID" '$0 ~ uid {print $1; exit}')"
+    [ -n "$session_id" ] && [ "$(loginctl show-session "$session_id" -p LockedHint --value)" = "yes" ]
 }
 
-# Prompt for passphrase using pinentry-gnome3
 get_passphrase() {
-    passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 2>&1 | grep D | cut -c3-)"
-    [ "$passphrase" ]
+    passphrase="$(printf 'SETPROMPT %s Persistent Storage passphrase:\nGETPIN\n' "$enter" | pinentry-gnome3 2>&1 | sed -n 's/^D //p')"
+    [ -n "$passphrase" ]
 }
 
-check_passphrase() {
-    read -rs passphrase
+check_initial_passphrase() {
+    local temp_passw
     temp_passw="$(head -c16 /dev/urandom | xxd -p)"
     printf '%s\n%s\n%s' "$passphrase" "$temp_passw" "$temp_passw" | passwd && \
-    printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd
+        printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd
 }
 
-# Initialize variables
-min_interval=5
-interval=30 # initial value
-exp=0
-enter='Enter'
-sleep $interval
-while true; do
-    if screen_is_locked; then
-        sleep $interval
-        continue
+check_persistent_passphrase() {
+    printf '%s' "$passphrase" | /sbin/cryptsetup --test-passphrase open "$IMG" --key-file -
+}
+
+if [ -z "$IMG" ]; then
+    min_interval=5
+    interval=30
+    exp=0
+    enter='Enter'
+    sleep "$interval"
+    while true; do
+        if screen_is_locked; then
+            sleep "$interval"
+            continue
+        fi
+        if ! get_passphrase; then
+            zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
+            sleep 2
+            continue
+        fi
+        if check_initial_passphrase &>/dev/null; then
+            unset passphrase
+            interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
+            ((interval < min_interval)) && interval=$min_interval
+            sleep "$interval"
+            exp=0
+            enter='Enter'
+        else
+            unset passphrase
+            zenity --notification --text="Passphrase does not match.\nTry again."
+            sleep 2
+            enter='Re-enter'
+            ((exp = (exp == 0) ? 2 : exp + 1))
+        fi
+    done
+fi
+
+state_dir="/live/persistence/TailsData_unlocked/dotfiles/.local/state/bails"
+interval_file="$state_dir/Persistent Storage.interval"
+mkdir -p "$state_dir"
+
+set_interval() {
+    interval=$(($1 < 5 ? 5 : $1 * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
+    printf '%s\n' "$interval" > "$interval_file"
+}
+
+while enter='Enter'; do
+    exp=0
+    if [ -s "$interval_file" ]; then
+        interval="$(<"$interval_file")"
+    else
+        interval=30
+        printf '%s\n' "$interval" > "$interval_file"
     fi
+
+    next_test_due=$(date -d "$(date -r "$interval_file")+$interval seconds" +%s)
+    sleep_time=$((next_test_due - $(date +%s)))
+    ((sleep_time > 0)) && sleep "$sleep_time"
+
+    while screen_is_locked; do sleep 10; done
+
     if ! get_passphrase; then
         zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
         sleep 2
         continue
     fi
-    if check_passphrase &>/dev/null <<< "$passphrase"; then
-        unset passphrase temp_passw
-        interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
-        (( interval < min_interval )) && interval=$min_interval
-        sleep $interval
-        exp=0
+
+    if check_persistent_passphrase &>/dev/null; then
+        unset passphrase
+        set_interval "$interval"
         enter='Enter'
     else
-        unset passphrase temp_passw
+        unset passphrase
         zenity --notification --text="Passphrase does not match.\nTry again."
         sleep 2
         enter='Re-enter'
-        ((exp = (exp == 0) ? 2 : exp + 1)) 
+        ((exp = (exp == 0) ? 2 : exp + 1))
     fi
 done
