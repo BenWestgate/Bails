@@ -59,7 +59,7 @@ USB sticks with at least double the typical IOPS performance (may be cheaper)
 
 MicroSD memory cards with at least double the typical USB stick's IOPS performance (cheaper)
 - [SanDisc Extreme microSD](https://amzn.to/3KraGF7)
-- [SAMSUNG PRO Plus microSD](https://amzn.to/3Qn9INK)
+- [SAMSUNG PRO Plus microSD](https://amzn.to/3OjRmdY)
 - [SAMSUNG EVO Select microSD](https://amzn.to/3Km8sXd)
 - [Silicon Power Superior microSD](https://amzn.to/3OHoBZZ)
 
@@ -74,12 +74,11 @@ In addition to [Tails' recommendations](https://tails.net/doc/about/requirements
 
 2. **Avoid computers with 4 GB of RAM or less**, they will force your USB stick to work much harder, wearing it out prematurely. On 4GB RAM, without one of the "SSD-like" drives above, the initial synchronization could take weeks instead of days. 8 GB RAM is better and 16 GB RAM is best. With 16 GB RAM computers *most* USB sticks can complete initial sync in hours, rather than days with 8 GB RAM.
 
-3. **Choose Windows, MacOS or Linux.** While Chromebooks may work, most have 4 GB of RAM and there are [extra steps](https://www.reddit.com/r/tails/comments/pd56ha/cheap_chromebook_for_tails_setup_guide/) to make them run Tails. It's easier to start Tails from MacOS and Linux and easiest from Windows.
+3. **Choose Windows, MacOS or Linux.** While Chromebooks may work, most have 4 GB of RAM and there are [extra steps](https://www.reddit.com/r/tails/comments/pd56ha/cheap-chromebook-for-tails_setup_guide/) to make them run Tails. It's easier to start Tails from MacOS and Linux and easiest from Windows.
 
 4. **Storage drive type and capacity don't matter.** Tails never uses your computer's storage. You're free to use this computer for other purposes or return it, after removing your CipherStick. CipherStick would even work with a used PC from eBay with no internal disk!
 
 5. **Screen size and resolution don't matter.** With laptops or all-in-one desktops you can save money buying a smaller size and/or lower resolution screen. HD or 720p is plenty of space for Bitcoin Core. Almost any laptop or monitor will suffice.
-
 
 **Enough already**, just show me a cheap and fast computer to get:
 - [Desktops with 16GB RAM](https://amzn.to/3OkLaSR)
@@ -134,23 +133,13 @@ By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directo
 
 **Internal drive**: Read [Accessing the internal hard disk](https://tails.net/doc/advanced_topics/internal_hard_disk/index.en.html) first. You must restart and set an administration password on the Welcome Screen. Then you can access the internal drive in the Files browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin/_.
 
-## How do I make a backup CipherStick?
-Get a USB stick at least the same size  as your current CipherStick then:
+## How do I hand CipherStick to someone else or make a backup?
 
-1. Close Bitcoin Core (Ctrl+Q)
-2. Wait for it to shutdown safely
-3. Applications > Tails Cloner
-4. Check "Clone the Current Persistent Storage"
-5. Select your target USB stick (or SD card)
-6. You will be prompted for a passphrase
-  - We recommend using the same one as the current Persistent Storage so that it is easier to remember
-  - You could use an off-site codex32 share as the passphrase if you're worried about forgetting your passphrase
-    - Just don't store that share in the same place as the backup USB stick!! 
-7. The device will be turned into an exact copy of your current CipherStick.
-8. Test it if you'd like, then store it some place cool and safe from tampering.
+Use the [fresh-Tails handoff workflow](HANDOFF.md). Create the destination using normal Tails procedures, let the destination owner create new Persistent Storage, authenticate the CipherStick release separately, and explicitly choose any optional Bitcoin Core data to copy.
 
-If you want to use a smaller USB stick for the backup you may have to prune your current block chain data first so that it will fit. You can find this setting in Bitcoin Core > Options.
-![image](https://github.com/BenWestgate/Bails/assets/73506583/0eca8bfb-1ea5-466c-bdb2-929936c7347e)
+Do not use a complete copy of another person's Persistent Storage as the normal handoff. That can transfer wallet ciphertext, configuration, logs, or other identifying state the recipient did not intend to receive.
+
+If your goal is a personal backup rather than a handoff to another person, make the same data choices deliberately and keep any copied wallet material protected appropriately.
 
 ## How should I handle my backup CipherStick?
 1. Keep it under lock and key and/or hidden and ideally in a tamper evident way.
@@ -158,6 +147,6 @@ If you want to use a smaller USB stick for the backup you may have to prune your
    - This is true of all Bitcoin wallet hardware, I am just honest, unlike some marketers.
 2. Keep it cool, high temperatures can cause premature data loss.
 3. Make your backup CipherStick look different from your current CipherStick.
-4. We recommend using the same passphrase as your current Tails so it is easier to remember.
+4. Use a passphrase appropriate for the destination and do not disclose another person's Persistent Storage passphrase.
 5. Update or create a new backup CipherStick at least every 6 months, more often without A/C.
 6. You can use a third USB stick to create a new backup CipherStick to quickly replace an off-site backup CipherStick.
