@@ -63,18 +63,17 @@ response=$(zenity --question --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
 
 Backup - Duplicate your CipherStick node to protect data.
 
-Settings - Updates, add software, and configure." \
+Settings - Updates and configuration." \
     --extra-button="Clone" --extra-button="Backup" --extra-button="Settings" --extra-button="Help" \
     --switch)
 
-# Menu options 
-which Sparrow && action=Update || action=Install
+# Menu options
 case "$response" in
 "Clone") bails-clone ;;
 "Backup") bails-backup ;;
 "Settings") response2=$(zenity --window-icon="$XDG_DATA_HOME/icons/bails128.png" --question \
         --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
-        --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="$action Sparrow" --extra-button="Network Privacy" \
+        --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="Network Privacy" \
         --switch) ;;
 "Help") response2=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
         --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
@@ -94,8 +93,6 @@ case "$response2" in
         -- "install-core" ;;
     "Update CipherStick") gnome-terminal --title="Updating CipherStick..." --hide-menubar \
         -- /bin/bash -c "git clone https://github.com/benwestgate/bails --depth=1 && bails/b --update" ;;
-    "$action Sparrow") gnome-terminal --title="$action Sparrow Wallet" --hide-menubar \
-        -- "install-sparrow" ;;
     "Network Privacy") onlynet_onion; bails-menu ;;
     "") bails-menu
 esac

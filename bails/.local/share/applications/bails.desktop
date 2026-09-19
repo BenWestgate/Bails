@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Name=CipherStick
-Comment=Configure Bitcoin Core and Sparrow on Tails.
+Comment=Configure Bitcoin Core on Tails.
 Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/wrapped bails-menu
 Terminal=false
 Type=Application
