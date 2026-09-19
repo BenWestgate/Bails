@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Restore Bitcoin Core Wallet from Codex32
+Comment=Recover a Codex32 master seed or share set and initialize Bitcoin Core
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/restore-codex32
+Terminal=false
+Type=Application
+Icon=bails128
+Categories=Finance;Utility;
