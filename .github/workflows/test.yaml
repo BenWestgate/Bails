@@ -1,0 +1,18 @@
+name: Functional tests
+on:
+  pull_request:
+  push:
+    branches: [ master ]
+    paths:
+      - 'b'
+      - 'bails/.local/bin/**'
+      - 'test/functional/**'
+      - '.github/workflows/test.yaml'
+
+jobs:
+  functional:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run functional tests
+        run: bash test/functional/run.sh
