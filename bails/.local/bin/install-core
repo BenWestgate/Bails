@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# Downloads Bitcoin Core and installs it persistently. Starts bails-wallet.
+# Downloads Bitcoin Core and installs it persistently.
 ###############################################################################
 
 # For security reviewing use: https://explainshell.com/ for unfamiliar commands.
