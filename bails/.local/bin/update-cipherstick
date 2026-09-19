@@ -1,0 +1,66 @@
+#!/bin/bash
+
+set -euo pipefail
+
+readonly REPO_URL="https://github.com/BenWestgate/Bails.git"
+readonly RELEASE_FINGERPRINT="89E6BEF5A4F51B71CA8FAA35A9ACCFC9F87CB111"
+readonly RELEASE_KEY="$HOME/.local/share/bails/release-key.asc"
+readonly RELEASE_STATE="/live/persistence/TailsData_unlocked/dotfiles/.local/state/bails/release-version"
+readonly INSTALLED_SOURCE="$HOME/.local/share/bails/b"
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf -- "$tmp_dir"' EXIT
+mkdir -m 700 "$tmp_dir/gnupg"
+
+GNUPGHOME="$tmp_dir/gnupg" gpg --batch --import "$RELEASE_KEY" >/dev/null 2>&1
+imported_fingerprint="$(GNUPGHOME="$tmp_dir/gnupg" gpg --batch --with-colons --fingerprint | \
+    awk -F: '$1 == "pub" { primary = 1; next } primary && $1 == "fpr" { print $10; primary = 0 }')"
+if [ "$imported_fingerprint" != "$RELEASE_FINGERPRINT" ]; then
+    zenity --error --title='CipherStick release key mismatch' \
+        --text='The installed release verification key does not match the fingerprint pinned by this updater.'
+    exit 1
+fi
+
+git init -q "$tmp_dir/repo"
+git -C "$tmp_dir/repo" remote add origin "$REPO_URL"
+git -C "$tmp_dir/repo" fetch -q --force --tags origin 'refs/tags/*:refs/tags/*'
+
+release_tag=
+while IFS= read -r tag; do
+    [ "$(git -C "$tmp_dir/repo" cat-file -t "refs/tags/$tag" 2>/dev/null)" = tag ] || continue
+    if GNUPGHOME="$tmp_dir/gnupg" git -C "$tmp_dir/repo" verify-tag "$tag" >/dev/null 2>&1; then
+        release_tag="$tag"
+        break
+    fi
+done < <(git -C "$tmp_dir/repo" tag -l 'v[0-9]*' --sort=-v:refname)
+
+if [ -z "$release_tag" ]; then
+    zenity --error --title='No authenticated CipherStick release' \
+        --text='No versioned tag signed by the pinned CipherStick release key is available. The updater will not execute mutable repository content.'
+    exit 1
+fi
+
+current_version="0"
+if [ -x "$INSTALLED_SOURCE" ]; then
+    current_version="$($INSTALLED_SOURCE --version | awk '{print $3}')"
+elif [ -r "$RELEASE_STATE" ]; then
+    current_version="$(cat "$RELEASE_STATE")"
+fi
+
+if ! dpkg --compare-versions "${release_tag#v}" gt "${current_version#v}"; then
+    zenity --info --title='CipherStick is up to date' \
+        --text="Installed version: $current_version\nNewest authenticated release: $release_tag"
+    exit 0
+fi
+
+mkdir "$tmp_dir/release"
+git -C "$tmp_dir/repo" archive "$release_tag" | tar -x -C "$tmp_dir/release"
+
+if "$tmp_dir/release/b" --update; then
+    mkdir -p "$(dirname "$RELEASE_STATE")"
+    printf '%s\n' "$release_tag" > "$RELEASE_STATE"
+else
+    zenity --error --title='CipherStick update failed' \
+        --text='The authenticated release was not installed successfully. The recorded release version was not advanced.'
+    exit 1
+fi
