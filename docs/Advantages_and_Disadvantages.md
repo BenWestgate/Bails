@@ -38,9 +38,9 @@ CipherStick is a script that installs Bitcoin Core on Tails. It then walks the u
 
 1. **Fast Setup**: CipherStick can be completed by non-technologists with minimal effort in under an hour.
 
-1. **CipherStick Cloning**: CipherStick installations can be cloned for friends and family, saving time required to sync the blockchain for the recipient and providing an additional encrypted wallet backup for the CipherStick cloned.
+1. **Fresh-Tails handoff**: Distribution starts from a fresh Tails installation and recipient-owned Persistent Storage. CipherStick software is authenticated separately, and any optional blockchain or application data is selected explicitly rather than copying another person's full persistent state.
 
-1. **CipherStick Backup USBs**: CipherStick creates backup USB sticks of itself, saving time in case of USB loss or damage.
+1. **Backup and clone automation is unfinished**: The current Backup and Clone menu implementations are not a supported distribution or recovery path.
 
 ## Disadvantages
 
