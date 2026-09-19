@@ -68,6 +68,7 @@ else:
         # Change user account password to Persistent Storage passphrase for spaced repetition practice.
         printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
     fi
+    unset existing_passphrase
 else
     printf '\033]2;Setup the Persistent Storage\a'
     # Choose passphrase

@@ -5,11 +5,10 @@
 - Help user remember passphrase w/ spaced repetition
 - Verify Bitcoin Core download
 - Install Bitcoin Core on Tails
-- Create a codex32 seed backup
-- Restore a codex32 seed backup
-- Create a standard derivation path wallet from codex32 seed encrypted by memorized passphrase
+- Legacy Codex32 wallet creation/restoration is disabled on current stable Tails.
+- Replacement restoration is tracked separately in issue #215.
 
-### The CipherStick MVP is COMPLETED.
+### The supported installer remains in alpha.
 
 ## In-Progress: CipherStick L1 Scope ([Manual Backup](https://bitcoin.design/guide/how-it-works/private-key-management/manual-backup/) [Daily](https://bitcoin.design/guide/daily-spending-wallet/) or [Monthly Spending Wallet](https://bitcoin.design/guide/designing-products/personal-finance/#monthly-budgeting))
 
