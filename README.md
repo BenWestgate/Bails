@@ -2,55 +2,57 @@
 
 # CipherStick (formerly known as "Bails")
 
-CipherStick is the most private way to transact and store bitcoin. It ensures your money is protected from surveillance, censorship, and confiscation, leaving no trace of your Bitcoin use on the computer or the Internet. Combining Bitcoin Core and Tails, CipherStick offers strong anonymity for transactions and secure encrypted storage.
+CipherStick is experimental software for setting up Bitcoin Core on a dedicated Tails USB. It automates parts of Persistent Storage setup, Bitcoin Core installation and verification, and optional Sparrow installation. It does not make anonymity, confiscation resistance, censorship resistance, or "no trace" guarantees.
+
+> **Alpha software:** CipherStick has not completed an independent security audit. Review the source and the documented limitations before using it with funds. Current bootstrap and update authentication are tracked separately and should be treated as part of the trust boundary.
 
 ## Bitcoin Core on Tails
 
-Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails and create a wallet backup.
+CipherStick builds on Tails and Bitcoin Core rather than replacing their security models. Tails routes supported network traffic through Tor; Bitcoin Core independently validates Bitcoin consensus rules and keeps wallet and node data local to the configured data directory. CipherStick adds setup automation around those upstream projects.
 
-Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet.
 - [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
-
-
-Tails is a portable operating system that defends against surveillance and censorship, exclusively utilizing the Tor anonymity network.
 - [Tails - How Tails works](https://tails.net/about/index.en.html)
 
+### Current support status
+
+- **Implemented:** Tails Persistent Storage setup guidance, Bitcoin Core download/verification/installation, pruning configuration, Sparrow installation, and spaced-repetition passphrase practice.
+- **Experimental / legacy:** the bundled Codex32 wallet flow. Replacement restoration work is tracked separately.
+- **Planned / unsupported:** CipherStick cloning, backup automation, AssumeUTXO bootstrap, offline signing, and multisignature workflows described in the design scope.
 
 ## Why use Bitcoin Core?
 
-### Full Validation
+### Full validation
 
-Bitcoin Core ensures the validity of every block and transaction, this protects you from counterfieting and **prevents miners and banks from seizing control of Bitcoin**.
+Bitcoin Core validates blocks and transactions against Bitcoin's consensus rules instead of asking a third party for a wallet balance. This reduces reliance on remote wallet servers; it does not prevent theft caused by compromised keys, software, hardware, or user mistakes.
 
 [Learn about full validation](https://bitcoin.org/en/bitcoin-core/features/validation)
 
-### Excellent Privacy
+### Local wallet privacy
 
-Bitcoin Core provides **exclusive privacy features**, making it challenging for anyone to link your transactions to you.
+Using your own node avoids revealing all wallet queries to a third-party wallet server. Network observers, counterparties, compromised endpoints, and transaction-graph analysis can still reveal information. Tor reduces direct network-location exposure but does not provide perfect transaction privacy.
 
-[Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
+[Discover Bitcoin Core privacy features](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
 # How to Install
 
 ## You need
+
 - **1 USB stick** or memory card, 32 GB minimum
-    - If you need a USB stick, see our [recommended USB sticks](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#what-type-of-flash-drive-should-i-get) for top speed
-- **2 GB of RAM** computer made in the last 15 years
-    - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save money
-- **A smartphone** to follow the instructions
-- **Pen or pencil**
-- **Couple pieces of paper**
-- **Hard surface** to write on
-- **1 hour in total** 1.4 GB to download, ½ hour to install Tails, ¼ hour to setup CipherStick
+    - See the [FAQ](docs/FAQ.md) for performance considerations.
+- **A computer supported by Tails** with at least 2 GB of RAM; more memory materially improves Bitcoin Core initial sync performance.
+- **A second device or printed instructions** so you can follow the remaining steps after rebooting into Tails.
+
+Hands-on setup time and Bitcoin Core initial block download are separate. Initial synchronization can take hours or days depending on hardware, storage, network conditions, and the current chain state; CipherStick does not publish a fixed completion-time guarantee.
 
 ## Your steps
 
-First, open these instructions on another device. 
+First, open these instructions on another device.
 
 ![image](https://user-images.githubusercontent.com/73506583/203773811-b157925d-404f-4b91-bd86-6d2e6b454a59.png)
 
 In the next steps, you will shut down the computer. To be able to follow the rest of the instructions afterwards, you can either:
-- Scan this QR code on your smartphone or tablet:    
+
+- Scan this QR code on your smartphone or tablet:
    ![image](https://github.com/BenWestgate/Bails/assets/73506583/72496200-fa4f-4ce3-94de-06cc88296e73)
 - Print these instructions on paper.
 - Take note of the URL of this page:
@@ -60,60 +62,39 @@ In the next steps, you will shut down the computer. To be able to follow the res
 
 ### Install steps
 
-1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 32 GB of capacity).
-   - If you know someone you trust who uses CipherStick already, you can [install by cloning](https://github.com/BenWestgate/Bails/tree/master#cipherstick-is-shareware) their CipherStick.
+1. [Install Tails](https://tails.net/install/index.en.html) to a dedicated USB stick or memory card (minimum 32 GB of capacity).
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
-   - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), ignore "Create Persistent Storage" and click "Start Tails".
-     - CipherStick will help you set up Persistent Storage later.
-   - If you installed by cloning from another CipherStick, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase, click "Unlock Encryption", and then click "Start Tails".
+   - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), ignore "Create Persistent Storage" and click "Start Tails". CipherStick will help you set up Persistent Storage later.
 1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the _Tor Connection_ window appears.
-   - If you cloned CipherStick, skip to step 7.
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
-1.  Type or Paste the following in Terminal, then press Enter:
+1. Type or paste the following in Terminal, then press Enter:
     ```bash
     git clone https://github.com/benwestgate/bails&&bails/b
     ```
-    ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
-1. Follow the instructions on Screen.
-1. You're Done!
-   - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make CipherStick even better!
-   
-### CipherStick is [shareware](https://en.wikipedia.org/wiki/Samizdat).
+1. Follow the instructions on screen.
 
-- To share this free open-source software with family and friends, choose **Applications** ▸ **Office** ▸ **CipherStick** ▸ **Clone**.
+The command above executes code from the current GitHub repository checkout. Authenticated immutable CipherStick releases are tracked separately; until that work lands, repository/delivery compromise is part of the installation trust model.
 
-#### Why clone CipherSticks?
+## Distribution and cloning
 
-- Sharing hand-to-hand prevents censorship and surveillance.
-- Cloning CipherStick saves them considerable setup time and boosts your backup resillience. A win-win situation!
+CipherStick's automated clone and backup flows are unfinished and are not part of the supported workflow. Do not rely on the menu entries or older documentation as a secure distribution mechanism. A fresh-Tails handoff design is tracked separately.
 
 # Support resources
 
-For support and discussion join our [telegram channel](https://t.me/bails_support).
+For support and discussion join the [Telegram channel](https://t.me/bails_support).
 
-For more reading checkout our [Frequently Asked Questions](docs/FAQ.md).
+For more reading see the [Frequently Asked Questions](docs/FAQ.md) and [Advantages and Disadvantages](docs/Advantages_and_Disadvantages.md).
 
-To contact Ben Westgate by email `benwestgate@protonmail.com`.
+To contact Ben Westgate by email: `benwestgate@protonmail.com`.
 
-## Advantages and Disadvantages
+## Codex32 status
 
-For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the CipherStick platform.
-
-### CipherStick is the First Codex32-enabled (BIP93) Wallet
-
-Find more information on [Codex32](https://secretcodex32.com/index.html) and [BIP93](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki).
-
-### Compliant with Auditable Bitcoin Wallets Standard
-
-Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
+CipherStick currently contains a legacy experimental Codex32 wallet implementation. The supported replacement restoration path is being developed separately. Do not infer independent review or compatibility from the presence of Codex32 code in this repository.
 
 ## Source Code Headers
 
-Every file containing source code must include copyright and license
-information. This includes any JS/CSS files that you might be serving out to
-browsers. (This is to help well-intentioned people avoid accidental copying that
-doesn't comply with the license.)
+Every file containing source code must include copyright and license information. This includes any JS/CSS files that might be served to browsers.
 
 MIT header:
 
