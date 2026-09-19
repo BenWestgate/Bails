@@ -43,8 +43,12 @@ fi
 current_version="0"
 if [ -x "$INSTALLED_SOURCE" ]; then
     current_version="$($INSTALLED_SOURCE --version | awk '{print $3}')"
-elif [ -r "$RELEASE_STATE" ]; then
-    current_version="$(cat "$RELEASE_STATE")"
+fi
+if [ -r "$RELEASE_STATE" ]; then
+    recorded_version="$(cat "$RELEASE_STATE")"
+    if dpkg --compare-versions "${recorded_version#v}" gt "${current_version#v}"; then
+        current_version="$recorded_version"
+    fi
 fi
 
 if ! dpkg --compare-versions "${release_tag#v}" gt "${current_version#v}"; then
