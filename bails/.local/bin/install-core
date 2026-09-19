@@ -206,6 +206,7 @@ printf "\033]2;Bitcoin Core %s complete!\a" $action
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
+    offer_assumeutxo=1
     # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
     ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
     assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
@@ -247,5 +248,6 @@ This initial synchronisation is very demanding, and may expose hardware problems
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
 wrapped bitcoin-qt -min -startupnotify=link-dotfiles
+[ -n "${offer_assumeutxo:-}" ] && load-assumeutxo --offer &
 wait
 touch $XDG_STATE_HOME/installed
