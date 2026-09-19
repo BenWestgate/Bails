@@ -44,6 +44,26 @@ readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitc
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
 
 
+# Count distinct valid signatures made by release builders.
+count_good_signatures() {
+    local status_file approved_file
+    status_file="$(mktemp)"
+    approved_file="$(mktemp)"
+
+    # GnuPG returns a nonzero status when any signature cannot be checked, for
+    # example while some builder keys are still missing. Keep the status stream
+    # so already-valid approved signatures can still count; only VALIDSIG
+    # records are considered below.
+    gpg --status-fd 1 --verify SHA256SUMS.asc SHA256SUMS >"$status_file" 2>/dev/null || true
+
+    grep fingerprint "$DOWNLOAD_DIR/builder-keys" | sed 's/ //g' | cut -f2 -d= | sort -u >"$approved_file"
+    awk 'NR == FNR { approved[$1] = 1; next }
+         /^\[GNUPG:\] VALIDSIG / { signer = approved[$NF] ? $NF : $3; if (approved[signer] && !seen[signer]++) count++ }
+         END { print count + 0 }' "$approved_file" "$status_file"
+    rm -f "$status_file" "$approved_file"
+}
+
+
 # Look for good signatures
 # Parameter 1 = Good Signatures required
 check_sigs() {
@@ -89,7 +109,7 @@ search_key() {
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver keyserver.ubuntu.com'
     fi
-    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
+    good_sig=$(count_good_signatures)
 }
 
 
@@ -161,7 +181,7 @@ export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
 who_trusts="the CipherStick maintainers"
 while true; do
     printf '\033]2;Verify checksum signatures...\a'
-    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
+    good_sig=$(count_good_signatures)
     # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version number.
     if ((good_sig >= BINVERIFY_MIN_GOOD_SIGS)); then
         zenity --question --title='Further download verification' --text="Your Bitcoin Core download has been successfully verified by $good_sig signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue Setup' --default-cancel --ok-label='More Verification' "$ICON" --icon-name=gtk-dialog-authentication
