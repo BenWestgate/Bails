@@ -6,7 +6,9 @@ CipherStick is the most private way to transact and store bitcoin. It ensures yo
 
 ## Bitcoin Core on Tails
 
-Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails and create a wallet backup.
+Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails.
+
+The legacy GTK3 Codex32 wallet create/restore flow is disabled on current stable Tails. Replacement Codex32 restoration is tracked separately in issue #215.
 
 Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet.
 - [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
@@ -100,13 +102,9 @@ To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the CipherStick platform.
 
-### CipherStick is the First Codex32-enabled (BIP93) Wallet
+### Codex32 restoration status
 
-Find more information on [Codex32](https://secretcodex32.com/index.html) and [BIP93](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki).
-
-### Compliant with Auditable Bitcoin Wallets Standard
-
-Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
+The legacy GTK3 Codex32 create/restore interface is disabled on current stable Tails. Issue #215 tracks the replacement restoration path using `python-codex32` and Bitcoin Core.
 
 ## Source Code Headers
 
