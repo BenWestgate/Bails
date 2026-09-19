@@ -15,7 +15,7 @@
 
 - Scan Codex32 25x25 QR codes that encode the codex32 string, these directly encode the codex32 string alphanumerically
 - Create backups of the CipherStick for recovery without rescanning blockchain or downloading CipherStick
-- Create clones of the CipherStick with all private data encrypted to give to friends & family to decentralize distribution, bypass download wait, improve user private data redundancy [mostly written]
+- Document a fresh-Tails handoff where the recipient owns Persistent Storage and explicitly chooses any optional data transfer; full persistent-state cloning is not the supported distribution model.
 - Give reminders at 100% IBD to create a backup CipherStick to avoid repeating IBD [mostly written]
 - Use AssumeUTXO to drastically shorten time to usefulness [partly written]
 - Create DEMO and Promo videos [partly written]

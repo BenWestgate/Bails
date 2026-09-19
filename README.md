@@ -61,14 +61,11 @@ In the next steps, you will shut down the computer. To be able to follow the res
 ### Install steps
 
 1. [Install Tails](https://tails.net/install/index.en.html) to a USB stick or memory card (minimum 32 GB of capacity).
-   - If you know someone you trust who uses CipherStick already, you can [install by cloning](https://github.com/BenWestgate/Bails/tree/master#cipherstick-is-shareware) their CipherStick.
 1. [Start Tails](https://tails.net/doc/first_steps/start/index.en.html).
    - At the [Welcome Screen](https://tails.net/doc/first_steps/welcome_screen/index.en.html), ignore "Create Persistent Storage" and click "Start Tails".
      - CipherStick will help you set up Persistent Storage later.
-   - If you installed by cloning from another CipherStick, enter your temporary [Persistent Storage](https://tails.net/doc/first_steps/welcome_screen/index.en.html#index3h1) passphrase, click "Unlock Encryption", and then click "Start Tails".
 1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the _Tor Connection_ window appears.
-   - If you cloned CipherStick, skip to step 7.
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
 1.  Type or Paste the following in Terminal, then press Enter:
     ```bash
@@ -78,15 +75,10 @@ In the next steps, you will shut down the computer. To be able to follow the res
 1. Follow the instructions on Screen.
 1. You're Done!
    - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make CipherStick even better!
-   
-### CipherStick is [shareware](https://en.wikipedia.org/wiki/Samizdat).
 
-- To share this free open-source software with family and friends, choose **Applications** ▸ **Office** ▸ **CipherStick** ▸ **Clone**.
+### Sharing CipherStick
 
-#### Why clone CipherSticks?
-
-- Sharing hand-to-hand prevents censorship and surveillance.
-- Cloning CipherStick saves them considerable setup time and boosts your backup resillience. A win-win situation!
+The unfinished **Clone** and **Backup** menu actions are not a supported distribution method. To prepare a destination for another person, use the [fresh-Tails handoff workflow](docs/HANDOFF.md): the recipient owns the Tails installation and Persistent Storage, CipherStick software is authenticated before execution, and any optional data is selected explicitly.
 
 # Support resources
 

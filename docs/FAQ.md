@@ -89,10 +89,7 @@ Once you are synced, nearly any computer will be fast enough to stay caught up a
 
 ## What type of backup USB stick should I get?
 
-1. Equal size to your primary CipherStick helps avoid pruning.
-2. A fast write speed makes backing up faster.
-3. Industrial SD cards and may retain data longer than "MLC" or "TLC" USB sticks.
-4. Your backup USBs won't need fast read performance and can be cheaper models.
+A full Persistent Storage clone is not the supported CipherStick backup or distribution model. If you are preparing another device, follow the [fresh-Tails handoff workflow](HANDOFF.md) and choose any optional data explicitly. The destination capacity needs to fit only the data you deliberately select.
 
 # During Setup
 
@@ -134,30 +131,24 @@ By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directo
 
 **Internal drive**: Read [Accessing the internal hard disk](https://tails.net/doc/advanced_topics/internal_hard_disk/index.en.html) first. You must restart and set an administration password on the Welcome Screen. Then you can access the internal drive in the Files browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin/_.
 
-## How do I make a backup CipherStick?
-Get a USB stick at least the same size  as your current CipherStick then:
+## How do I make a backup or share CipherStick?
 
-1. Close Bitcoin Core (Ctrl+Q)
-2. Wait for it to shutdown safely
-3. Applications > Tails Cloner
-4. Check "Clone the Current Persistent Storage"
-5. Select your target USB stick (or SD card)
-6. You will be prompted for a passphrase
-  - We recommend using the same one as the current Persistent Storage so that it is easier to remember
-  - You could use an off-site codex32 share as the passphrase if you're worried about forgetting your passphrase
-    - Just don't store that share in the same place as the backup USB stick!! 
-7. The device will be turned into an exact copy of your current CipherStick.
-8. Test it if you'd like, then store it some place cool and safe from tampering.
+Do not use Tails Cloner as a CipherStick policy for copying another person's full Persistent Storage. Start with a fresh Tails destination and follow [Fresh-Tails CipherStick Handoff](HANDOFF.md).
 
-If you want to use a smaller USB stick for the backup you may have to prune your current block chain data first so that it will fit. You can find this setting in Bitcoin Core > Options.
-![image](https://github.com/BenWestgate/Bails/assets/73506583/0eca8bfb-1ea5-466c-bdb2-929936c7347e)
+The handoff has three separate steps:
 
-## How should I handle my backup CipherStick?
-1. Keep it under lock and key and/or hidden and ideally in a tamper evident way.
-   - If someone skilled tampers with your CipherStick _**and** you use it without noticing_ they could monitor your activity or steal your bitcoins.
-   - This is true of all Bitcoin wallet hardware, I am just honest, unlike some marketers.
-2. Keep it cool, high temperatures can cause premature data loss.
-3. Make your backup CipherStick look different from your current CipherStick.
-4. We recommend using the same passphrase as your current Tails so it is easier to remember.
-5. Update or create a new backup CipherStick at least every 6 months, more often without A/C.
-6. You can use a third USB stick to create a new backup CipherStick to quickly replace an off-site backup CipherStick.
+1. the recipient installs Tails and creates their own Persistent Storage;
+2. an authenticated CipherStick release is verified before extraction or execution;
+3. the person performing the handoff explicitly selects any additional data to copy.
+
+Optional Bitcoin Core `blocks/` or `chainstate/` data can be selected to reduce redownload work after Bitcoin Core is shut down cleanly. Wallets, keys, Sparrow state, configuration, logs, and other identifying data are not included unless the user explicitly chooses those exact paths and understands the consequence.
+
+The unfinished **Clone** and **Backup** menu actions are not part of this workflow.
+
+## How should I handle handoff or backup media?
+
+1. Protect media from physical access, tampering, and high temperatures.
+2. Keep recovery material independent of the CipherStick device itself.
+3. Clearly label which data was intentionally copied and which was not.
+4. Authenticate CipherStick software before executing it on the destination.
+5. Test recovery or handoff steps without assuming that encryption alone makes copied wallet or identifying state safe to distribute.
