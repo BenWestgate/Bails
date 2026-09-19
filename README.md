@@ -30,6 +30,10 @@ Bitcoin Core provides **exclusive privacy features**, making it challenging for 
 
 [Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
+## Security model
+
+Before installing, read the [CipherStick threat model](docs/THREAT_MODEL.md). It defines the installer and handoff trust boundaries, supported assumptions, inherited upstream risks, and explicit non-goals.
+
 # How to Install
 
 ## You need
