@@ -103,7 +103,7 @@ case "$response2" in
         if pgrep -f "$HOME/.local/bin/spaced-repetition" >/dev/null; then
             zenity --notification --text="Spaced repetition is already running."
         else
-            spaced-repetition >/dev/null 2>&1 &
+            spaced-repetition --now >/dev/null 2>&1 &
         fi
         ;;
     "Network Privacy") onlynet_onion; bails-menu ;;

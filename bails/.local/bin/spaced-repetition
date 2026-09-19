@@ -26,6 +26,8 @@
 
 readonly STATE_DIR='/live/persistence/TailsData_unlocked/dotfiles/.local/state'
 readonly STATE_FILE="$STATE_DIR/spaced-repetition.state"
+practice_now=0
+[ "${1:-}" = "--now" ] && practice_now=1
 
 screen_is_locked() {
     # Check if the current session is locked
@@ -61,6 +63,11 @@ load_schedule() {
     [[ "$saved_interval" =~ ^[0-9]+$ && "$saved_due" =~ ^[0-9]+$ ]] || return 1
     ((saved_interval >= min_interval)) || return 1
 
+    if ((practice_now)); then
+        interval=$saved_interval
+        return 0
+    fi
+
     if zenity --question --title='Spaced repetition trainer' \
         --text="Continue from your previous training interval?" \
         --ok-label='Continue' --cancel-label='Start Over'; then
@@ -82,7 +89,7 @@ mkdir -p "$STATE_DIR"
 if ! load_schedule; then
     interval=30
     save_schedule
-    sleep "$interval"
+    ((practice_now)) || sleep "$interval"
 fi
 
 while true; do
