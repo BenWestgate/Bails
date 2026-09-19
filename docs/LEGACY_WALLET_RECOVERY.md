@@ -17,7 +17,7 @@ Removal of wallet code from this repository does not intentionally delete Bitcoi
 
 The legacy flow created Bitcoin Core wallets through Bitcoin Core RPC and imported descriptors into those wallets. Wallet directories already present under the Bitcoin Core data directory remain Bitcoin Core wallet data; they do not require `bails-wallet` merely to exist.
 
-Use the Bitcoin Core version appropriate for the wallet data, keep an untouched backup, and use Bitcoin Core's documented wallet loading and migration procedures. Do not automatically copy private keys into Sparrow or another coordinator as part of this removal.
+Use the Bitcoin Core version appropriate for the wallet data, keep an untouched backup, and use Bitcoin Core's documented wallet loading and migration procedures. Do not automatically copy private keys into another coordinator as part of this removal.
 
 ## Codex32 backups
 
