@@ -24,6 +24,11 @@
 # Prompts the user for their user account password as spaced repetition.
 ###############################################################################
 
+readonly STATE_DIR='/live/persistence/TailsData_unlocked/dotfiles/.local/state'
+readonly STATE_FILE="$STATE_DIR/spaced-repetition.state"
+practice_now=0
+[ "${1:-}" = "--now" ] && practice_now=1
+
 screen_is_locked() {
     # Check if the current session is locked
     session_state=$(loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p LockedHint | cut -d= -f2)
@@ -43,15 +48,54 @@ check_passphrase() {
     printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd
 }
 
+save_schedule() {
+    local due tmp
+    due=$(($(date +%s) + interval))
+    tmp="$STATE_FILE.tmp.$$"
+    printf '%s %s\n' "$interval" "$due" >"$tmp"
+    mv "$tmp" "$STATE_FILE"
+}
+
+load_schedule() {
+    local saved_interval saved_due now remaining
+    [ -r "$STATE_FILE" ] || return 1
+    read -r saved_interval saved_due <"$STATE_FILE" || return 1
+    [[ "$saved_interval" =~ ^[0-9]+$ && "$saved_due" =~ ^[0-9]+$ ]] || return 1
+    ((saved_interval >= min_interval)) || return 1
+
+    if ((practice_now)); then
+        interval=$saved_interval
+        return 0
+    fi
+
+    if zenity --question --title='Spaced repetition trainer' \
+        --text="Continue from your previous training interval?" \
+        --ok-label='Continue' --cancel-label='Start Over'; then
+        interval=$saved_interval
+        now=$(date +%s)
+        remaining=$((saved_due - now))
+        ((remaining > 0)) && sleep "$remaining"
+        return 0
+    fi
+    return 1
+}
+
 # Initialize variables
 min_interval=5
 interval=30 # initial value
 exp=0
 enter='Enter'
-sleep $interval
+mkdir -p "$STATE_DIR"
+if ! load_schedule; then
+    interval=30
+    save_schedule
+    ((practice_now)) || sleep "$interval"
+fi
+
 while true; do
     if screen_is_locked; then
-        sleep $interval
+        save_schedule
+        sleep "$interval"
         continue
     fi
     if ! get_passphrase; then
@@ -63,14 +107,15 @@ while true; do
         unset passphrase temp_passw
         interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
         (( interval < min_interval )) && interval=$min_interval
-        sleep $interval
         exp=0
         enter='Enter'
+        save_schedule
+        sleep "$interval"
     else
         unset passphrase temp_passw
         zenity --notification --text="Passphrase does not match.\nTry again."
         sleep 2
         enter='Re-enter'
-        ((exp = (exp == 0) ? 2 : exp + 1)) 
+        ((exp = (exp == 0) ? 2 : exp + 1))
     fi
 done
