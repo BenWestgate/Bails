@@ -141,8 +141,16 @@ else # Import a trusted set on first-run.
             echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
-    # Download chain parameters in background to set prune
-    retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
+    # Download both an authenticated release baseline and the current master
+    # estimates. Master is fresher, but is only accepted within conservative
+    # bounds derived from the authenticated release.
+    source_tar="$DOWNLOAD_DIR/bitcoin-$VER.tar.gz"
+    master_chainparams="$DOWNLOAD_DIR/chainparams-master.cpp"
+    (
+        retry_on_fail wget --continue -O "$source_tar" \
+            "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/bitcoin-$VER.tar.gz"
+        wget --continue -O "$master_chainparams" "$BITCOIN_CHAINPARAMS_URL" || true
+    ) & get_size=$!
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
@@ -206,10 +214,40 @@ printf "\033]2;Bitcoin Core %s complete!\a" $action
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
-    # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
+    # Verify the release source against the authenticated checksum manifest.
+    # It provides a trusted lower bound for the fresher mutable master values.
     ps -p $get_size &>/dev/null && fg %"$(jobs -l | grep $get_size | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-    assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-    assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    source_name="bitcoin-$VER.tar.gz"
+    source_hash=$(awk -v file="$source_name" '$2 == file { print $1; exit }' SHA256SUMS)
+    if [[ ! "$source_hash" =~ ^[[:xdigit:]]{64}$ ]] || \
+        ! printf '%s  %s\n' "$source_hash" "$source_tar" | sha256sum --check --status; then
+        zenity --error --title="Bitcoin Core source verification failed" \
+            --text="Could not authenticate pruning metadata for Bitcoin Core $VER." "$ICON"
+        exit 1
+    fi
+    release_chainparams="$DOWNLOAD_DIR/chainparams-release.cpp"
+    tar -xOf "$source_tar" "bitcoin-$VER/src/kernel/chainparams.cpp" >"$release_chainparams" || exit 1
+    rm -f "$source_tar"
+    release_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$release_chainparams" | sed 's/[^0-9]*//g')
+    release_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$release_chainparams" | sed 's/[^0-9]*//g')
+    master_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$master_chainparams" 2>/dev/null | sed 's/[^0-9]*//g')
+    master_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$master_chainparams" 2>/dev/null | sed 's/[^0-9]*//g')
+    if [[ ! "$release_chain_state_size" =~ ^[0-9]+$ || ! "$release_blockchain_size" =~ ^[0-9]+$ ]] || \
+        ((release_chain_state_size <= 0 || release_blockchain_size <= release_chain_state_size)); then
+        zenity --error --title="Invalid Bitcoin Core storage metadata" \
+            --text="Bitcoin Core $VER contains invalid authenticated pruning size metadata." "$ICON"
+        exit 1
+    fi
+    assumed_chain_state_size=$release_chain_state_size
+    assumed_blockchain_size=$release_blockchain_size
+    if [[ "$master_chain_state_size" =~ ^[0-9]+$ ]] && \
+        ((master_chain_state_size >= release_chain_state_size && master_chain_state_size <= release_chain_state_size * 2)); then
+        assumed_chain_state_size=$master_chain_state_size
+    fi
+    if [[ "$master_blockchain_size" =~ ^[0-9]+$ ]] && \
+        ((master_blockchain_size >= release_blockchain_size && master_blockchain_size <= release_blockchain_size * 2)); then
+        assumed_blockchain_size=$master_blockchain_size
+    fi
     # Move completed verified download to persistent storage
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
