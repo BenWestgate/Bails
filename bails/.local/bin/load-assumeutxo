@@ -1,0 +1,46 @@
+#!/bin/bash
+
+set -u
+
+export WAYLAND_DISPLAY=""
+export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
+
+if [ -d "$DATA_DIR/chainstate_snapshot" ]; then
+    zenity --info --title='AssumeUTXO already active' \
+        --text='Bitcoin Core already has a snapshot chainstate. Background validation will continue automatically.'
+    exit 0
+fi
+
+if [ "${1:-}" = "--offer" ]; then
+    zenity --question --title='Use an AssumeUTXO snapshot?' \
+        --text='Bitcoin Core can become usable sooner by loading a compatible UTXO snapshot while full validation continues in the background.\n\nThere is no canonical snapshot download source. Only continue if you already have a snapshot from another node or trusted handoff.' \
+        --ok-label='Choose Snapshot' --cancel-label='Use Normal Sync' || exit 0
+    shift
+fi
+
+snapshot="${1:-}"
+if [ -z "$snapshot" ]; then
+    snapshot="$(zenity --file-selection --title='Choose Bitcoin Core UTXO snapshot')" || exit 0
+fi
+
+if [ ! -f "$snapshot" ]; then
+    zenity --error --title='Snapshot not found' --text="The selected file does not exist:\n$snapshot"
+    exit 1
+fi
+
+zenity --info --title='Bitcoin Core will verify the snapshot' \
+    --text='CipherStick does not trust the snapshot source. Bitcoin Core loadtxoutset accepts only snapshot hashes compiled into the installed Bitcoin Core release. Full historical validation continues in the background after the snapshot becomes active.'
+
+if bitcoin-cli -rpcwait -rpcclienttimeout=0 loadtxoutset "$snapshot"; then
+    zenity --info --title='AssumeUTXO loaded' \
+        --text='The snapshot chainstate is active. Bitcoin Core will sync it toward the tip while validating the historical chain in the background.'
+    if zenity --question --title='Delete snapshot file?' \
+        --text='Bitcoin Core no longer needs the imported snapshot file after loadtxoutset succeeds. Delete the source file to reclaim its storage space?' \
+        --ok-label='Delete Snapshot' --cancel-label='Keep Snapshot'; then
+        rm -f -- "$snapshot"
+    fi
+else
+    zenity --error --title='AssumeUTXO rejected' \
+        --text='Bitcoin Core rejected the snapshot. Normal initial block download will continue. Use a snapshot whose hash is supported by this Bitcoin Core release.'
+    exit 1
+fi
