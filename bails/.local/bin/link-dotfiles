@@ -25,6 +25,24 @@
 # shellcheck source=/dev/null
 . ~/.profile
 export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
-cd $DOTFILES || { persistent-setup; link-dotfiles; exit 1; } # Run persistent-setup again if off.
+cd "$DOTFILES" || { persistent-setup; link-dotfiles; exit 1; } # Run persistent-setup again if off.
 find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
 find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
+
+# Bitcoin Core invokes link-dotfiles through -startupnotify once startup has
+# completed. If that invocation still has no peers after 30 seconds, remind the
+# user that Tails may still be waiting for them to connect to Tor. Calls made
+# before Bitcoin Core is reachable simply skip this check.
+(
+    sleep 30
+    network_info="$(bitcoin-cli getnetworkinfo 2>/dev/null)" || exit 0
+    connections="$(awk '/^[[:space:]]*"connections":/ { gsub(/[^0-9]/, "", $2); print $2; exit }' <<<"$network_info")"
+    if [[ "$connections" =~ ^[0-9]+$ ]] && ((connections == 0)); then
+        if zenity --question --title='Bitcoin Core has no peers' \
+            --icon-name=tor-disconnected-symbolic \
+            --text='Bitcoin Core still has no peers. If Tails is waiting for you to connect to Tor, open Tor Connection now.' \
+            --ok-label='Open Tor Connection' --cancel-label='Not Now'; then
+            gtk-launch tca
+        fi
+    fi
+) &
