@@ -50,11 +50,11 @@ count_good_signatures() {
     status_file="$(mktemp)"
     approved_file="$(mktemp)"
 
-    if ! gpg --status-fd 1 --verify SHA256SUMS.asc SHA256SUMS >"$status_file" 2>/dev/null; then
-        rm -f "$status_file" "$approved_file"
-        echo 0
-        return
-    fi
+    # GnuPG returns a nonzero status when any signature cannot be checked, for
+    # example while some builder keys are still missing. Keep the status stream
+    # so already-valid approved signatures can still count; only VALIDSIG
+    # records are considered below.
+    gpg --status-fd 1 --verify SHA256SUMS.asc SHA256SUMS >"$status_file" 2>/dev/null || true
 
     grep fingerprint "$DOWNLOAD_DIR/builder-keys" | sed 's/ //g' | cut -f2 -d= | sort -u >"$approved_file"
     awk 'NR == FNR { approved[$1] = 1; next }
