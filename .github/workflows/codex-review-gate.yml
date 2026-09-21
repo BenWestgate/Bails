@@ -77,6 +77,19 @@ jobs:
             };
 
             const isCodex = (login) => codexLogins.has(login || '');
+            const eventPullNumber = Number(
+              context.payload.pull_request?.number || context.payload.issue?.number || 0,
+            );
+            const triggeringReviewId =
+              context.eventName === 'pull_request_review' &&
+              isCodex(context.payload.review?.user?.login)
+                ? Number(context.payload.review.id)
+                : null;
+            const triggeringIssueCommentId =
+              context.eventName === 'issue_comment' &&
+              isCodex(context.payload.comment?.user?.login)
+                ? Number(context.payload.comment.id)
+                : null;
 
             function normalizeState(value) {
               if (!value || typeof value !== 'object') return { ...emptyState };
@@ -267,7 +280,12 @@ jobs:
                 if (!isCodex(review.user?.login)) continue;
                 if (review.commit_id !== pull.head.sha) continue;
                 const submittedAt = asDate(review.submitted_at);
-                if (!submittedAt || submittedAt < startedAt) continue;
+                const isTriggeringReview =
+                  eventPullNumber === pull.number &&
+                  triggeringReviewId === Number(review.id);
+                if (!submittedAt || (!isTriggeringReview && submittedAt < startedAt)) {
+                  continue;
+                }
                 const findingCount = commentsByReview.get(Number(review.id)) || 0;
                 if (findingCount > 0) {
                   terminal.push({
@@ -313,7 +331,12 @@ jobs:
                 }
                 if (reviewedSha !== pull.head.sha) continue;
                 const createdAt = asDate(comment.created_at);
-                if (!createdAt || createdAt < startedAt) continue;
+                const isTriggeringComment =
+                  eventPullNumber === pull.number &&
+                  triggeringIssueCommentId === Number(comment.id);
+                if (!createdAt || (!isTriggeringComment && createdAt < startedAt)) {
+                  continue;
+                }
                 terminal.push({ at: createdAt, kind: 'approve', findingCount: 0 });
               }
 
@@ -327,7 +350,10 @@ jobs:
                   if (!isCodex(comment.user?.login)) return false;
                   if (!String(comment.body || '').includes(quotaText)) return false;
                   const createdAt = asDate(comment.created_at);
-                  return createdAt && createdAt >= floor;
+                  const isTriggeringComment =
+                    eventPullNumber === pull.number &&
+                    triggeringIssueCommentId === Number(comment.id);
+                  return createdAt && (isTriggeringComment || createdAt >= floor);
                 })
                 .map((comment) => ({
                   at: asDate(comment.created_at),
