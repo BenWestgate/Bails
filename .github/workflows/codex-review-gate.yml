@@ -401,21 +401,6 @@ jobs:
                 terminal.push({ at: createdAt, kind: 'approve', findingCount: 0 });
               }
 
-              if (allowApproval && requestBoundApproval && requestCommentId) {
-                for (const reaction of requestReactions) {
-                  if (!isCodex(reaction.user?.login)) continue;
-                  if (reaction.content !== '+1') continue;
-                  const createdAt = asDate(reaction.created_at);
-                  if (!createdAt || createdAt < resultFloor) continue;
-                  terminal.push({ at: createdAt, kind: 'approve', findingCount: 0 });
-                }
-              }
-
-              terminal.sort((a, b) => {
-                if (a.kind !== b.kind) return a.kind === 'findings' ? -1 : 1;
-                return b.at - a.at;
-              });
-
               const quotas = issueComments
                 .filter((comment) => {
                   if (!isCodex(comment.user?.login)) return false;
@@ -432,6 +417,62 @@ jobs:
                   pr: pull.number,
                 }))
                 .sort((a, b) => b.at - a.at);
+
+              if (requestBoundApproval && !requestCommentId) {
+                return {
+                  terminal: null,
+                  quota: null,
+                  startedAt,
+                };
+              }
+
+              if (requestBoundApproval && requestCommentId) {
+                const codexReactions = requestReactions.filter((reaction) =>
+                  isCodex(reaction.user?.login),
+                );
+                const approvalReaction = codexReactions
+                  .filter((reaction) => reaction.content === '+1')
+                  .map((reaction) => ({
+                    at: asDate(reaction.created_at),
+                    kind: 'approve',
+                    findingCount: 0,
+                  }))
+                  .filter((reaction) => reaction.at && reaction.at >= resultFloor)
+                  .sort((a, b) => b.at - a.at)[0];
+                const reviewInProgress = codexReactions.some(
+                  (reaction) => reaction.content === 'eyes',
+                );
+
+                if (allowApproval && approvalReaction) {
+                  return {
+                    terminal: approvalReaction,
+                    quota: quotas[0] || null,
+                    startedAt,
+                  };
+                }
+
+                if (reviewInProgress || quotas.length > 0) {
+                  return {
+                    terminal: null,
+                    quota: quotas[0] || null,
+                    startedAt,
+                  };
+                }
+
+                const finding = terminal
+                  .filter((item) => item.kind === 'findings')
+                  .sort((a, b) => b.at - a.at)[0];
+                return {
+                  terminal: finding || null,
+                  quota: null,
+                  startedAt,
+                };
+              }
+
+              terminal.sort((a, b) => {
+                if (a.kind !== b.kind) return a.kind === 'findings' ? -1 : 1;
+                return b.at - a.at;
+              });
 
               return {
                 terminal: terminal[0] || null,
