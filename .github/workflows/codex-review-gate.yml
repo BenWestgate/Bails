@@ -266,6 +266,15 @@ jobs:
               );
             }
 
+            function requestMetadataForRun(run) {
+              return String(run.output?.summary || '')
+                .split('\n')
+                .filter((line) =>
+                  /^(Requested at|Request comment|Base commit|Approval mode):/.test(line),
+                )
+                .join('\n');
+            }
+
             async function inspectCodexOutcome(
               pull,
               run,
@@ -538,6 +547,7 @@ jobs:
                   check_run_id: run.id,
                   head_sha: pull.head.sha,
                   pr: pull.number,
+                  request_metadata: requestMetadataForRun(run),
                 });
                 continue;
               }
@@ -588,6 +598,9 @@ jobs:
               }
 
               const approved = event.kind === 'approve';
+              const verdictSummary = approved
+                ? 'Managed Codex completed review of this commit without review findings.'
+                : `Managed Codex posted ${event.findingCount} review finding(s) for this commit.`;
               await github.rest.checks.update({
                 owner,
                 repo,
@@ -599,9 +612,9 @@ jobs:
                   title: approved
                     ? 'Codex review passed'
                     : 'Codex review found blocking issues',
-                  summary: approved
-                    ? 'Managed Codex completed review of this commit without review findings.'
-                    : `Managed Codex posted ${event.findingCount} review finding(s) for this commit.`,
+                  summary: event.request_metadata
+                    ? `${verdictSummary}\n${event.request_metadata}`
+                    : verdictSummary,
                 },
               });
             }
