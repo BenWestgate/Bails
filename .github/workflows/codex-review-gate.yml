@@ -5,13 +5,10 @@ on:
     branches: [master]
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited, closed]
-  pull_request_review:
-    types: [submitted]
   issue_comment:
     types: [created]
   schedule:
     - cron: '17 * * * *'
-  workflow_dispatch:
 
 concurrency:
   group: codex-review-gate-${{ github.repository }}
@@ -29,7 +26,8 @@ jobs:
     if: >-
       github.event_name != 'issue_comment' ||
       (github.event.issue.pull_request &&
-       (github.event.comment.user.login == 'chatgpt-codex-connector[bot]' ||
+       (github.event.comment.user.login == 'chatgpt-codex-connector' ||
+        github.event.comment.user.login == 'chatgpt-codex-connector[bot]' ||
         github.event.comment.body == '@codex review'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -39,7 +37,7 @@ jobs:
         with:
           script: |
             const gateName = 'codex-review-gate';
-            const gateVersion = 'v2';
+            const gateVersion = 'v3';
             const stateName = 'codex-review-quota-state';
             const codexLogins = new Set([
               'chatgpt-codex-connector',
@@ -81,14 +79,15 @@ jobs:
             const eventPullNumber = Number(
               context.payload.pull_request?.number || context.payload.issue?.number || 0,
             );
-            const triggeringReviewId =
-              context.eventName === 'pull_request_review' &&
-              isCodex(context.payload.review?.user?.login)
-                ? Number(context.payload.review.id)
-                : null;
             const triggeringIssueCommentId =
               context.eventName === 'issue_comment' &&
               isCodex(context.payload.comment?.user?.login)
+                ? Number(context.payload.comment.id)
+                : null;
+            const triggeringReviewCommandId =
+              context.eventName === 'issue_comment' &&
+              !isCodex(context.payload.comment?.user?.login) &&
+              String(context.payload.comment?.body || '').trim() === '@codex review'
                 ? Number(context.payload.comment.id)
                 : null;
 
@@ -260,8 +259,7 @@ jobs:
                   ? quotaFloor
                   : startedAt;
 
-              const requestCommentId = requestCommentIdForRun(run);
-              const [reviews, reviewComments, issueComments, requestReactions] =
+              const [reviews, reviewComments, issueComments] =
                 await Promise.all([
                   github.paginate(github.rest.pulls.listReviews, {
                     owner,
@@ -281,15 +279,35 @@ jobs:
                     issue_number: pull.number,
                     per_page: 100,
                   }),
-                  requestCommentId
-                    ? github.paginate(github.rest.reactions.listForIssueComment, {
-                        owner,
-                        repo,
-                        comment_id: requestCommentId,
-                        per_page: 100,
-                      })
-                    : Promise.resolve([]),
                 ]);
+
+              const reviewRequests = issueComments
+                .filter((comment) => {
+                  if (isCodex(comment.user?.login)) return false;
+                  if (String(comment.body || '').trim() !== '@codex review') {
+                    return false;
+                  }
+                  const createdAt = asDate(comment.created_at);
+                  const isTriggeringCommand =
+                    eventPullNumber === pull.number &&
+                    triggeringReviewCommandId === Number(comment.id);
+                  return createdAt && (createdAt >= startedAt || isTriggeringCommand);
+                })
+                .map((comment) => ({
+                  at: asDate(comment.created_at),
+                  id: Number(comment.id),
+                }))
+                .sort((a, b) => b.at - a.at);
+              const requestCommentId =
+                reviewRequests[0]?.id || requestCommentIdForRun(run);
+              const requestReactions = requestCommentId
+                ? await github.paginate(github.rest.reactions.listForIssueComment, {
+                    owner,
+                    repo,
+                    comment_id: requestCommentId,
+                    per_page: 100,
+                  })
+                : [];
 
               const commentsByReview = new Map();
               for (const comment of reviewComments) {
@@ -306,15 +324,7 @@ jobs:
                 if (!isCodex(review.user?.login)) continue;
                 if (review.commit_id !== pull.head.sha) continue;
                 const submittedAt = asDate(review.submitted_at);
-                const isTriggeringReview =
-                  eventPullNumber === pull.number &&
-                  triggeringReviewId === Number(review.id);
-                if (
-                  !submittedAt ||
-                  (submittedAt < startedAt && !isTriggeringReview)
-                ) {
-                  continue;
-                }
+                if (!submittedAt) continue;
                 const findingCount = commentsByReview.get(Number(review.id)) || 0;
                 if (findingCount > 0) {
                   findings.push({
@@ -406,6 +416,8 @@ jobs:
                 }))
                 .sort((a, b) => b.at - a.at);
 
+              const latestReviewRequestAt = reviewRequests[0]?.at || null;
+
               findings.sort((a, b) => b.at - a.at);
               approvals.sort((a, b) => b.at - a.at);
 
@@ -416,6 +428,7 @@ jobs:
               return {
                 terminal,
                 quota: quotas[0] || null,
+                reviewRequestedAt: latestReviewRequestAt,
                 startedAt,
               };
             }
@@ -495,21 +508,56 @@ jobs:
                 check_run_id: run.id,
                 head_sha: pull.head.sha,
                 pr: pull.number,
+                review_requested_at: outcome.reviewRequestedAt,
                 started_at: outcome.startedAt,
               });
             }
 
-            terminalEvents.sort((a, b) => a.at - b.at);
+            const verdictsByCheckRun = new Map();
             for (const event of terminalEvents) {
-              const current = await github.rest.pulls.get({
-                owner,
-                repo,
-                pull_number: event.pr,
-              });
-              if (
-                current.data.head.sha !== event.head_sha ||
-                current.data.base.sha !== event.base_sha
-              ) {
+              const existing = verdictsByCheckRun.get(event.check_run_id);
+              if (!existing) {
+                verdictsByCheckRun.set(event.check_run_id, {
+                  ...event,
+                  prs: [event.pr],
+                });
+                continue;
+              }
+
+              if (!existing.prs.includes(event.pr)) existing.prs.push(event.pr);
+              if (event.at > existing.at) existing.at = event.at;
+              if (event.kind === 'findings') {
+                existing.kind = 'findings';
+                existing.findingCount = Math.max(
+                  existing.findingCount || 0,
+                  event.findingCount || 0,
+                );
+              }
+            }
+
+            const verdictEvents = [...verdictsByCheckRun.values()];
+            verdictEvents.sort((a, b) => a.at - b.at);
+            for (const event of verdictEvents) {
+              let stillRelevant = false;
+              for (const pullNumber of event.prs) {
+                const current = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: pullNumber,
+                });
+                if (
+                  current.data.state === 'open' &&
+                  !current.data.draft &&
+                  current.data.base.ref === defaultBranch &&
+                  current.data.head.sha === event.head_sha &&
+                  current.data.base.sha === event.base_sha
+                ) {
+                  stillRelevant = true;
+                  break;
+                }
+              }
+
+              if (!stillRelevant) {
                 await github.rest.checks.update({
                   owner,
                   repo,
@@ -545,7 +593,7 @@ jobs:
               });
             }
 
-            const latestTerminal = terminalEvents
+            const latestTerminal = verdictEvents
               .slice()
               .sort((a, b) => b.at - a.at)[0];
             const latestQuota = quotaEvents
@@ -555,7 +603,7 @@ jobs:
             if (latestTerminal && (!latestQuota || latestTerminal.at >= latestQuota.at)) {
               const terminalMatchesProbe =
                 state.probe &&
-                latestTerminal.pr === state.probe.pr &&
+                latestTerminal.prs.includes(state.probe.pr) &&
                 latestTerminal.head_sha === state.probe.head_sha &&
                 latestTerminal.base_sha === state.probe.base_sha;
               state = {
@@ -656,9 +704,14 @@ jobs:
                 candidate.started_at < effectiveAvailableSince;
               const automaticReviewExpired =
                 now - candidate.started_at >= automaticReviewGrace;
+              const recentReviewRequestAt = asDate(candidate.review_requested_at);
+              const reviewRequestInFlight =
+                recentReviewRequestAt &&
+                now - recentReviewRequestAt < probeResponseGrace;
               const shouldTrigger =
-                quotaDue ||
-                (!nextProbe && (recoveredQueue || automaticReviewExpired));
+                !reviewRequestInFlight &&
+                (quotaDue ||
+                  (!nextProbe && (recoveredQueue || automaticReviewExpired)));
 
               if (shouldTrigger) {
                 const comment = await github.rest.issues.createComment({
