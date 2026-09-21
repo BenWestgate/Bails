@@ -128,36 +128,14 @@ If you shutdown Tails without exiting Bitcoin Core safely, or by yanking the USB
 Click **Applications > Favorites > CipherStick > Settings > Update CipherStick**. Make sure you still Trust this repository and it has retained a good reputation before doing so.
 
 ## How can I copy the block chain from a Bitcoin node I already have?
-By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do NOT do this, wait for CipherStick to synchronize.
+You may copy the _blocks_ and _chainstate_ folders from a Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location) after Bitcoin Core has shut down cleanly. Bitcoin Core validates the copied data when it starts.
 
 **External drive**: Plug it in while Tails is running. Use the _Files_ browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin_.
 
 **Internal drive**: Read [Accessing the internal hard disk](https://tails.net/doc/advanced_topics/internal_hard_disk/index.en.html) first. You must restart and set an administration password on the Welcome Screen. Then you can access the internal drive in the Files browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin/_.
 
-## How do I make a backup CipherStick?
-Get a USB stick at least the same size  as your current CipherStick then:
+## How do I give CipherStick to someone else?
 
-1. Close Bitcoin Core (Ctrl+Q)
-2. Wait for it to shutdown safely
-3. Applications > Tails Cloner
-4. Check "Clone the Current Persistent Storage"
-5. Select your target USB stick (or SD card)
-6. You will be prompted for a passphrase
-  - We recommend using the same one as the current Persistent Storage so that it is easier to remember
-  - You could use an off-site codex32 share as the passphrase if you're worried about forgetting your passphrase
-    - Just don't store that share in the same place as the backup USB stick!! 
-7. The device will be turned into an exact copy of your current CipherStick.
-8. Test it if you'd like, then store it some place cool and safe from tampering.
+Do not clone your Persistent Storage. Follow the [fresh-Tails handoff](HANDOFF.md): the recipient creates their own Tails installation and Persistent Storage, receives authenticated CipherStick software, and you explicitly choose any additional data to copy.
 
-If you want to use a smaller USB stick for the backup you may have to prune your current block chain data first so that it will fit. You can find this setting in Bitcoin Core > Options.
-![image](https://github.com/BenWestgate/Bails/assets/73506583/0eca8bfb-1ea5-466c-bdb2-929936c7347e)
-
-## How should I handle my backup CipherStick?
-1. Keep it under lock and key and/or hidden and ideally in a tamper evident way.
-   - If someone skilled tampers with your CipherStick _**and** you use it without noticing_ they could monitor your activity or steal your bitcoins.
-   - This is true of all Bitcoin wallet hardware, I am just honest, unlike some marketers.
-2. Keep it cool, high temperatures can cause premature data loss.
-3. Make your backup CipherStick look different from your current CipherStick.
-4. We recommend using the same passphrase as your current Tails so it is easier to remember.
-5. Update or create a new backup CipherStick at least every 6 months, more often without A/C.
-6. You can use a third USB stick to create a new backup CipherStick to quickly replace an off-site backup CipherStick.
+Wallet files, configuration, logs, and other persistent state are not part of the default handoff.
