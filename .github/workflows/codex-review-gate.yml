@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review, edited]
+    types: [opened, synchronize, reopened, ready_for_review, edited, closed]
   pull_request_review:
     types: [submitted]
   issue_comment:
@@ -503,13 +503,49 @@ jobs:
               state: 'open',
               per_page: 100,
             });
+            const reviewablePulls = pullRequests.filter((pull) => !pull.draft);
+            const pullNumbersByHead = new Map();
+            for (const pull of reviewablePulls) {
+              const numbers = pullNumbersByHead.get(pull.head.sha) || [];
+              numbers.push(pull.number);
+              pullNumbersByHead.set(pull.head.sha, numbers);
+            }
 
             const pending = [];
             const terminalEvents = [];
             const quotaEvents = [];
 
-            for (const pull of pullRequests) {
-              if (pull.draft) continue;
+            for (const pull of reviewablePulls) {
+              const sharedHeadPulls = pullNumbersByHead.get(pull.head.sha) || [];
+              if (sharedHeadPulls.length > 1) {
+                let run = await latestGateRun(pull.head.sha);
+                const sharedExternalId = `shared-head:${pull.head.sha}`;
+                if (
+                  !run ||
+                  run.external_id !== sharedExternalId ||
+                  run.status === 'completed'
+                ) {
+                  run = (
+                    await github.rest.checks.create({
+                      owner,
+                      repo,
+                      name: gateName,
+                      head_sha: pull.head.sha,
+                      external_id: sharedExternalId,
+                      status: 'in_progress',
+                      started_at: now.toISOString(),
+                      details_url: `${context.serverUrl}/${owner}/${repo}/pull/${pull.number}`,
+                      output: {
+                        title: 'Codex review blocked by shared PR head',
+                        summary:
+                          `Open PRs ${sharedHeadPulls.map((number) => `#${number}`).join(', ')} share this head commit. ` +
+                          'The gate stays pending until each reviewable PR has a unique head SHA.',
+                      },
+                    })
+                  ).data;
+                }
+                continue;
+              }
 
               let run = await latestGateRun(pull.head.sha);
               const baseChanged = Boolean(
