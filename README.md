@@ -70,12 +70,8 @@ In the next steps, you will shut down the computer. To be able to follow the res
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the _Tor Connection_ window appears.
    - If you cloned CipherStick, skip to step 7.
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
-1.  Type or Paste the following in Terminal, then press Enter:
-    ```bash
-    git clone https://github.com/benwestgate/bails&&bails/b
-    ```
-    ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
-1. Follow the instructions on Screen.
+1. Obtain an authenticated CipherStick release from another CipherStick user you trust. Network bootstrap from the mutable GitHub repository remains disabled; see the [release authentication procedure](docs/RELEASES.md).
+1. Start the verified local CipherStick installer and follow the instructions on screen.
 1. You're Done!
    - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make CipherStick even better!
    

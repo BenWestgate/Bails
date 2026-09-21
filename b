@@ -51,6 +51,7 @@ else
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   (
+    set -e
     persistent-setup &
     until /usr/local/lib/tpscli is-unlocked && \
       /usr/local/lib/tpscli is-active Dotfiles && \
@@ -62,7 +63,10 @@ else
     rsync -rvh --perms --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     rm -rvf "$BAILS_DIR"
     link-dotfiles
-  ) & # Run persistent setup in background
+  ) & persistent_install=$! # Run persistent setup in background
+  if [ "$1" == "--update" ]; then
+    wait "$persistent_install" || exit 1
+  fi
   if [ -z "$1" ]; then # Install/Update core if ran without a parameter
     # shellcheck disable=SC1091
     . install-core && bails-wallet

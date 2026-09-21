@@ -96,7 +96,7 @@ case "$response2" in
     "Update Bitcoin Core") gnome-terminal --title="Updating Bitcoin Core..." --hide-menubar \
         -- "install-core" ;;
     "Update CipherStick") gnome-terminal --title="Updating CipherStick..." --hide-menubar \
-        -- /bin/bash -c "git clone https://github.com/benwestgate/bails --depth=1 && bails/b --update" ;;
+        -- "update-cipherstick" ;;
     "$action Sparrow") gnome-terminal --title="$action Sparrow Wallet" --hide-menubar \
         -- "install-sparrow" ;;
     "Network Privacy") onlynet_onion; bails-menu ;;
