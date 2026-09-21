@@ -103,6 +103,10 @@ jobs:
                       typeof value.probe.head_sha === 'string'
                         ? value.probe.head_sha
                         : null,
+                    base_sha:
+                      typeof value.probe.base_sha === 'string'
+                        ? value.probe.base_sha
+                        : null,
                     requested_at:
                       typeof value.probe.requested_at === 'string'
                         ? value.probe.requested_at
@@ -387,7 +391,10 @@ jobs:
               if (pull.draft) continue;
 
               let run = await latestGateRun(pull.head.sha);
-              if (run && run.external_id !== pull.base.sha) run = undefined;
+              const baseChanged = Boolean(
+                run && run.external_id !== pull.base.sha,
+              );
+              if (baseChanged) run = undefined;
               if (!run) run = await createPendingGate(pull);
 
               if (run.status === 'completed') continue;
@@ -409,9 +416,11 @@ jobs:
               if (outcome.quota) quotaEvents.push(outcome.quota);
 
               pending.push({
+                base_sha: pull.base.sha,
                 check_run_id: run.id,
                 head_sha: pull.head.sha,
                 needs_manual:
+                  baseChanged ||
                   context.eventName === 'pull_request_target' &&
                   context.payload.pull_request?.number === pull.number &&
                   (context.payload.action === 'synchronize' ||
@@ -477,30 +486,36 @@ jobs:
                 available_since: latestTerminal.at.toISOString(),
               };
             } else if (latestQuota) {
-              const lastFailure = asDate(state.last_failure_at);
-              const separated = !lastFailure || latestQuota.at - lastFailure >= fiveHours;
-              if (separated) {
-                const failures = state.consecutive_failures + 1;
-                const nextProbe =
-                  failures >= 3
-                    ? nextDailyProbe(latestQuota.at)
-                    : new Date(latestQuota.at.getTime() + retryDelay);
-                state = {
-                  ...state,
-                  consecutive_failures: failures,
-                  last_failure_at: latestQuota.at.toISOString(),
-                  mode: failures >= 3 ? 'daily' : 'normal',
-                  next_probe_at: nextProbe.toISOString(),
-                  probe: null,
-                };
-              } else {
-                state.probe = null;
-                if (!asDate(state.next_probe_at) && lastFailure) {
+              const probeRequestedAt = asDate(state.probe?.requested_at);
+              const quotaAnswersProbe =
+                !probeRequestedAt || latestQuota.at >= probeRequestedAt;
+              if (quotaAnswersProbe) {
+                const lastFailure = asDate(state.last_failure_at);
+                const separated =
+                  !lastFailure || latestQuota.at - lastFailure >= fiveHours;
+                if (separated) {
+                  const failures = state.consecutive_failures + 1;
                   const nextProbe =
-                    state.mode === 'daily'
-                      ? nextDailyProbe(lastFailure)
-                      : new Date(lastFailure.getTime() + retryDelay);
-                  state.next_probe_at = nextProbe.toISOString();
+                    failures >= 3
+                      ? nextDailyProbe(latestQuota.at)
+                      : new Date(latestQuota.at.getTime() + retryDelay);
+                  state = {
+                    ...state,
+                    consecutive_failures: failures,
+                    last_failure_at: latestQuota.at.toISOString(),
+                    mode: failures >= 3 ? 'daily' : 'normal',
+                    next_probe_at: nextProbe.toISOString(),
+                    probe: null,
+                  };
+                } else {
+                  state.probe = null;
+                  if (!asDate(state.next_probe_at) && lastFailure) {
+                    const nextProbe =
+                      state.mode === 'daily'
+                        ? nextDailyProbe(lastFailure)
+                        : new Date(lastFailure.getTime() + retryDelay);
+                    state.next_probe_at = nextProbe.toISOString();
+                  }
                 }
               }
             }
@@ -508,10 +523,13 @@ jobs:
             const effectiveAvailableSince = asDate(state.available_since);
 
             const pendingByKey = new Map(
-              pending.map((item) => [`${item.pr}:${item.head_sha}`, item]),
+              pending.map((item) => [
+                `${item.pr}:${item.head_sha}:${item.base_sha}`,
+                item,
+              ]),
             );
             if (state.probe) {
-              const key = `${state.probe.pr}:${state.probe.head_sha}`;
+              const key = `${state.probe.pr}:${state.probe.head_sha}:${state.probe.base_sha}`;
               if (!pendingByKey.has(key)) {
                 state.probe = null;
               } else {
@@ -554,6 +572,7 @@ jobs:
                 state.probe = {
                   pr: candidate.pr,
                   head_sha: candidate.head_sha,
+                  base_sha: candidate.base_sha,
                   requested_at: now.toISOString(),
                   comment_id: Number(comment.data.id),
                 };
@@ -572,7 +591,13 @@ jobs:
               }
             }
 
-            if (JSON.stringify(state) !== JSON.stringify(originalState)) {
+            const shouldCheckpointDefaultPush =
+              context.eventName === 'push' &&
+              context.ref === `refs/heads/${defaultBranch}`;
+            if (
+              shouldCheckpointDefaultPush ||
+              JSON.stringify(state) !== JSON.stringify(originalState)
+            ) {
               await writeState(state);
             }
 
