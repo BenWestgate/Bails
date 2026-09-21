@@ -110,3 +110,9 @@ If you are preserving an older CipherStick because you depend on the removed leg
 ## How should I handle independently created backup media?
 
 Keep backup media physically secure, cool, and clearly distinguishable from the active device. Test recovery before relying on it. Do not store a backup beside all of the secrets needed to decrypt or spend from it, and do not assume CipherStick can recover data that Tails, Bitcoin Core, or the media itself can no longer read.
+
+## How do I give CipherStick to someone else?
+
+Do not clone your Persistent Storage. Follow the [fresh-Tails handoff](HANDOFF.md): the recipient creates their own Tails installation and Persistent Storage, receives authenticated CipherStick software, and you explicitly choose any additional data to copy.
+
+Wallet files, configuration, logs, and other persistent state are not part of the default handoff.
