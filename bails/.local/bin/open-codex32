@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+set -euo pipefail
+
+readonly REVISION="78f4a3b4e99b02bf012ff179aaa7f3f8a96683f2"
+readonly DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+readonly VENV_DIR="$DATA_HOME/python-codex32-venv"
+readonly GUI="$VENV_DIR/bin/codex32-gui"
+readonly REVISION_FILE="$VENV_DIR/.cipherstick-revision"
+
+if [ ! -x "$GUI" ] || [ "$(cat "$REVISION_FILE" 2>/dev/null || true)" != "$REVISION" ]; then
+    zenity --question --title='Install Codex32?' \
+        --text='CipherStick will install its pinned python-codex32 graphical application.' \
+        --ok-label='Install' --default-cancel || exit 0
+
+    gnome-terminal --wait --title='Installing Codex32' --hide-menubar -- install-codex32 || {
+        zenity --error --title='Codex32 installation failed' \
+            --text='The graphical Codex32 application could not be installed.'
+        exit 1
+    }
+fi
+
+[ -x "$GUI" ] || {
+    zenity --error --title='Codex32 unavailable' \
+        --text='The graphical Codex32 application is not available.'
+    exit 1
+}
+
+exec "$GUI"
