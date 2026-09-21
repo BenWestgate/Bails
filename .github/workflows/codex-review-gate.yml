@@ -275,7 +275,17 @@ jobs:
                 .sort((a, b) => b.id - a.id)[0];
             }
 
-            async function createPendingGate(pull, requireHeadUpdate = false) {
+            async function createPendingGate(
+              pull,
+              requireHeadUpdate = false,
+              requestCommentId = null,
+            ) {
+              const waitingSummary = requestCommentId
+                ? [
+                    `Request comment: ${requestCommentId}`,
+                    'Waiting for managed Codex to review this pull request commit.',
+                  ].join('\n')
+                : 'Waiting for managed Codex to review this pull request commit.';
               const created = await github.rest.checks.create({
                 owner,
                 repo,
@@ -291,7 +301,7 @@ jobs:
                     : 'Codex review pending',
                   summary: requireHeadUpdate
                     ? 'The default branch changed after this head commit was reviewed. Update or rebase the pull request so it has a new head commit before Codex review can complete.'
-                    : 'Waiting for managed Codex to review this pull request commit.',
+                    : waitingSummary,
                 },
               });
               return created.data;
@@ -522,6 +532,7 @@ jobs:
               return {
                 terminal,
                 quota: quotas[0] || null,
+                requestInFlight,
                 reviewRequestedAt: latestReviewRequestAt,
                 startedAt,
               };
@@ -550,9 +561,12 @@ jobs:
             const pending = [];
             const terminalEvents = [];
             const quotaEvents = [];
+            const inFlightCheckRunIds = new Set();
             const inspectedClosedSiblings = new Set();
 
             for (const pull of reviewablePulls) {
+              const triggeringRequestCommentId =
+                eventPullNumber === pull.number ? triggeringReviewCommandId : null;
               let run = await latestGateRun(pull.head.sha);
               const versionMismatch = Boolean(
                 run && !String(run.external_id || '').startsWith(`${gateVersion}:`),
@@ -563,12 +577,22 @@ jobs:
                 run.external_id !== `${gateVersion}:${pull.base.sha}`,
               );
               if (versionMismatch) {
-                run = await createPendingGate(pull);
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  triggeringRequestCommentId,
+                );
               } else if (baseChanged) {
                 run = await createPendingGate(pull, true);
                 continue;
               }
-              if (!run) run = await createPendingGate(pull);
+              if (!run) {
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  triggeringRequestCommentId,
+                );
+              }
 
               // A base-only change cannot be safely correlated to an opaque
               // Codex review request. Keep the gate pending until strict branch
@@ -584,7 +608,11 @@ jobs:
               // from the reviewable set. If it becomes reviewable again, a
               // fresh pending run must replace that merge-satisfying neutral.
               if (run.status === 'completed' && run.conclusion === 'neutral') {
-                run = await createPendingGate(pull);
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  triggeringRequestCommentId,
+                );
               }
 
               // A manual review command on an already-clean head starts a new
@@ -597,7 +625,11 @@ jobs:
                 run.status === 'completed' &&
                 run.conclusion === 'success'
               ) {
-                run = await createPendingGate(pull);
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  triggeringReviewCommandId,
+                );
               }
 
               const completedSuccess =
@@ -606,6 +638,7 @@ jobs:
 
               const outcome = await inspectCodexOutcome(pull, run, availableSince);
               if (outcome.quota) quotaEvents.push(outcome.quota);
+              if (outcome.requestInFlight) inFlightCheckRunIds.add(run.id);
 
               // A commit-scoped check can be shared by multiple PRs with the
               // same head and base. A late finding does not become safe merely
@@ -625,6 +658,9 @@ jobs:
                   availableSince,
                 );
                 if (siblingOutcome.quota) quotaEvents.push(siblingOutcome.quota);
+                if (siblingOutcome.requestInFlight) {
+                  inFlightCheckRunIds.add(run.id);
+                }
                 if (siblingOutcome.terminal?.kind === 'findings') {
                   terminalEvents.push({
                     ...siblingOutcome.terminal,
@@ -683,7 +719,11 @@ jobs:
               }
             }
 
-            const verdictEvents = [...verdictsByCheckRun.values()];
+            const verdictEvents = [...verdictsByCheckRun.values()].filter(
+              (event) =>
+                event.kind === 'findings' ||
+                !inFlightCheckRunIds.has(event.check_run_id),
+            );
             verdictEvents.sort((a, b) => a.at - b.at);
             const currentOpenPulls = await github.paginate(github.rest.pulls.list, {
               owner,
