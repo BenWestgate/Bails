@@ -12,6 +12,7 @@
 name: "CodeQL"
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "master" ]
   pull_request:
@@ -66,8 +67,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Rename .local to local
-      run: |
-        mv ./bails/.local ./bails/local    # Initializes the CodeQL tools for scanning.
+      run: mv ./bails/.local ./bails/local
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
