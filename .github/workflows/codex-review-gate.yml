@@ -386,11 +386,13 @@ jobs:
               const latestRequestReactions = reviewRequests[0]
                 ? reactionsByRequest.get(reviewRequests[0].id) || []
                 : [];
-              const requestInFlight = reviewRequests.some((request) =>
-                (reactionsByRequest.get(request.id) || []).some(
-                  (reaction) =>
-                    isCodex(reaction.user?.login) && reaction.content === 'eyes',
-                ),
+              const requestInFlight = reviewRequests.some(
+                (request) =>
+                  now - request.at < probeResponseGrace &&
+                  (reactionsByRequest.get(request.id) || []).some(
+                    (reaction) =>
+                      isCodex(reaction.user?.login) && reaction.content === 'eyes',
+                  ),
               );
 
               const commentsByReview = new Map();
@@ -562,7 +564,7 @@ jobs:
             const terminalEvents = [];
             const quotaEvents = [];
             const inFlightCheckRunIds = new Set();
-            const inspectedClosedSiblings = new Set();
+            const inspectedNonReviewableSiblings = new Set();
 
             for (const pull of reviewablePulls) {
               const triggeringRequestCommentId =
@@ -642,15 +644,15 @@ jobs:
 
               // A commit-scoped check can be shared by multiple PRs with the
               // same head and base. A late finding does not become safe merely
-              // because the PR that received it was closed before this run.
+              // because the PR that received it was closed or made draft.
               for (const sibling of pullRequests) {
-                if (sibling.state !== 'closed') continue;
+                if (sibling.state === 'open' && !sibling.draft) continue;
                 if (sibling.head.sha !== pull.head.sha) continue;
                 if (sibling.base.ref !== defaultBranch) continue;
                 if (sibling.base.sha !== pull.base.sha) continue;
                 const siblingKey = `${run.id}:${sibling.number}`;
-                if (inspectedClosedSiblings.has(siblingKey)) continue;
-                inspectedClosedSiblings.add(siblingKey);
+                if (inspectedNonReviewableSiblings.has(siblingKey)) continue;
+                inspectedNonReviewableSiblings.add(siblingKey);
 
                 const siblingOutcome = await inspectCodexOutcome(
                   sibling,
@@ -709,13 +711,17 @@ jobs:
               }
 
               if (!existing.prs.includes(event.pr)) existing.prs.push(event.pr);
-              if (event.at > existing.at) existing.at = event.at;
               if (event.kind === 'findings') {
+                if (existing.kind !== 'findings' || event.at > existing.at) {
+                  existing.at = event.at;
+                }
                 existing.kind = 'findings';
                 existing.findingCount = Math.max(
                   existing.findingCount || 0,
                   event.findingCount || 0,
                 );
+              } else if (existing.kind !== 'findings' && event.at > existing.at) {
+                existing.at = event.at;
               }
             }
 
