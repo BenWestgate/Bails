@@ -258,6 +258,12 @@ jobs:
               return match ? Number(match[1]) : null;
             }
 
+            function requestAcknowledgedAtForRun(run) {
+              const summary = String(run.output?.summary || '');
+              const match = summary.match(/^Request acknowledged at: (.+)$/m);
+              return match ? asDate(match[1]) : null;
+            }
+
             function requestBoundApprovalForRun(run) {
               const summary = String(run.output?.summary || '');
               return (
@@ -270,9 +276,37 @@ jobs:
               return String(run.output?.summary || '')
                 .split('\n')
                 .filter((line) =>
-                  /^(Requested at|Request comment|Base commit|Approval mode):/.test(line),
+                  /^(Requested at|Request comment|Request acknowledged at|Base commit|Approval mode):/.test(line),
                 )
                 .join('\n');
+            }
+
+            async function waitForRequestAcknowledgement(commentId) {
+              const delays = [0, 1000, 1000, 2000, 4000, 8000, 15000];
+              for (const delay of delays) {
+                if (delay) {
+                  await new Promise((resolve) => setTimeout(resolve, delay));
+                }
+                const reactions = await github.paginate(
+                  github.rest.reactions.listForIssueComment,
+                  {
+                    owner,
+                    repo,
+                    comment_id: commentId,
+                    per_page: 100,
+                  },
+                );
+                const acknowledgement = reactions
+                  .filter(
+                    (reaction) =>
+                      isCodex(reaction.user?.login) && reaction.content === 'eyes',
+                  )
+                  .map((reaction) => asDate(reaction.created_at))
+                  .filter(Boolean)
+                  .sort((a, b) => b - a)[0];
+                if (acknowledgement) return acknowledgement;
+              }
+              return null;
             }
 
             async function inspectCodexOutcome(
@@ -283,6 +317,7 @@ jobs:
               terminalFloor,
               requestCommentId,
               requestBoundApproval,
+              requestAcknowledgedAt,
             ) {
               const startedAt = asDate(run.started_at || run.created_at) || now;
               const resultFloor =
@@ -457,33 +492,11 @@ jobs:
                 const finding = terminal
                   .filter((item) => item.kind === 'findings')
                   .sort((a, b) => b.at - a.at)[0];
-
-                if (
-                  allowApproval &&
-                  approvalReaction &&
-                  (!finding || approvalReaction.at >= finding.at)
-                ) {
-                  return {
-                    terminal: approvalReaction,
-                    quota: quotas[0] || null,
-                    startedAt,
-                  };
-                }
-
-                if (reviewInProgress || quotas.length > 0) {
-                  return {
-                    terminal: null,
-                    quota: quotas[0] || null,
-                    startedAt,
-                  };
-                }
-
-                const approval = allowApproval
-                  ? [approvalReaction, approvalComment]
-                      .filter(Boolean)
-                      .sort((a, b) => b.at - a.at)[0]
-                  : null;
-                const requestTerminal = [finding, approval]
+                const quota = quotas[0] || null;
+                const strongTerminal = [
+                  finding,
+                  allowApproval ? approvalReaction : null,
+                ]
                   .filter(Boolean)
                   .sort((a, b) => {
                     const timeOrder = b.at - a.at;
@@ -493,8 +506,54 @@ jobs:
                     }
                     return 0;
                   })[0];
+
+                if (reviewInProgress) {
+                  return {
+                    terminal: null,
+                    quota,
+                    startedAt,
+                  };
+                }
+
+                const quotaWins =
+                  quota &&
+                  (!strongTerminal ||
+                    quota.at > strongTerminal.at ||
+                    (quota.at.valueOf() === strongTerminal.at.valueOf() &&
+                      strongTerminal.kind === 'approve'));
+                if (quotaWins) {
+                  return {
+                    terminal: null,
+                    quota,
+                    startedAt,
+                  };
+                }
+
+                if (strongTerminal) {
+                  return {
+                    terminal: strongTerminal,
+                    quota,
+                    startedAt,
+                  };
+                }
+
+                if (quota) {
+                  return {
+                    terminal: null,
+                    quota,
+                    startedAt,
+                  };
+                }
+
+                const acknowledgedApproval =
+                  allowApproval &&
+                  requestAcknowledgedAt &&
+                  approvalComment &&
+                  approvalComment.at >= requestAcknowledgedAt
+                    ? approvalComment
+                    : null;
                 return {
-                  terminal: requestTerminal || null,
+                  terminal: approvalReaction || acknowledgedApproval || null,
                   quota: null,
                   startedAt,
                 };
@@ -581,6 +640,7 @@ jobs:
                 run.output?.title === 'Codex review required after base update';
               const requestCommentId = requestCommentIdForRun(run);
               const requestBoundApproval = requestBoundApprovalForRun(run);
+              const requestAcknowledgedAt = requestAcknowledgedAtForRun(run);
 
               const outcome = await inspectCodexOutcome(
                 pull,
@@ -590,6 +650,7 @@ jobs:
                 requestFloor,
                 requestCommentId,
                 requestBoundApproval,
+                requestAcknowledgedAt,
               );
               if (outcome.terminal) {
                 if (completedSuccess && outcome.terminal.kind !== 'findings') {
@@ -821,6 +882,28 @@ jobs:
                     ].join('\n'),
                   },
                 });
+                const acknowledgedAt = await waitForRequestAcknowledgement(
+                  Number(comment.data.id),
+                );
+                if (acknowledgedAt) {
+                  await github.rest.checks.update({
+                    owner,
+                    repo,
+                    check_run_id: candidate.check_run_id,
+                    status: 'in_progress',
+                    output: {
+                      title: 'Codex review requested',
+                      summary: [
+                        `Requested at: ${now.toISOString()}`,
+                        `Request comment: ${Number(comment.data.id)}`,
+                        `Request acknowledged at: ${acknowledgedAt.toISOString()}`,
+                        `Base commit: ${candidate.base_sha}`,
+                        'Approval mode: request-bound',
+                        'Requested managed Codex review and waiting for its result.',
+                      ].join('\n'),
+                    },
+                  });
+                }
               }
             }
 
