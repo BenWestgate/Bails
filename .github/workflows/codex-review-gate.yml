@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review, edited, closed]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited, closed]
   pull_request_review:
     types: [submitted]
   issue_comment:
@@ -262,7 +262,7 @@ jobs:
               const summary = String(run.output?.summary || '');
               return (
                 run.output?.title === 'Codex review required after base update' ||
-                /^Approval mode: request-reaction$/m.test(summary)
+                /^Approval mode: request-(reaction|bound)$/m.test(summary)
               );
             }
 
@@ -361,7 +361,7 @@ jobs:
               }
 
               for (const comment of issueComments) {
-                if (!allowApproval || requestBoundApproval) continue;
+                if (!allowApproval) continue;
                 if (!isCodex(comment.user?.login)) continue;
                 const body = String(comment.body || '');
                 if (!body.startsWith("Codex Review: Didn't find any major issues.")) {
@@ -448,6 +448,9 @@ jobs:
                   }))
                   .filter((reaction) => reaction.at && reaction.at >= resultFloor)
                   .sort((a, b) => b.at - a.at)[0];
+                const approvalComment = terminal
+                  .filter((item) => item.kind === 'approve')
+                  .sort((a, b) => b.at - a.at)[0];
                 const reviewInProgress = codexReactions.some(
                   (reaction) => reaction.content === 'eyes',
                 );
@@ -475,8 +478,23 @@ jobs:
                   };
                 }
 
+                const approval = allowApproval
+                  ? [approvalReaction, approvalComment]
+                      .filter(Boolean)
+                      .sort((a, b) => b.at - a.at)[0]
+                  : null;
+                const requestTerminal = [finding, approval]
+                  .filter(Boolean)
+                  .sort((a, b) => {
+                    const timeOrder = b.at - a.at;
+                    if (timeOrder !== 0) return timeOrder;
+                    if (a.kind !== b.kind) {
+                      return a.kind === 'findings' ? -1 : 1;
+                    }
+                    return 0;
+                  })[0];
                 return {
-                  terminal: finding || null,
+                  terminal: requestTerminal || null,
                   quota: null,
                   startedAt,
                 };
@@ -798,7 +816,7 @@ jobs:
                       `Requested at: ${now.toISOString()}`,
                       `Request comment: ${Number(comment.data.id)}`,
                       `Base commit: ${candidate.base_sha}`,
-                      'Approval mode: request-reaction',
+                      'Approval mode: request-bound',
                       'Requested managed Codex review and waiting for its result.',
                     ].join('\n'),
                   },
