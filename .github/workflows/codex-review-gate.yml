@@ -40,7 +40,7 @@ jobs:
         with:
           script: |
             const gateName = 'codex-review-gate';
-            const gateVersion = 'v7';
+            const gateVersion = 'v8';
             const stateName = 'codex-review-quota-state';
             const codexLogins = new Set([
               'chatgpt-codex-connector',
@@ -315,10 +315,6 @@ jobs:
 
             async function inspectCodexOutcome(pull, run, quotaFloor) {
               const startedAt = asDate(run.started_at || run.created_at) || now;
-              const floor =
-                quotaFloor && quotaFloor > startedAt
-                  ? quotaFloor
-                  : startedAt;
 
               const [reviews, reviewComments, issueComments] =
                 await Promise.all([
@@ -367,6 +363,17 @@ jobs:
                 reviewRequests.push({ at: createdAt, id: commentId });
               }
               reviewRequests.sort((a, b) => b.at - a.at);
+              const storedRequest = reviewRequests.find(
+                (request) => request.id === storedRequestCommentId,
+              );
+              const resultFloor =
+                storedRequest?.at && storedRequest.at < startedAt
+                  ? storedRequest.at
+                  : startedAt;
+              const floor =
+                quotaFloor && quotaFloor > resultFloor
+                  ? quotaFloor
+                  : resultFloor;
 
               const reactionsByRequest = new Map();
               await Promise.all(
@@ -386,13 +393,17 @@ jobs:
               const latestRequestReactions = reviewRequests[0]
                 ? reactionsByRequest.get(reviewRequests[0].id) || []
                 : [];
-              const requestInFlight = reviewRequests.some(
-                (request) =>
-                  now - request.at < probeResponseGrace &&
-                  (reactionsByRequest.get(request.id) || []).some(
-                    (reaction) =>
-                      isCodex(reaction.user?.login) && reaction.content === 'eyes',
-                  ),
+              // An eyes acknowledgement is authoritative until Codex removes
+              // it. Aging it out would allow a genuinely long-running review
+              // to report findings after this required check had already
+              // passed. If Codex ever leaves an orphaned eyes reaction behind,
+              // the safe recovery is a new head commit, which starts a new
+              // commit-scoped gate rather than guessing that the old job died.
+              const requestInFlight = reviewRequests.some((request) =>
+                (reactionsByRequest.get(request.id) || []).some(
+                  (reaction) =>
+                    isCodex(reaction.user?.login) && reaction.content === 'eyes',
+                ),
               );
 
               const commentsByReview = new Map();
@@ -434,7 +445,7 @@ jobs:
                 if (!isCodex(reaction.user?.login)) continue;
                 if (reaction.content !== '+1') continue;
                 const createdAt = asDate(reaction.created_at);
-                if (!createdAt || createdAt < startedAt) continue;
+                if (!createdAt || createdAt < resultFloor) continue;
                 approvals.push({
                   at: createdAt,
                   kind: 'approve',
@@ -482,7 +493,7 @@ jobs:
                   triggeringIssueCommentId === Number(comment.id);
                 if (
                   !createdAt ||
-                  (createdAt < startedAt && !isTriggeringComment)
+                  (createdAt < resultFloor && !isTriggeringComment)
                 ) {
                   continue;
                 }
@@ -535,6 +546,7 @@ jobs:
                 terminal,
                 quota: quotas[0] || null,
                 requestInFlight,
+                reviewRequestCommentId: reviewRequests[0]?.id || null,
                 reviewRequestedAt: latestReviewRequestAt,
                 startedAt,
               };
@@ -559,6 +571,47 @@ jobs:
                 !pull.draft &&
                 pull.base.ref === defaultBranch,
             );
+
+            // A trusted manual review request invalidates an earlier success
+            // immediately, even while the PR is draft. Draft PRs are excluded
+            // from reviewablePulls, so doing this before the main loop prevents
+            // a stale success from surviving until ready_for_review.
+            if (triggeringReviewCommandId && eventPullNumber) {
+              const triggeringPull = pullRequests.find(
+                (pull) =>
+                  pull.number === eventPullNumber &&
+                  pull.state === 'open' &&
+                  pull.base.ref === defaultBranch,
+              );
+              if (triggeringPull) {
+                const triggerRun = await latestGateRun(triggeringPull.head.sha);
+                const triggerVersionMismatch = Boolean(
+                  triggerRun &&
+                  !String(triggerRun.external_id || '').startsWith(`${gateVersion}:`),
+                );
+                const triggerBaseChanged = Boolean(
+                  triggerRun &&
+                  !triggerVersionMismatch &&
+                  triggerRun.external_id !==
+                    `${gateVersion}:${triggeringPull.base.sha}`,
+                );
+                if (triggerBaseChanged) {
+                  await createPendingGate(triggeringPull, true);
+                } else if (
+                  !triggerRun ||
+                  triggerVersionMismatch ||
+                  (triggerRun.status === 'completed' &&
+                    (triggerRun.conclusion === 'success' ||
+                      triggerRun.conclusion === 'neutral'))
+                ) {
+                  await createPendingGate(
+                    triggeringPull,
+                    false,
+                    triggeringReviewCommandId,
+                  );
+                }
+              }
+            }
 
             const pending = [];
             const terminalEvents = [];
@@ -617,28 +670,32 @@ jobs:
                 );
               }
 
-              // A manual review command on an already-clean head starts a new
-              // review cycle. Reopen the gate immediately so a later findings
-              // review cannot race against stale success while we deliberately
-              // avoid the PR-head-sourced pull_request_review trigger.
+              let completedSuccess =
+                run.status === 'completed' && run.conclusion === 'success';
+              if (run.status === 'completed' && !completedSuccess) continue;
+
+              let outcome = await inspectCodexOutcome(pull, run, availableSince);
+
+              // Reconciliation fallback for a trusted request that arrived
+              // after a successful check while this PR was non-reviewable (or
+              // if its issue_comment run was delayed). Reopen before accepting
+              // any prior success.
+              const completedAt = asDate(run.completed_at);
               if (
-                eventPullNumber === pull.number &&
-                triggeringReviewCommandId &&
-                run.status === 'completed' &&
-                run.conclusion === 'success'
+                completedSuccess &&
+                completedAt &&
+                outcome.reviewRequestedAt &&
+                outcome.reviewRequestedAt > completedAt
               ) {
                 run = await createPendingGate(
                   pull,
                   false,
-                  triggeringReviewCommandId,
+                  outcome.reviewRequestCommentId,
                 );
+                completedSuccess = false;
+                outcome = await inspectCodexOutcome(pull, run, availableSince);
               }
 
-              const completedSuccess =
-                run.status === 'completed' && run.conclusion === 'success';
-              if (run.status === 'completed' && !completedSuccess) continue;
-
-              const outcome = await inspectCodexOutcome(pull, run, availableSince);
               if (outcome.quota) quotaEvents.push(outcome.quota);
               if (outcome.requestInFlight) inFlightCheckRunIds.add(run.id);
 
@@ -816,7 +873,9 @@ jobs:
               verdictEvents.map((event) => event.check_run_id),
             );
             const retryPending = pending.filter(
-              (item) => !verdictCheckRunIds.has(item.check_run_id),
+              (item) =>
+                !verdictCheckRunIds.has(item.check_run_id) &&
+                !inFlightCheckRunIds.has(item.check_run_id),
             );
 
             const latestTerminal = verdictEvents
