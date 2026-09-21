@@ -47,7 +47,7 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
 else
   printf '\033]2;Welcome to CipherStick!\a'
   # Install CipherStick to tmpfs
-  rsync -rvh "$BAILS_DIR/bails/" "$HOME"
+  rsync -rvh --perms "$BAILS_DIR/bails/" "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   (
@@ -58,8 +58,8 @@ else
         sleep 1
     done
     # Install CipherStick to Persistent Storage
-    rsync -rvh --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
-    rsync -rvh --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
+    rsync -rvh --perms --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
+    rsync -rvh --perms --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     rm -rvf "$BAILS_DIR"
     link-dotfiles
   ) & # Run persistent setup in background
