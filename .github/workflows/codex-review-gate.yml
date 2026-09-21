@@ -442,8 +442,15 @@ jobs:
                 const reviewInProgress = codexReactions.some(
                   (reaction) => reaction.content === 'eyes',
                 );
+                const finding = terminal
+                  .filter((item) => item.kind === 'findings')
+                  .sort((a, b) => b.at - a.at)[0];
 
-                if (allowApproval && approvalReaction) {
+                if (
+                  allowApproval &&
+                  approvalReaction &&
+                  (!finding || approvalReaction.at >= finding.at)
+                ) {
                   return {
                     terminal: approvalReaction,
                     quota: quotas[0] || null,
@@ -459,9 +466,6 @@ jobs:
                   };
                 }
 
-                const finding = terminal
-                  .filter((item) => item.kind === 'findings')
-                  .sort((a, b) => b.at - a.at)[0];
                 return {
                   terminal: finding || null,
                   quota: null,
