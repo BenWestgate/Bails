@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited, closed]
+  # Intentionally no pull_request_review trigger: GitHub can execute that event
+  # from the PR head. This workflow has write permissions, so review results are
+  # reconciled through trusted issue/default-branch events and the schedule.
   issue_comment:
     types: [created]
   schedule:
@@ -37,7 +40,7 @@ jobs:
         with:
           script: |
             const gateName = 'codex-review-gate';
-            const gateVersion = 'v3';
+            const gateVersion = 'v4';
             const stateName = 'codex-review-quota-state';
             const codexLogins = new Set([
               'chatgpt-codex-connector',
@@ -482,6 +485,26 @@ jobs:
                 continue;
               }
 
+              // Neutral is only used when a previously relevant PR disappears
+              // from the reviewable set. If it becomes reviewable again, a
+              // fresh pending run must replace that merge-satisfying neutral.
+              if (run.status === 'completed' && run.conclusion === 'neutral') {
+                run = await createPendingGate(pull);
+              }
+
+              // A manual review command on an already-clean head starts a new
+              // review cycle. Reopen the gate immediately so a later findings
+              // review cannot race against stale success while we deliberately
+              // avoid the PR-head-sourced pull_request_review trigger.
+              if (
+                eventPullNumber === pull.number &&
+                triggeringReviewCommandId &&
+                run.status === 'completed' &&
+                run.conclusion === 'success'
+              ) {
+                run = await createPendingGate(pull);
+              }
+
               const completedSuccess =
                 run.status === 'completed' && run.conclusion === 'success';
               if (run.status === 'completed' && !completedSuccess) continue;
@@ -593,6 +616,17 @@ jobs:
               });
             }
 
+            // A shared commit-scoped check can collect a terminal verdict from
+            // one PR while a sibling PR was added to pending earlier in this
+            // same reconciliation pass. Never retry a check that already has a
+            // terminal verdict; findings in particular must remain blocking.
+            const verdictCheckRunIds = new Set(
+              verdictEvents.map((event) => event.check_run_id),
+            );
+            const retryPending = pending.filter(
+              (item) => !verdictCheckRunIds.has(item.check_run_id),
+            );
+
             const latestTerminal = verdictEvents
               .slice()
               .sort((a, b) => b.at - a.at)[0];
@@ -649,7 +683,7 @@ jobs:
             const effectiveAvailableSince = asDate(state.available_since);
 
             const pendingByKey = new Map(
-              pending.map((item) => [
+              retryPending.map((item) => [
                 `${item.pr}:${item.head_sha}:${item.base_sha}`,
                 item,
               ]),
@@ -657,17 +691,8 @@ jobs:
             if (state.probe) {
               const key = `${state.probe.pr}:${state.probe.head_sha}:${state.probe.base_sha}`;
               if (!pendingByKey.has(key)) {
-                const relatedPending = pending.find(
-                  (item) =>
-                    item.pr === state.probe.pr &&
-                    item.head_sha === state.probe.head_sha,
-                );
                 const requestedAt = asDate(state.probe.requested_at);
-                if (
-                  relatedPending &&
-                  relatedPending.base_sha !== state.probe.base_sha &&
-                  requestedAt
-                ) {
+                if (requestedAt) {
                   const drainUntil = new Date(
                     requestedAt.getTime() + probeResponseGrace,
                   );
@@ -692,8 +717,8 @@ jobs:
               }
             }
 
-            pending.sort((a, b) => a.started_at - b.started_at || a.pr - b.pr);
-            const candidate = pending[0];
+            retryPending.sort((a, b) => a.started_at - b.started_at || a.pr - b.pr);
+            const candidate = retryPending[0];
             if (!candidate) {
               state.probe = null;
             } else if (!state.probe) {
