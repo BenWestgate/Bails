@@ -533,7 +533,7 @@ jobs:
             const pullRequests = await github.paginate(github.rest.pulls.list, {
               owner,
               repo,
-              state: 'open',
+              state: 'all',
               per_page: 100,
             });
             // The required gate protects the default branch. Two reviewable PRs
@@ -541,12 +541,16 @@ jobs:
             // diff, so sharing the commit-scoped gate is safe. PRs targeting a
             // different base never get a successful gate from this workflow.
             const reviewablePulls = pullRequests.filter(
-              (pull) => !pull.draft && pull.base.ref === defaultBranch,
+              (pull) =>
+                pull.state === 'open' &&
+                !pull.draft &&
+                pull.base.ref === defaultBranch,
             );
 
             const pending = [];
             const terminalEvents = [];
             const quotaEvents = [];
+            const inspectedClosedSiblings = new Set();
 
             for (const pull of reviewablePulls) {
               let run = await latestGateRun(pull.head.sha);
@@ -602,6 +606,36 @@ jobs:
 
               const outcome = await inspectCodexOutcome(pull, run, availableSince);
               if (outcome.quota) quotaEvents.push(outcome.quota);
+
+              // A commit-scoped check can be shared by multiple PRs with the
+              // same head and base. A late finding does not become safe merely
+              // because the PR that received it was closed before this run.
+              for (const sibling of pullRequests) {
+                if (sibling.state !== 'closed') continue;
+                if (sibling.head.sha !== pull.head.sha) continue;
+                if (sibling.base.ref !== defaultBranch) continue;
+                if (sibling.base.sha !== pull.base.sha) continue;
+                const siblingKey = `${run.id}:${sibling.number}`;
+                if (inspectedClosedSiblings.has(siblingKey)) continue;
+                inspectedClosedSiblings.add(siblingKey);
+
+                const siblingOutcome = await inspectCodexOutcome(
+                  sibling,
+                  run,
+                  availableSince,
+                );
+                if (siblingOutcome.quota) quotaEvents.push(siblingOutcome.quota);
+                if (siblingOutcome.terminal?.kind === 'findings') {
+                  terminalEvents.push({
+                    ...siblingOutcome.terminal,
+                    base_sha: pull.base.sha,
+                    check_run_id: run.id,
+                    head_sha: pull.head.sha,
+                    pr: sibling.number,
+                  });
+                }
+              }
+
               if (outcome.terminal) {
                 if (completedSuccess && outcome.terminal.kind !== 'findings') {
                   continue;
@@ -651,35 +685,27 @@ jobs:
 
             const verdictEvents = [...verdictsByCheckRun.values()];
             verdictEvents.sort((a, b) => a.at - b.at);
+            const currentOpenPulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
             for (const event of verdictEvents) {
-              let stillRelevant = false;
-              let baseChangedWithSameHead = null;
-              for (const pullNumber of event.prs) {
-                const current = await github.rest.pulls.get({
-                  owner,
-                  repo,
-                  pull_number: pullNumber,
-                });
-                if (
-                  current.data.state === 'open' &&
-                  !current.data.draft &&
-                  current.data.base.ref === defaultBranch &&
-                  current.data.head.sha === event.head_sha &&
-                  current.data.base.sha === event.base_sha
-                ) {
-                  stillRelevant = true;
-                  break;
-                }
-                if (
-                  current.data.state === 'open' &&
-                  !current.data.draft &&
-                  current.data.base.ref === defaultBranch &&
-                  current.data.head.sha === event.head_sha &&
-                  current.data.base.sha !== event.base_sha
-                ) {
-                  baseChangedWithSameHead = current.data;
-                }
-              }
+              const stillRelevant = currentOpenPulls.some(
+                (current) =>
+                  !current.draft &&
+                  current.base.ref === defaultBranch &&
+                  current.head.sha === event.head_sha &&
+                  current.base.sha === event.base_sha,
+              );
+              const baseChangedWithSameHead = currentOpenPulls.find(
+                (current) =>
+                  !current.draft &&
+                  current.base.ref === defaultBranch &&
+                  current.head.sha === event.head_sha &&
+                  current.base.sha !== event.base_sha,
+              );
 
               if (!stillRelevant) {
                 // If only the base moved, neutral would satisfy a required
@@ -695,14 +721,21 @@ jobs:
                   repo,
                   check_run_id: event.check_run_id,
                   status: 'completed',
-                  conclusion: baseChangedWithSameHead ? 'failure' : 'neutral',
+                  conclusion:
+                    baseChangedWithSameHead || event.kind === 'findings'
+                      ? 'failure'
+                      : 'neutral',
                   completed_at: now.toISOString(),
                   output: {
                     title: baseChangedWithSameHead
                       ? 'Codex review stale after base update'
+                      : event.kind === 'findings'
+                        ? 'Codex review found blocking issues'
                       : 'Codex review superseded',
                     summary: baseChangedWithSameHead
                       ? 'The default branch changed while the Codex result was being reconciled. Update or rebase the pull request so its new base can be reviewed.'
+                      : event.kind === 'findings'
+                        ? `Managed Codex posted ${event.findingCount} review finding(s) for this commit.`
                       : 'The pull request head or base changed while its Codex result was being reconciled.',
                   },
                 });
