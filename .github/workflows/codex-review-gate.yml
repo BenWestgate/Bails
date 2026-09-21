@@ -431,7 +431,9 @@ jobs:
               if (baseChanged) run = undefined;
               if (!run) run = await createPendingGate(pull, baseChanged);
 
-              if (run.status === 'completed') continue;
+              const completedSuccess =
+                run.status === 'completed' && run.conclusion === 'success';
+              if (run.status === 'completed' && !completedSuccess) continue;
 
               const requestFloor = requestedAtForRun(run);
               const requiresFreshRequest =
@@ -445,6 +447,9 @@ jobs:
                 requestFloor,
               );
               if (outcome.terminal) {
+                if (completedSuccess && outcome.terminal.kind !== 'findings') {
+                  continue;
+                }
                 terminalEvents.push({
                   ...outcome.terminal,
                   base_sha: pull.base.sha,
@@ -454,6 +459,7 @@ jobs:
                 });
                 continue;
               }
+              if (completedSuccess) continue;
               if (outcome.quota) quotaEvents.push(outcome.quota);
 
               pending.push({
