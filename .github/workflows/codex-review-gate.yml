@@ -40,12 +40,14 @@ jobs:
         with:
           script: |
             const gateName = 'codex-review-gate';
-            const gateVersion = 'v6';
+            const gateVersion = 'v7';
             const stateName = 'codex-review-quota-state';
             const codexLogins = new Set([
               'chatgpt-codex-connector',
               'chatgpt-codex-connector[bot]',
             ]);
+            const trustedReviewPermissions = new Set(['admin', 'maintain', 'write']);
+            const reviewCommandPermissions = new Map();
             const quotaText = 'reached your Codex usage limits for code reviews';
             const fiveHours = 5 * 60 * 60 * 1000;
             const retryDelay = 5.25 * 60 * 60 * 1000;
@@ -79,6 +81,43 @@ jobs:
             };
 
             const isCodex = (login) => codexLogins.has(login || '');
+            async function isTrustedReviewCommand(comment) {
+              const login = comment?.user?.login || '';
+              if (
+                !login ||
+                isCodex(login) ||
+                String(comment?.body || '').trim() !== '@codex review'
+              ) {
+                return false;
+              }
+
+              // Requests emitted by this workflow use the repository's Actions
+              // identity. A pull request cannot impersonate that identity in
+              // the base repository, so it is safe to treat it as trusted.
+              if (login === 'github-actions[bot]') return true;
+
+              if (reviewCommandPermissions.has(login)) {
+                return reviewCommandPermissions.get(login);
+              }
+
+              let allowed = false;
+              try {
+                const response = await github.rest.repos.getCollaboratorPermissionLevel({
+                  owner,
+                  repo,
+                  username: login,
+                });
+                allowed = trustedReviewPermissions.has(response.data.permission);
+              } catch (error) {
+                if (error.status !== 404) {
+                  core.warning(
+                    `Could not verify review-command permission for ${login}: ${error}`,
+                  );
+                }
+              }
+              reviewCommandPermissions.set(login, allowed);
+              return allowed;
+            }
             const isCodexTaskSummary = (body) => {
               const text = String(body || '');
               return text.startsWith('### Summary\n') && text.includes('[View task →](');
@@ -91,12 +130,17 @@ jobs:
               isCodex(context.payload.comment?.user?.login)
                 ? Number(context.payload.comment.id)
                 : null;
-            const triggeringReviewCommandId =
+            let triggeringReviewCommandId = null;
+            if (
               context.eventName === 'issue_comment' &&
-              !isCodex(context.payload.comment?.user?.login) &&
               String(context.payload.comment?.body || '').trim() === '@codex review'
-                ? Number(context.payload.comment.id)
-                : null;
+            ) {
+              if (await isTrustedReviewCommand(context.payload.comment)) {
+                triggeringReviewCommandId = Number(context.payload.comment.id);
+              } else {
+                core.notice('Ignoring untrusted @codex review command.');
+              }
+            }
 
             function normalizeState(value) {
               if (!value || typeof value !== 'object') return { ...emptyState };
@@ -288,36 +332,55 @@ jobs:
                   }),
                 ]);
 
-              const reviewRequests = issueComments
-                .filter((comment) => {
-                  if (isCodex(comment.user?.login)) return false;
-                  if (String(comment.body || '').trim() !== '@codex review') {
-                    return false;
-                  }
-                  const createdAt = asDate(comment.created_at);
-                  const isTriggeringCommand =
-                    eventPullNumber === pull.number &&
-                    triggeringReviewCommandId === Number(comment.id);
-                  return createdAt && (createdAt >= startedAt || isTriggeringCommand);
-                })
-                .map((comment) => ({
-                  at: asDate(comment.created_at),
-                  id: Number(comment.id),
-                }))
-                .sort((a, b) => b.at - a.at);
-              const requestCommentId =
-                reviewRequests[0]?.id || requestCommentIdForRun(run);
-              const requestReactions = requestCommentId
-                ? await github.paginate(github.rest.reactions.listForIssueComment, {
-                    owner,
-                    repo,
-                    comment_id: requestCommentId,
-                    per_page: 100,
-                  })
+              const storedRequestCommentId = requestCommentIdForRun(run);
+              const reviewRequests = [];
+              for (const comment of issueComments) {
+                if (String(comment.body || '').trim() !== '@codex review') continue;
+                const createdAt = asDate(comment.created_at);
+                const commentId = Number(comment.id);
+                const isTriggeringCommand =
+                  eventPullNumber === pull.number &&
+                  triggeringReviewCommandId === commentId;
+                const isStoredRequest = storedRequestCommentId === commentId;
+                if (
+                  !createdAt ||
+                  (createdAt < startedAt && !isTriggeringCommand && !isStoredRequest)
+                ) {
+                  continue;
+                }
+                if (
+                  !isStoredRequest &&
+                  !(await isTrustedReviewCommand(comment))
+                ) {
+                  continue;
+                }
+                reviewRequests.push({ at: createdAt, id: commentId });
+              }
+              reviewRequests.sort((a, b) => b.at - a.at);
+
+              const reactionsByRequest = new Map();
+              await Promise.all(
+                reviewRequests.map(async (request) => {
+                  const reactions = await github.paginate(
+                    github.rest.reactions.listForIssueComment,
+                    {
+                      owner,
+                      repo,
+                      comment_id: request.id,
+                      per_page: 100,
+                    },
+                  );
+                  reactionsByRequest.set(request.id, reactions);
+                }),
+              );
+              const latestRequestReactions = reviewRequests[0]
+                ? reactionsByRequest.get(reviewRequests[0].id) || []
                 : [];
-              const requestInFlight = requestReactions.some(
-                (reaction) =>
-                  isCodex(reaction.user?.login) && reaction.content === 'eyes',
+              const requestInFlight = reviewRequests.some((request) =>
+                (reactionsByRequest.get(request.id) || []).some(
+                  (reaction) =>
+                    isCodex(reaction.user?.login) && reaction.content === 'eyes',
+                ),
               );
 
               const commentsByReview = new Map();
@@ -352,7 +415,10 @@ jobs:
               }
 
               const approvals = [];
-              for (const reaction of requestReactions) {
+              // A clean approval belongs to the newest request in this review
+              // cycle. Older requests are still inspected above for in-flight
+              // acknowledgements, but cannot satisfy a newer review request.
+              for (const reaction of latestRequestReactions) {
                 if (!isCodex(reaction.user?.login)) continue;
                 if (reaction.content !== '+1') continue;
                 const createdAt = asDate(reaction.created_at);
@@ -443,8 +509,15 @@ jobs:
               // still acknowledged: another overlapping review may yet report
               // findings, and review-submission events are intentionally not
               // trusted to execute this write-capable workflow.
+              // A newer quota response also supersedes an older clean result:
+              // that review request did not complete and must be retried.
+              const cleanApproval = !requestInFlight ? approvals[0] || null : null;
               const terminal =
-                findings[0] || (!requestInFlight ? approvals[0] : null) || null;
+                findings[0] ||
+                (cleanApproval &&
+                (!quotas[0] || cleanApproval.at >= quotas[0].at)
+                  ? cleanApproval
+                  : null);
 
               return {
                 terminal,
@@ -528,6 +601,7 @@ jobs:
               if (run.status === 'completed' && !completedSuccess) continue;
 
               const outcome = await inspectCodexOutcome(pull, run, availableSince);
+              if (outcome.quota) quotaEvents.push(outcome.quota);
               if (outcome.terminal) {
                 if (completedSuccess && outcome.terminal.kind !== 'findings') {
                   continue;
@@ -542,7 +616,6 @@ jobs:
                 continue;
               }
               if (completedSuccess) continue;
-              if (outcome.quota) quotaEvents.push(outcome.quota);
 
               pending.push({
                 base_sha: pull.base.sha,
@@ -580,6 +653,7 @@ jobs:
             verdictEvents.sort((a, b) => a.at - b.at);
             for (const event of verdictEvents) {
               let stillRelevant = false;
+              let baseChangedWithSameHead = null;
               for (const pullNumber of event.prs) {
                 const current = await github.rest.pulls.get({
                   owner,
@@ -596,19 +670,40 @@ jobs:
                   stillRelevant = true;
                   break;
                 }
+                if (
+                  current.data.state === 'open' &&
+                  !current.data.draft &&
+                  current.data.base.ref === defaultBranch &&
+                  current.data.head.sha === event.head_sha &&
+                  current.data.base.sha !== event.base_sha
+                ) {
+                  baseChangedWithSameHead = current.data;
+                }
               }
 
               if (!stillRelevant) {
+                // If only the base moved, neutral would satisfy a required
+                // check for the unchanged PR head. Publish a replacement
+                // pending check first and make the stale verdict blocking, so
+                // there is no mergeable window before reconciliation catches
+                // the new default-branch base.
+                if (baseChangedWithSameHead) {
+                  await createPendingGate(baseChangedWithSameHead, true);
+                }
                 await github.rest.checks.update({
                   owner,
                   repo,
                   check_run_id: event.check_run_id,
                   status: 'completed',
-                  conclusion: 'neutral',
+                  conclusion: baseChangedWithSameHead ? 'failure' : 'neutral',
                   completed_at: now.toISOString(),
                   output: {
-                    title: 'Codex review superseded',
-                    summary: 'The pull request head or base changed while its Codex result was being reconciled.',
+                    title: baseChangedWithSameHead
+                      ? 'Codex review stale after base update'
+                      : 'Codex review superseded',
+                    summary: baseChangedWithSameHead
+                      ? 'The default branch changed while the Codex result was being reconciled. Update or rebase the pull request so its new base can be reviewed.'
+                      : 'The pull request head or base changed while its Codex result was being reconciled.',
                   },
                 });
                 continue;
