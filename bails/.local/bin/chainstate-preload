@@ -27,6 +27,10 @@
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 
+# Refresh persistent links and schedule the delayed no-peer/Tor reminder for
+# every normal Bitcoin Core start, not only the installation launch.
+link-dotfiles --core-startup
+
 cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
 if ! grep 'progress=0.999' debug.log; then
     sleep 30
