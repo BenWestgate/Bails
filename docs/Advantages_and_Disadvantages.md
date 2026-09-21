@@ -1,53 +1,25 @@
-# CipherStick Bitcoin Wallet and Cold Storage
+# CipherStick: Current Properties and Limits
 
-CipherStick is a script that installs Bitcoin Core on Tails. It then walks the user though setup of an anonymous transaction and cold storage solution offering several advantages:
+CipherStick is experimental setup automation for Bitcoin Core on Tails. Its security properties come from the specific Tails and Bitcoin Core behavior it configures, not from a general guarantee.
 
-## Advantages
+## What it does
 
-1. **Privacy and Safety Priority**: CipherStick prioritizes privacy and safety over ease of use, requiring users to take necessary steps for secure bitcoin storage and private usage. The first step is installing a trustworthy operating system, Tails to a USB.
+- Installs Bitcoin Core and configures it to use Tails Persistent Storage.
+- Uses Tails' Tor-based network configuration for supported network traffic.
+- Checks downloaded Bitcoin Core release artifacts before installation.
+- Configures local block pruning when storage is limited.
+- Provides spaced-repetition prompts for the Persistent Storage passphrase.
 
-1. **Encrypted Wallet and Private Keys**: CipherStick encrypts both the wallet and private keys to prevent snooping on your Bitcoin use in case of compromised backups.
+## What it does not do
 
-1. **Persistent Wallet**: CipherStick is persistent, your wallet is saved and will load whenever you start Tails and unlock your Persistent Storage, saving time in the long run.
+- Create, restore, back up, or otherwise manage wallet private keys.
+- Guarantee anonymity, censorship resistance, confiscation resistance, or recovery of lost secrets.
+- Eliminate risks from compromised hardware, firmware, an unlocked Tails session, malicious peripherals, or user error.
+- Make initial Bitcoin Core synchronization fast; it can take hours or days.
+- Support automatic cloning, backup USB creation, offline signing, multisignature coordination, or Codex32 wallet restoration.
 
-1. **Codex32 Seed Backups**: CipherStick uses easy-to-write Codex32 seed backups, providing privacy and redundancy, tolerating loss or breach of 1-2 locations as well as loss of the passphrase.
+## Practical limits
 
-1. **Memorized Passphrase for Seed Backup**: A codex32 share to your backup is derived from a memorized passphrase, reducing the number of backup locations needed.
+Tails encrypts selected persistent data at rest, but an unlocked session can expose its data. Tor reduces direct network-location exposure, but transaction analysis, counterparties, and compromised services can still reveal information. Bitcoin Core validates the rules of the network locally, but cannot prevent loss or theft caused by compromised keys or endpoints.
 
-1. **Multi-sig for High-Value Bitcoin Savings**: A 2-of-2 multi-sig is used between the online seed backup (3 of 5 Codex-32) and an offline seed backup (3-of-3 Codex-32) stored across 7 locations, ensuring redundancy. This protects against one of the 2 signing devices being compromised.
-
-1. **Multi-party Multi-sig for Inheritance Protection**: CipherStick uses a 4-of-6 multi-party multi-sig for bitcoin inheritances, requiring collaboration of at least 2+ parties to spend, ensuring long-term savings are inaccessible without high-quality verification.
-
-1. **Offline Private Keys**: Private keys to Savings wallets are never on an internet-connected device with data movement limited to QR codes, enhancing security. Spending wallets are online with keys protected only by encryption for more convenient spending.
-
-1. **HD Wallets**: CipherStick uses HD wallets to send funds to thousands of addresses and recover funds from the original paper seed backup, improving privacy and loss resistance.
-
-1. **Minimal Software Beyond Bitcoin Core**: CipherStick minimizes code, primarily using python and bash scripts making it easily auditable.
-
-1. **Open Source and Auditable**: CipherStick is open-source and auditable, minimizing code review efforts.
-
-1. **Usable for Non-Technical Users**: CipherStick provides simple instructions and an intuitive interface for users with minimal computer literacy.
-
-1. **Private Keys Protection**: Private keys are stored in non-descript, tamper-evident packaging and held by trusted individuals such as heirs and professionals.
-
-1. **Privacy Focus**: CipherStick uses a full node, giving perfect receiving privacy, while using the Tor-network hides and encrypts the source of any transaction you broadcast. Most other wallets ask a trusted third party to show your balance and broadcast your transactions who can sell your data.
-
-1. **Counterfeit Prevention**: CipherStick ensures your bitcoin balance is genuine by using a full node. Most wallets ask a trusted a third party who can lie to you. 
-
-1. **Minimal Hardware**: CipherStick requires access to one or two cheap computers, making it cost-effective. The computer does not need to be erased to use CipherStick as it runs from the USB stick.
-
-1. **Fast Setup**: CipherStick can be completed by non-technologists with minimal effort in under an hour.
-
-1. **CipherStick Cloning**: CipherStick installations can be cloned for friends and family, saving time required to sync the blockchain for the recipient and providing an additional encrypted wallet backup for the CipherStick cloned.
-
-1. **CipherStick Backup USBs**: CipherStick creates backup USB sticks of itself, saving time in case of USB loss or damage.
-
-## Disadvantages
-
-While CipherStick provides the best balance of privacy, security, ease of use, and cost when storing privacy-critical sums of bitcoin, it has the following disadvantages that might not be expected:
-
-1. **Setup Time**: Completing the setup requires investing approximately 45 minutes spread over a couple of days.
-
-1. **Reduced Redundancy if Passphrase Lost**: Privacy and fast setup conflict with redundancy. Forgetting the memorized passphrase increases the risk of loss.
-
-1. **Wallet Privacy**: CipherSticks will unlock with just the passphrase alone, potentially revealing transactions and balances if both the passphrase and USB are compromised.
+CipherStick is alpha software and has not received an independent security audit. Read the upstream Tails and Bitcoin Core documentation before using it with funds.
