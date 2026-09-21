@@ -224,7 +224,7 @@ jobs:
                 .sort((a, b) => b.id - a.id)[0];
             }
 
-            async function createPendingGate(pull) {
+            async function createPendingGate(pull, requireFreshRequest = false) {
               const created = await github.rest.checks.create({
                 owner,
                 repo,
@@ -235,17 +235,39 @@ jobs:
                 started_at: now.toISOString(),
                 details_url: `${context.serverUrl}/${owner}/${repo}/pull/${pull.number}`,
                 output: {
-                  title: 'Codex review pending',
-                  summary:
-                    'Waiting for managed Codex to review this pull request commit.',
+                  title: requireFreshRequest
+                    ? 'Codex review required after base update'
+                    : 'Codex review pending',
+                  summary: requireFreshRequest
+                    ? 'The pull request base changed. A fresh managed Codex review must be requested before this gate can complete.'
+                    : 'Waiting for managed Codex to review this pull request commit.',
                 },
               });
               return created.data;
             }
 
-            async function inspectCodexOutcome(pull, run, quotaFloor) {
+            function requestedAtForRun(run) {
+              const summary = String(run.output?.summary || '');
+              const match = summary.match(/^Requested at: (.+)$/m);
+              return match ? asDate(match[1]) : null;
+            }
+
+            async function inspectCodexOutcome(
+              pull,
+              run,
+              quotaFloor,
+              allowTerminal,
+              terminalFloor,
+            ) {
               const startedAt = asDate(run.started_at || run.created_at) || now;
-              const floor = quotaFloor && quotaFloor > startedAt ? quotaFloor : startedAt;
+              const resultFloor =
+                terminalFloor && terminalFloor > startedAt
+                  ? terminalFloor
+                  : startedAt;
+              const floor =
+                quotaFloor && quotaFloor > resultFloor
+                  ? quotaFloor
+                  : resultFloor;
 
               const [reviews, reviewComments, issueComments] =
                 await Promise.all([
@@ -281,13 +303,19 @@ jobs:
 
               const terminal = [];
               for (const review of reviews) {
+                if (!allowTerminal) continue;
                 if (!isCodex(review.user?.login)) continue;
                 if (review.commit_id !== pull.head.sha) continue;
                 const submittedAt = asDate(review.submitted_at);
                 const isTriggeringReview =
                   eventPullNumber === pull.number &&
                   triggeringReviewId === Number(review.id);
-                if (!submittedAt || (!isTriggeringReview && submittedAt < startedAt)) {
+                const triggerMayPrecedeFloor =
+                  isTriggeringReview && !terminalFloor;
+                if (
+                  !submittedAt ||
+                  (submittedAt < resultFloor && !triggerMayPrecedeFloor)
+                ) {
                   continue;
                 }
                 const findingCount = commentsByReview.get(Number(review.id)) || 0;
@@ -301,6 +329,7 @@ jobs:
               }
 
               for (const comment of issueComments) {
+                if (!allowTerminal) continue;
                 if (!isCodex(comment.user?.login)) continue;
                 const body = String(comment.body || '');
                 if (!body.startsWith("Codex Review: Didn't find any major issues.")) {
@@ -338,7 +367,12 @@ jobs:
                 const isTriggeringComment =
                   eventPullNumber === pull.number &&
                   triggeringIssueCommentId === Number(comment.id);
-                if (!createdAt || (!isTriggeringComment && createdAt < startedAt)) {
+                const triggerMayPrecedeFloor =
+                  isTriggeringComment && !terminalFloor;
+                if (
+                  !createdAt ||
+                  (createdAt < resultFloor && !triggerMayPrecedeFloor)
+                ) {
                   continue;
                 }
                 terminal.push({ at: createdAt, kind: 'approve', findingCount: 0 });
@@ -395,18 +429,25 @@ jobs:
                 run && run.external_id !== pull.base.sha,
               );
               if (baseChanged) run = undefined;
-              if (!run) run = await createPendingGate(pull);
+              if (!run) run = await createPendingGate(pull, baseChanged);
 
               if (run.status === 'completed') continue;
+
+              const requestFloor = requestedAtForRun(run);
+              const requiresFreshRequest =
+                run.output?.title === 'Codex review required after base update';
 
               const outcome = await inspectCodexOutcome(
                 pull,
                 run,
                 availableSince,
+                !requiresFreshRequest || Boolean(requestFloor),
+                requestFloor,
               );
               if (outcome.terminal) {
                 terminalEvents.push({
                   ...outcome.terminal,
+                  base_sha: pull.base.sha,
                   check_run_id: run.id,
                   head_sha: pull.head.sha,
                   pr: pull.number,
@@ -421,6 +462,7 @@ jobs:
                 head_sha: pull.head.sha,
                 needs_manual:
                   baseChanged ||
+                  requiresFreshRequest ||
                   context.eventName === 'pull_request_target' &&
                   context.payload.pull_request?.number === pull.number &&
                   (context.payload.action === 'synchronize' ||
@@ -481,9 +523,15 @@ jobs:
               .sort((a, b) => b.at - a.at)[0];
 
             if (latestTerminal && (!latestQuota || latestTerminal.at >= latestQuota.at)) {
+              const terminalMatchesProbe =
+                state.probe &&
+                latestTerminal.pr === state.probe.pr &&
+                latestTerminal.head_sha === state.probe.head_sha &&
+                latestTerminal.base_sha === state.probe.base_sha;
               state = {
                 ...emptyState,
                 available_since: latestTerminal.at.toISOString(),
+                probe: terminalMatchesProbe ? null : state.probe,
               };
             } else if (latestQuota) {
               const probeRequestedAt = asDate(state.probe?.requested_at);
@@ -584,8 +632,11 @@ jobs:
                   status: 'in_progress',
                   output: {
                     title: 'Codex review requested',
-                    summary:
+                    summary: [
+                      `Requested at: ${now.toISOString()}`,
+                      `Base commit: ${candidate.base_sha}`,
                       'Requested managed Codex review and waiting for its result.',
+                    ].join('\n'),
                   },
                 });
               }
