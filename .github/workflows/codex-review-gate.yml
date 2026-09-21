@@ -579,6 +579,28 @@ jobs:
             if (state.probe) {
               const key = `${state.probe.pr}:${state.probe.head_sha}:${state.probe.base_sha}`;
               if (!pendingByKey.has(key)) {
+                const relatedPending = pending.find(
+                  (item) =>
+                    item.pr === state.probe.pr &&
+                    item.head_sha === state.probe.head_sha,
+                );
+                const requestedAt = asDate(state.probe.requested_at);
+                if (
+                  relatedPending &&
+                  relatedPending.base_sha !== state.probe.base_sha &&
+                  requestedAt
+                ) {
+                  const drainUntil = new Date(
+                    requestedAt.getTime() + probeResponseGrace,
+                  );
+                  const nextProbe = asDate(state.next_probe_at);
+                  if (
+                    drainUntil > now &&
+                    (!nextProbe || drainUntil > nextProbe)
+                  ) {
+                    state.next_probe_at = drainUntil.toISOString();
+                  }
+                }
                 state.probe = null;
               } else {
                 const requestedAt = asDate(state.probe.requested_at);
