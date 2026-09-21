@@ -252,12 +252,28 @@ jobs:
               return match ? asDate(match[1]) : null;
             }
 
+            function requestCommentIdForRun(run) {
+              const summary = String(run.output?.summary || '');
+              const match = summary.match(/^Request comment: (\d+)$/m);
+              return match ? Number(match[1]) : null;
+            }
+
+            function requestBoundApprovalForRun(run) {
+              const summary = String(run.output?.summary || '');
+              return (
+                run.output?.title === 'Codex review required after base update' ||
+                /^Approval mode: request-reaction$/m.test(summary)
+              );
+            }
+
             async function inspectCodexOutcome(
               pull,
               run,
               quotaFloor,
-              allowTerminal,
+              allowApproval,
               terminalFloor,
+              requestCommentId,
+              requestBoundApproval,
             ) {
               const startedAt = asDate(run.started_at || run.created_at) || now;
               const resultFloor =
@@ -269,7 +285,7 @@ jobs:
                   ? quotaFloor
                   : resultFloor;
 
-              const [reviews, reviewComments, issueComments] =
+              const [reviews, reviewComments, issueComments, requestReactions] =
                 await Promise.all([
                   github.paginate(github.rest.pulls.listReviews, {
                     owner,
@@ -289,6 +305,14 @@ jobs:
                     issue_number: pull.number,
                     per_page: 100,
                   }),
+                  requestCommentId
+                    ? github.paginate(github.rest.reactions.listForIssueComment, {
+                        owner,
+                        repo,
+                        comment_id: requestCommentId,
+                        per_page: 100,
+                      })
+                    : Promise.resolve([]),
                 ]);
 
               const commentsByReview = new Map();
@@ -303,7 +327,6 @@ jobs:
 
               const terminal = [];
               for (const review of reviews) {
-                if (!allowTerminal) continue;
                 if (!isCodex(review.user?.login)) continue;
                 if (review.commit_id !== pull.head.sha) continue;
                 const submittedAt = asDate(review.submitted_at);
@@ -329,7 +352,7 @@ jobs:
               }
 
               for (const comment of issueComments) {
-                if (!allowTerminal) continue;
+                if (!allowApproval || requestBoundApproval) continue;
                 if (!isCodex(comment.user?.login)) continue;
                 const body = String(comment.body || '');
                 if (!body.startsWith("Codex Review: Didn't find any major issues.")) {
@@ -376,6 +399,16 @@ jobs:
                   continue;
                 }
                 terminal.push({ at: createdAt, kind: 'approve', findingCount: 0 });
+              }
+
+              if (allowApproval && requestBoundApproval && requestCommentId) {
+                for (const reaction of requestReactions) {
+                  if (!isCodex(reaction.user?.login)) continue;
+                  if (reaction.content !== '+1') continue;
+                  const createdAt = asDate(reaction.created_at);
+                  if (!createdAt || createdAt < resultFloor) continue;
+                  terminal.push({ at: createdAt, kind: 'approve', findingCount: 0 });
+                }
               }
 
               terminal.sort((a, b) => {
@@ -438,6 +471,8 @@ jobs:
               const requestFloor = requestedAtForRun(run);
               const requiresFreshRequest =
                 run.output?.title === 'Codex review required after base update';
+              const requestCommentId = requestCommentIdForRun(run);
+              const requestBoundApproval = requestBoundApprovalForRun(run);
 
               const outcome = await inspectCodexOutcome(
                 pull,
@@ -445,6 +480,8 @@ jobs:
                 availableSince,
                 !requiresFreshRequest || Boolean(requestFloor),
                 requestFloor,
+                requestCommentId,
+                requestBoundApproval,
               );
               if (outcome.terminal) {
                 if (completedSuccess && outcome.terminal.kind !== 'findings') {
@@ -486,7 +523,10 @@ jobs:
                 repo,
                 pull_number: event.pr,
               });
-              if (current.data.head.sha !== event.head_sha) {
+              if (
+                current.data.head.sha !== event.head_sha ||
+                current.data.base.sha !== event.base_sha
+              ) {
                 await github.rest.checks.update({
                   owner,
                   repo,
@@ -496,7 +536,7 @@ jobs:
                   completed_at: now.toISOString(),
                   output: {
                     title: 'Codex review superseded',
-                    summary: 'The pull request changed while its Codex result was being reconciled.',
+                    summary: 'The pull request head or base changed while its Codex result was being reconciled.',
                   },
                 });
                 continue;
@@ -662,7 +702,9 @@ jobs:
                     title: 'Codex review requested',
                     summary: [
                       `Requested at: ${now.toISOString()}`,
+                      `Request comment: ${Number(comment.data.id)}`,
                       `Base commit: ${candidate.base_sha}`,
+                      'Approval mode: request-reaction',
                       'Requested managed Codex review and waiting for its result.',
                     ].join('\n'),
                   },
