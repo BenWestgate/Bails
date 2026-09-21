@@ -40,7 +40,7 @@ jobs:
         with:
           script: |
             const gateName = 'codex-review-gate';
-            const gateVersion = 'v4';
+            const gateVersion = 'v5';
             const stateName = 'codex-review-quota-state';
             const codexLogins = new Set([
               'chatgpt-codex-connector',
@@ -311,6 +311,10 @@ jobs:
                     per_page: 100,
                   })
                 : [];
+              const requestInFlight = requestReactions.some(
+                (reaction) =>
+                  isCodex(reaction.user?.login) && reaction.content === 'eyes',
+              );
 
               const commentsByReview = new Map();
               for (const comment of reviewComments) {
@@ -426,7 +430,12 @@ jobs:
 
               // Any finding on this exact head remains blocking until the head
               // changes. A later clean review cannot make unchanged code safe.
-              const terminal = findings[0] || approvals[0] || null;
+              // Also keep the gate pending while the latest explicit request is
+              // still acknowledged: another overlapping review may yet report
+              // findings, and review-submission events are intentionally not
+              // trusted to execute this write-capable workflow.
+              const terminal =
+                findings[0] || (!requestInFlight ? approvals[0] : null) || null;
 
               return {
                 terminal,
