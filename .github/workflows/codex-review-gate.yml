@@ -40,7 +40,7 @@ jobs:
         with:
           script: |
             const gateName = 'codex-review-gate';
-            const gateVersion = 'v5';
+            const gateVersion = 'v6';
             const stateName = 'codex-review-quota-state';
             const codexLogins = new Set([
               'chatgpt-codex-connector',
@@ -79,6 +79,10 @@ jobs:
             };
 
             const isCodex = (login) => codexLogins.has(login || '');
+            const isCodexTaskSummary = (body) => {
+              const text = String(body || '');
+              return text.startsWith('### Summary\n') && text.includes('[View task →](');
+            };
             const eventPullNumber = Number(
               context.payload.pull_request?.number || context.payload.issue?.number || 0,
             );
@@ -319,6 +323,11 @@ jobs:
               const commentsByReview = new Map();
               for (const comment of reviewComments) {
                 if (!isCodex(comment.user?.login)) continue;
+                // Codex task/agent runs can occasionally attach a non-review
+                // execution summary as an inline PR comment. Those comments are
+                // not findings; all other unknown inline Codex comments remain
+                // fail-closed and count as review findings.
+                if (isCodexTaskSummary(comment.body)) continue;
                 const reviewId = Number(comment.pull_request_review_id);
                 commentsByReview.set(
                   reviewId,
