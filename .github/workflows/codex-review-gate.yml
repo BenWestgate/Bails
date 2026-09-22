@@ -40,7 +40,7 @@ jobs:
         with:
           script: |
             const gateName = 'codex-review-gate';
-            const gateVersion = 'v8';
+            const gateVersion = 'v9';
             const stateName = 'codex-review-quota-state';
             const codexLogins = new Set([
               'chatgpt-codex-connector',
@@ -303,6 +303,53 @@ jobs:
                     ? 'The default branch changed after this head commit was reviewed. Update or rebase the pull request so it has a new head commit before Codex review can complete.'
                     : waitingSummary,
                 },
+              });
+              return created.data;
+            }
+
+            async function ensureAmbiguousSharedHeadGate(pulls) {
+              const headSha = pulls[0].head.sha;
+              const run = await latestGateRun(headSha);
+              const externalId = `${gateVersion}:ambiguous`;
+              const details = pulls
+                .slice()
+                .sort((a, b) => a.number - b.number)
+                .map((pull) => `#${pull.number} @ ${pull.base.sha}`)
+                .join(', ');
+              const output = {
+                title: 'Codex review blocked by shared head',
+                summary: [
+                  'Multiple reviewable pull requests reuse this head commit against different base commits.',
+                  'A commit-scoped required check cannot safely represent those different diffs.',
+                  `Conflicting pull requests: ${details}`,
+                  'Give the pull requests distinct head commits, close one, or convert one to draft before Codex review can proceed.',
+                ].join('\n'),
+              };
+
+              if (run?.external_id === externalId) {
+                await github.rest.checks.update({
+                  owner,
+                  repo,
+                  check_run_id: run.id,
+                  status: 'completed',
+                  conclusion: 'failure',
+                  completed_at: now.toISOString(),
+                  output,
+                });
+                return run;
+              }
+
+              const created = await github.rest.checks.create({
+                owner,
+                repo,
+                name: gateName,
+                head_sha: headSha,
+                external_id: externalId,
+                status: 'completed',
+                conclusion: 'failure',
+                completed_at: now.toISOString(),
+                details_url: `${context.serverUrl}/${owner}/${repo}/pull/${pulls[0].number}`,
+                output,
               });
               return created.data;
             }
@@ -571,6 +618,19 @@ jobs:
                 !pull.draft &&
                 pull.base.ref === defaultBranch,
             );
+            const reviewablePullsByHead = new Map();
+            for (const pull of reviewablePulls) {
+              const siblings = reviewablePullsByHead.get(pull.head.sha) || [];
+              siblings.push(pull);
+              reviewablePullsByHead.set(pull.head.sha, siblings);
+            }
+            const ambiguousHeadShas = new Set();
+            for (const [headSha, siblings] of reviewablePullsByHead) {
+              const baseShas = new Set(siblings.map((pull) => pull.base.sha));
+              if (baseShas.size < 2) continue;
+              ambiguousHeadShas.add(headSha);
+              await ensureAmbiguousSharedHeadGate(siblings);
+            }
 
             // A trusted manual review request invalidates an earlier success
             // immediately, even while the PR is draft. Draft PRs are excluded
@@ -583,7 +643,10 @@ jobs:
                   pull.state === 'open' &&
                   pull.base.ref === defaultBranch,
               );
-              if (triggeringPull) {
+              if (
+                triggeringPull &&
+                !ambiguousHeadShas.has(triggeringPull.head.sha)
+              ) {
                 const triggerRun = await latestGateRun(triggeringPull.head.sha);
                 const triggerVersionMismatch = Boolean(
                   triggerRun &&
@@ -620,9 +683,13 @@ jobs:
             const inspectedNonReviewableSiblings = new Set();
 
             for (const pull of reviewablePulls) {
+              if (ambiguousHeadShas.has(pull.head.sha)) continue;
               const triggeringRequestCommentId =
                 eventPullNumber === pull.number ? triggeringReviewCommandId : null;
               let run = await latestGateRun(pull.head.sha);
+              const ambiguousRun = Boolean(
+                run && run.external_id === `${gateVersion}:ambiguous`,
+              );
               const versionMismatch = Boolean(
                 run && !String(run.external_id || '').startsWith(`${gateVersion}:`),
               );
@@ -631,7 +698,7 @@ jobs:
                 !versionMismatch &&
                 run.external_id !== `${gateVersion}:${pull.base.sha}`,
               );
-              if (versionMismatch) {
+              if (ambiguousRun || versionMismatch) {
                 run = await createPendingGate(
                   pull,
                   false,
