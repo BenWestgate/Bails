@@ -1,18 +1,12 @@
 # CipherStick Bitcoin Wallet and Cold Storage
 
-CipherStick is a script that installs Bitcoin Core on Tails. It then walks the user though setup of an anonymous transaction and cold storage solution offering several advantages:
+CipherStick is a script that installs Bitcoin Core on Tails. Wallet creation and private-key handling are left to wallet software of the user's choosing rather than implemented by CipherStick itself.
 
 ## Advantages
 
 1. **Privacy and Safety Priority**: CipherStick prioritizes privacy and safety over ease of use, requiring users to take necessary steps for secure bitcoin storage and private usage. The first step is installing a trustworthy operating system, Tails to a USB.
 
-1. **Encrypted Wallet and Private Keys**: CipherStick encrypts both the wallet and private keys to prevent snooping on your Bitcoin use in case of compromised backups.
-
-1. **Persistent Wallet**: CipherStick is persistent, your wallet is saved and will load whenever you start Tails and unlock your Persistent Storage, saving time in the long run.
-
-1. **Codex32 Seed Backups**: CipherStick uses easy-to-write Codex32 seed backups, providing privacy and redundancy, tolerating loss or breach of 1-2 locations as well as loss of the passphrase.
-
-1. **Memorized Passphrase for Seed Backup**: A codex32 share to your backup is derived from a memorized passphrase, reducing the number of backup locations needed.
+1. **Encrypted Persistent Storage**: Tails Persistent Storage protects persistent application and Bitcoin data while the storage is locked.
 
 1. **Multi-sig for High-Value Bitcoin Savings**: A 2-of-2 multi-sig is used between the online seed backup (3 of 5 Codex-32) and an offline seed backup (3-of-3 Codex-32) stored across 7 locations, ensuring redundancy. This protects against one of the 2 signing devices being compromised.
 
@@ -20,7 +14,7 @@ CipherStick is a script that installs Bitcoin Core on Tails. It then walks the u
 
 1. **Offline Private Keys**: Private keys to Savings wallets are never on an internet-connected device with data movement limited to QR codes, enhancing security. Spending wallets are online with keys protected only by encryption for more convenient spending.
 
-1. **HD Wallets**: CipherStick uses HD wallets to send funds to thousands of addresses and recover funds from the original paper seed backup, improving privacy and loss resistance.
+1. **No Custom Key Handling**: CipherStick stays focused on installation and node setup, leaving wallet coordination and private-key handling to separately reviewed software.
 
 1. **Minimal Software Beyond Bitcoin Core**: CipherStick minimizes code, primarily using python and bash scripts making it easily auditable.
 
