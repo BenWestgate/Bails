@@ -100,7 +100,7 @@ case "$response2" in
     "$action Sparrow") gnome-terminal --title="$action Sparrow Wallet" --hide-menubar \
         -- "install-sparrow" ;;
     "Practice Passphrase")
-        trainer_pid="$(cat "$XDG_DATA_HOME/../state/spaced-repetition.pid" 2>/dev/null || true)"
+        trainer_pid="$(cat "$XDG_RUNTIME_DIR/spaced-repetition.pid" 2>/dev/null || true)"
         if [[ "$trainer_pid" =~ ^[0-9]+$ ]] && kill -0 "$trainer_pid" 2>/dev/null; then
             kill -USR1 "$trainer_pid"
         else
