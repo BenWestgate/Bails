@@ -23,7 +23,7 @@
 set -euo pipefail
 
 readonly REVISION="78f4a3b4e99b02bf012ff179aaa7f3f8a96683f2"
-readonly DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly VENV_DIR="$DATA_HOME/python-codex32-venv"
 readonly GUI="$VENV_DIR/bin/codex32-gui"
 readonly REVISION_FILE="$VENV_DIR/.cipherstick-revision"
