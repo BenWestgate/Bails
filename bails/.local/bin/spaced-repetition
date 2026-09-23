@@ -26,7 +26,7 @@
 
 readonly STATE_DIR='/live/persistence/TailsData_unlocked/dotfiles/.local/state'
 readonly STATE_FILE="$STATE_DIR/spaced-repetition.state"
-readonly PID_FILE="$STATE_DIR/spaced-repetition.pid"
+readonly PID_FILE="$XDG_RUNTIME_DIR/spaced-repetition.pid"
 practice_now=0
 resume_only=0
 [ "${1:-}" = "--now" ] && practice_now=1
