@@ -21,9 +21,17 @@ Use the Bitcoin Core version appropriate for the wallet data, keep an untouched 
 
 ## Codex32 backups
 
-Codex32 shares remain recovery material even though the bundled implementation is removed. The replacement restoration path is tracked in issue #215 and uses the separately reviewed `python-codex32` project to recover a master seed for Bitcoin Core.
+Codex32 shares remain recovery material even though the bundled implementation is removed. CipherStick's replacement flow uses a pinned `python-codex32` GUI to recover a master seed for Bitcoin Core.
 
-Until that replacement is reviewed and merged:
+To restore:
+
+1. start Bitcoin Core;
+2. open the **Codex32** application; on first launch, allow CipherStick to install its pinned `python-codex32` checkout and virtual environment into Persistent Storage;
+3. choose **Restore my wallet** and enter enough shares to meet their threshold;
+4. follow the GUI to restore into an empty Bitcoin Core wallet; and
+5. compare the restored wallet details, especially the master fingerprint, with your wallet record before relying on the restored wallet.
+
+During recovery:
 
 - keep the original shares unchanged;
 - do not discard the original CipherStick based on an untested conversion;
@@ -32,4 +40,4 @@ Until that replacement is reviewed and merged:
 
 ## Migration boundary
 
-This removal deliberately does not migrate private keys automatically. A future recovery tool must make secret lifetime explicit, avoid unintended persistence of the recovered master seed, and restore into Bitcoin Core without reintroducing the old `bails-wallet` codebase.
+This removal deliberately does not migrate private keys automatically. The replacement flow keeps the recovered seed inside the recovery process and restores into Bitcoin Core without reintroducing the old `bails-wallet` codebase.
