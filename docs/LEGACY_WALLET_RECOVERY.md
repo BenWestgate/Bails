@@ -28,7 +28,8 @@ Until that replacement is reviewed and merged:
 - keep the original shares unchanged;
 - do not discard the original CipherStick based on an untested conversion;
 - do not send shares to an online service for decoding;
-- do not assume a third-party Codex32 tool has the same error-correction or derivation behavior as the removed implementation.
+- do not assume a third-party Codex32 tool has the same error-correction or derivation behavior as the removed implementation;
+- if you depend on the legacy restore path, retain a known-good copy of the previous CipherStick release for recovery use.
 
 ## Migration boundary
 
