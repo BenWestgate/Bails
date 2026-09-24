@@ -90,6 +90,8 @@ For a discussion on the pros and cons of using CipherStick, refer to the [detail
 
 CipherStick installs and configures Bitcoin Core, guides Persistent Storage setup, and provides passphrase practice. Automated cloning, backup creation, offline signing, multisignature coordination, and Codex32 wallet restoration are not currently supported.
 
+See the [CipherStick threat model](docs/THREAT_MODEL.md) for the installer-specific trust boundaries and non-goals.
+
 ## Source Code Headers
 
 Every file containing source code must include copyright and license
