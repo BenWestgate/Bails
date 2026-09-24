@@ -49,7 +49,7 @@ To contribute a patch, the workflow is as follows:
   1. Create topic branch
   1. Commit patches
 
-Match the style of the surrounding shell scripts.
+The shell conventions in the [developer notes](docs/developer-notes.md#shell-code) must be followed.
 
 ### Committing Patches
 
@@ -217,7 +217,7 @@ In general, all pull requests must:
   - Have a clear use case, fix a demonstrable bug or serve the greater good of
     the project (for example refactoring for modularisation);
   - Be well peer-reviewed;
-  - Match the style of the surrounding shell scripts;
+  - Follow the shell conventions in the [developer notes](docs/developer-notes.md#shell-code);
   - Not break the existing test suite;
   - Where bugs are fixed, where possible, there should be unit tests
     demonstrating the bug and also proving the fix. This helps prevent regression.
