@@ -25,6 +25,8 @@ set -euo pipefail
 readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
+SCRIPT_DIR="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")"
+readonly SCRIPT_DIR
 
 if [ ! -d "$SOURCE_DIR/.git" ] || \
     [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" != "$REVISION" ] || \
@@ -33,7 +35,9 @@ if [ ! -d "$SOURCE_DIR/.git" ] || \
         --text='CipherStick will install or repair its pinned python-codex32 graphical application.' \
         --ok-label='Install' --default-cancel || exit 0
 
-    gnome-terminal --wait --title='Installing codex32' --hide-menubar -- install-codex32 || {
+    "$SCRIPT_DIR/install-codex32" 2>&1 | zenity --progress --pulsate --auto-close --no-cancel \
+        --title='Installing codex32' \
+        --text='Installing the graphical codex32 application...' || {
         zenity --error --title='codex32 installation failed' \
             --text='The graphical codex32 application could not be installed.'
         exit 1
