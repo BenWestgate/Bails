@@ -8,7 +8,7 @@ CipherStick is the most private way to transact and store bitcoin. It ensures yo
 
 Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails.
 
-The legacy Codex32 wallet create/restore flow has been removed. Replacement Codex32 tooling is tracked separately in issue #215.
+The legacy Codex32 wallet create/restore flow has been removed. The **codex32** application installs CipherStick's pinned `python-codex32` GUI into Persistent Storage on first use. Start Bitcoin Core, open **codex32**, choose **Restore my wallet**, enter the required shares, and verify the recovered master fingerprint against your separately stored wallet record before Bitcoin Core is changed. If the record is unavailable, the GUI shows the recovered fingerprint and requires an explicit warning acknowledgement before restore.
 
 Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet.
 - [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
