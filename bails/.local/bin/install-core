@@ -115,10 +115,26 @@ cd "$XDG_DATA_HOME/bitcoin" 2>/dev/null || cd "$HOME/.local/share/bitcoin" || ex
 DOWNLOAD_DIR=$PWD
 retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
 VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
+case "$VER" in
+    ''|*[!0-9.]*) echo "Unexpected Bitcoin Core version: $VER" >&2; exit 1 ;;
+esac
+release_path="bitcoin-core-$VER"
+
+# python-codex32 requires Bitcoin Core 32 or newer. Until 32.0 is stable,
+# use the authenticated 32.0rc2 release candidate instead of stable 31.x.
+if [ "${VER%%.*}" -lt 32 ]; then
+    VER=32.0rc2
+    release_path="bitcoin-core-32.0/test.rc2"
+fi
+
+release_url="$BITCOIN_CORE_DOMAIN/bin/$release_path"
+mkdir -p "bitcoin-core-$VER"
 # Download Bitcoin core checksums and signatures in background
-retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/SHA256SUMS"{,.asc} & sig_dl=$!
+retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
+    "$release_url/SHA256SUMS" "$release_url/SHA256SUMS.asc" & sig_dl=$!
 # Download Bitcoin core binary in background
-retry_on_fail wget -cxnH --cut-dirs=1 "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/bitcoin-$VER-x86_64-linux-gnu.tar.gz" & get_core=$!
+retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
+    "$release_url/bitcoin-$VER-x86_64-linux-gnu.tar.gz" & get_core=$!
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
 if cd guix.sigs 2>/dev/null; then
     retry_on_fail git pull -v # Update guix.sigs
