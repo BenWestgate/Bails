@@ -37,7 +37,6 @@ ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
 # Update favorite apps list
 
 favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
-which Sparrow && favorites=${favorites/bitcoin-qt/sparrow-Sparrow}
 gsettings set org.gnome.shell favorite-apps "$favorites"
 
 space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \

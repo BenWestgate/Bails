@@ -8,7 +8,7 @@ CipherStick grew from the question:
 
 Because projects like **CipherStick** exist and work, the more people who use them, the less likely Bitcoin bans will ever be attempted.
 
-I believe it's extremely secure in relation to the effort it takes to setup and use, you get an isolated security focused free open-source operating system, strong encyption, Tor, verified signatures, a Bitcoin Core full node, and a shamir secret sharing backup in under an hour. And it doesn't need a dedicated PC, just a dedicated USB stick.
+I believe it's extremely secure in relation to the effort it takes to setup and use: you get an isolated security focused free and open-source operating system, strong encryption, Tor, verified signatures, and a Bitcoin Core full node in under an hour. Codex32 backup tooling is maintained separately from CipherStick's removed legacy wallet implementation. And it doesn't need a dedicated PC, just a dedicated USB stick.
 
 Other options with similar privacy and setup time span either: aren't free, are more error prone and/or give weaker security. 
 
@@ -101,7 +101,7 @@ Once you are synced, nearly any computer will be fast enough to stay caught up a
 In short, if you know who they are, know their GPG fingerprint belongs to them and believe they could have reviewed the Bitcoin Core source code and built it, then you can trust their signature. If you don't trust anyone on the list, ask someone trustworthy who they would trust. Or go back and click "Skip" to let the CipherStick developers choose whose signatures to trust.
 
 ## Does it matter what order I enter shares when restoring?
-No. But currently, you do have to keep your computer on until you’ve reached a threshold. So if you’d have to fetch some by travel or encrypted video calls it makes sense to enter those first so you’re not waiting around with as many shares stored in the computer's memory. For this reason, the seed backup passphrase is always last.
+No. Codex32 shares can be entered in any order until the recovery threshold is reached. The removed legacy CipherStick wallet flow is no longer the supported restoration interface.
 
 ## How do I make this go faster?
 1. Check that your internet bandwidth is not slow. You can't sync faster than you can download and the blockchain is around 600 GB.
