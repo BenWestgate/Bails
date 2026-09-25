@@ -40,12 +40,12 @@ if [ ! -d "$SOURCE_DIR/.git" ] || \
     }
 fi
 
-[ -d "$SOURCE_DIR/.git" ] && \
-    [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" = "$REVISION" ] && \
-    PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null || {
+if ! [ -d "$SOURCE_DIR/.git" ] || \
+    [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" != "$REVISION" ] || \
+    ! PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null; then
     zenity --error --title='codex32 unavailable' \
         --text='The graphical codex32 application is not available.'
     exit 1
-}
+fi
 
 exec env PYTHONPATH="$SOURCE_DIR/src" python3 -P -m codex32_gui
