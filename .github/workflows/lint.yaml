@@ -19,7 +19,6 @@ jobs:
           SHELLCHECK_OPTS: -e 2012 -e SC2046
         with:
           ignore_paths: |
-            ./bails/.local/bin/bails-wallet
             ./bails/.local/bin/ibd-progress
             ./bails/.local/bin/backupd
   # python-lint:

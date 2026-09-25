@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# Downloads Bitcoin Core and installs it persistently. Starts bails-wallet.
+# Downloads Bitcoin Core and installs it persistently.
 ###############################################################################
 
 # For security reviewing use: https://explainshell.com/ for unfamiliar commands.
@@ -230,7 +230,6 @@ else
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
     ln --symbolic --force -b /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
-    chmod -w $DATA_DIR/wallets  # TODO: this can be deleted when panic mode is added
     ln --symbolic --force -b {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
     ln --symbolic --force -b $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
     # Calculate space available for block file storage
