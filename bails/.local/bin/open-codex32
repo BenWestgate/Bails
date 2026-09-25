@@ -24,17 +24,11 @@ set -euo pipefail
 
 readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
-readonly VENV_DIR="$DATA_HOME/python-codex32-venv"
-readonly GUI="$VENV_DIR/bin/codex32-gui"
-readonly REVISION_FILE="$VENV_DIR/.cipherstick-revision"
-readonly PYTHON_VERSION_FILE="$VENV_DIR/.cipherstick-python-version"
+readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 
-python_version="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-
-if [ ! -x "$GUI" ] || \
-    [ "$(cat "$REVISION_FILE" 2>/dev/null || true)" != "$REVISION" ] || \
-    [ "$(cat "$PYTHON_VERSION_FILE" 2>/dev/null || true)" != "$python_version" ] || \
-    ! "$VENV_DIR/bin/python" -c 'import codex32; import codex32_gui' 2>/dev/null; then
+if [ ! -d "$SOURCE_DIR/.git" ] || \
+    [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" != "$REVISION" ] || \
+    ! PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null; then
     zenity --question --title='Install codex32?' \
         --text='CipherStick will install or repair its pinned python-codex32 graphical application.' \
         --ok-label='Install' --default-cancel || exit 0
@@ -46,10 +40,12 @@ if [ ! -x "$GUI" ] || \
     }
 fi
 
-[ -x "$GUI" ] || {
+[ -d "$SOURCE_DIR/.git" ] && \
+    [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" = "$REVISION" ] && \
+    PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null || {
     zenity --error --title='codex32 unavailable' \
         --text='The graphical codex32 application is not available.'
     exit 1
 }
 
-exec "$GUI"
+exec env PYTHONPATH="$SOURCE_DIR/src" python3 -P -m codex32_gui

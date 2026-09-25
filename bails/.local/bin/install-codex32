@@ -26,9 +26,6 @@ readonly REPOSITORY="https://github.com/BenWestgate/python-codex32.git"
 readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
-readonly VENV_DIR="$DATA_HOME/python-codex32-venv"
-readonly REVISION_FILE="$VENV_DIR/.cipherstick-revision"
-readonly PYTHON_VERSION_FILE="$VENV_DIR/.cipherstick-python-version"
 
 python3 -c 'import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)' || {
     echo "python-codex32 requires Python 3.12 or 3.13." >&2
@@ -40,12 +37,9 @@ python3 -c 'import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Adw
     exit 1
 }
 
-python_version="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-
-if [ -x "$VENV_DIR/bin/codex32-gui" ] && \
-    [ "$(cat "$REVISION_FILE" 2>/dev/null || true)" = "$REVISION" ] && \
-    [ "$(cat "$PYTHON_VERSION_FILE" 2>/dev/null || true)" = "$python_version" ] && \
-    "$VENV_DIR/bin/python" -c 'import codex32; import codex32_gui' 2>/dev/null; then
+if [ -d "$SOURCE_DIR/.git" ] && \
+    [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" = "$REVISION" ] && \
+    PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null; then
     exit 0
 fi
 
@@ -67,12 +61,4 @@ actual_revision="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
     exit 1
 }
 
-python3 -m venv --clear --system-site-packages "$VENV_DIR"
-"$VENV_DIR/bin/python" -m pip install \
-    -r "$SOURCE_DIR/requirements/cli-build-dependencies.txt"
-"$VENV_DIR/bin/python" -m pip install --no-build-isolation --no-deps "$SOURCE_DIR"
-
-[ -x "$VENV_DIR/bin/codex32-gui" ]
-"$VENV_DIR/bin/python" -c 'import codex32; import codex32_gui'
-printf '%s\n' "$REVISION" > "$REVISION_FILE"
-printf '%s\n' "$python_version" > "$PYTHON_VERSION_FILE"
+PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui'
