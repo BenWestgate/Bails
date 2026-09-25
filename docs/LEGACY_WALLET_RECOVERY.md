@@ -19,18 +19,20 @@ The legacy flow created Bitcoin Core wallets through Bitcoin Core RPC and import
 
 Use the Bitcoin Core version appropriate for the wallet data, keep an untouched backup, and use Bitcoin Core's documented wallet loading and migration procedures. Do not automatically copy private keys into another coordinator as part of this removal.
 
-## Codex32 backups
+## codex32 backups
 
-Codex32 shares remain recovery material even though the bundled implementation is removed. The replacement restoration path is tracked in issue #215 and uses the separately reviewed `python-codex32` project to recover a master seed for Bitcoin Core.
+codex32 shares remain recovery material even though the bundled implementation is removed. The replacement restoration path uses the pinned `python-codex32` graphical application installed by CipherStick.
 
-Until that replacement is reviewed and merged:
+To restore with the replacement flow:
 
-- keep the original shares unchanged;
-- do not discard the original CipherStick based on an untested conversion;
-- do not send shares to an online service for decoding;
-- do not assume a third-party Codex32 tool has the same error-correction or derivation behavior as the removed implementation;
-- if you depend on the legacy restore path, retain a known-good copy of the previous CipherStick release for recovery use.
+1. keep the original shares unchanged and do not send them to an online service;
+2. start Bitcoin Core 32 or newer with local RPC enabled;
+3. open **codex32**, choose **Restore my wallet**, and enter the required shares;
+4. type the master fingerprint from the separately stored wallet record before import; if that record is unavailable, verify the recovered fingerprint independently before accepting the explicit warning;
+5. let Bitcoin Core finish scanning, then verify the expected wallet history before relying on the restored wallet.
+
+Do not assume a third-party codex32 tool has the same correction or derivation behavior as CipherStick's pinned `python-codex32` revision. Keep the original CipherStick unchanged until recovery has been tested.
 
 ## Migration boundary
 
-This removal deliberately does not migrate private keys automatically. A future recovery tool must make secret lifetime explicit, avoid unintended persistence of the recovered master seed, and restore into Bitcoin Core without reintroducing the old `bails-wallet` codebase.
+This removal deliberately does not migrate private keys automatically. The replacement keeps recovery logic in `python-codex32`, avoids persisting the recovered master seed in Bails, and restores through Bitcoin Core without reintroducing the old `bails-wallet` codebase.
