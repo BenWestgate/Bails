@@ -61,20 +61,14 @@ response=$(zenity --question --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
     --icon-name="bails128" --title="CipherStick menu" \
     --text="Wallet - Create a new seed backup or recover an existing seed.
 
-Clone - Create a synchronized CipherStick node for a friend.
-
-Backup - Duplicate your CipherStick node to protect data.
-
 Settings - Updates, add software, and configure." \
-    --extra-button="Wallet" --extra-button="Clone" --extra-button="Backup" --extra-button="Settings" --extra-button="Help" \
+    --extra-button="Wallet" --extra-button="Settings" --extra-button="Help" \
     --switch)
 
 # Menu options 
 which Sparrow && action=Update || action=Install
 case "$response" in
 "Wallet") bails-wallet ;;
-"Clone") bails-clone ;;
-"Backup") bails-backup ;;
 "Settings") response2=$(zenity --window-icon="$XDG_DATA_HOME/icons/bails128.png" --question \
         --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
         --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="$action Sparrow" --extra-button="Network Privacy" \
