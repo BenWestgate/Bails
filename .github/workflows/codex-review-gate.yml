@@ -1,0 +1,1107 @@
+name: Codex review gate
+
+on:
+  push:
+    branches: [master]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited, closed]
+  # Intentionally no pull_request_review trigger: GitHub can execute that event
+  # from the PR head. This workflow has write permissions, so review results are
+  # reconciled through trusted issue/default-branch events and the schedule.
+  issue_comment:
+    types: [created]
+  schedule:
+    - cron: '17 * * * *'
+
+concurrency:
+  group: codex-review-gate-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  checks: write
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  review:
+    name: Codex review coordinator
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request &&
+       (github.event.comment.user.login == 'chatgpt-codex-connector' ||
+        github.event.comment.user.login == 'chatgpt-codex-connector[bot]' ||
+        github.event.comment.body == '@codex review'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Reconcile Codex reviews
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const gateName = 'codex-review-gate';
+            const gateVersion = 'v9';
+            const stateName = 'codex-review-quota-state';
+            const codexLogins = new Set([
+              'chatgpt-codex-connector',
+              'chatgpt-codex-connector[bot]',
+            ]);
+            const trustedReviewPermissions = new Set(['admin', 'maintain', 'write']);
+            const reviewCommandPermissions = new Map();
+            const quotaText = 'reached your Codex usage limits for code reviews';
+            const fiveHours = 5 * 60 * 60 * 1000;
+            const retryDelay = 5.25 * 60 * 60 * 1000;
+            const automaticReviewGrace = 60 * 60 * 1000;
+            const probeResponseGrace = 2 * 60 * 60 * 1000;
+            const { owner, repo } = context.repo;
+            const now = new Date();
+
+            const repository = await github.rest.repos.get({ owner, repo });
+            const defaultBranch = repository.data.default_branch;
+            const defaultRef = await github.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: defaultBranch,
+            });
+            const defaultSha = defaultRef.data.commit.sha;
+
+            const emptyState = {
+              consecutive_failures: 0,
+              last_failure_at: null,
+              mode: 'normal',
+              next_probe_at: null,
+              available_since: null,
+              probe: null,
+            };
+
+            const asDate = (value) => {
+              if (!value) return null;
+              const parsed = new Date(value);
+              return Number.isNaN(parsed.valueOf()) ? null : parsed;
+            };
+
+            const isCodex = (login) => codexLogins.has(login || '');
+            async function isTrustedReviewCommand(comment) {
+              const login = comment?.user?.login || '';
+              if (
+                !login ||
+                isCodex(login) ||
+                String(comment?.body || '').trim() !== '@codex review'
+              ) {
+                return false;
+              }
+
+              // Requests emitted by this workflow use the repository's Actions
+              // identity. A pull request cannot impersonate that identity in
+              // the base repository, so it is safe to treat it as trusted.
+              if (login === 'github-actions[bot]') return true;
+
+              if (reviewCommandPermissions.has(login)) {
+                return reviewCommandPermissions.get(login);
+              }
+
+              let allowed = false;
+              try {
+                const response = await github.rest.repos.getCollaboratorPermissionLevel({
+                  owner,
+                  repo,
+                  username: login,
+                });
+                allowed = trustedReviewPermissions.has(response.data.permission);
+              } catch (error) {
+                if (error.status !== 404) {
+                  core.warning(
+                    `Could not verify review-command permission for ${login}: ${error}`,
+                  );
+                }
+              }
+              reviewCommandPermissions.set(login, allowed);
+              return allowed;
+            }
+            const isCodexTaskSummary = (body) => {
+              const text = String(body || '');
+              return text.startsWith('### Summary\n') && text.includes('[View task →](');
+            };
+            const eventPullNumber = Number(
+              context.payload.pull_request?.number || context.payload.issue?.number || 0,
+            );
+            const triggeringIssueCommentId =
+              context.eventName === 'issue_comment' &&
+              isCodex(context.payload.comment?.user?.login)
+                ? Number(context.payload.comment.id)
+                : null;
+            let triggeringReviewCommandId = null;
+            if (
+              context.eventName === 'issue_comment' &&
+              String(context.payload.comment?.body || '').trim() === '@codex review'
+            ) {
+              if (await isTrustedReviewCommand(context.payload.comment)) {
+                triggeringReviewCommandId = Number(context.payload.comment.id);
+              } else {
+                core.notice('Ignoring untrusted @codex review command.');
+              }
+            }
+
+            function normalizeState(value) {
+              if (!value || typeof value !== 'object') return { ...emptyState };
+              const failures = Number.isInteger(value.consecutive_failures)
+                ? Math.max(0, value.consecutive_failures)
+                : 0;
+              const probe = value.probe && typeof value.probe === 'object'
+                ? {
+                    pr: Number(value.probe.pr) || null,
+                    head_sha:
+                      typeof value.probe.head_sha === 'string'
+                        ? value.probe.head_sha
+                        : null,
+                    base_sha:
+                      typeof value.probe.base_sha === 'string'
+                        ? value.probe.base_sha
+                        : null,
+                    requested_at:
+                      typeof value.probe.requested_at === 'string'
+                        ? value.probe.requested_at
+                        : null,
+                    comment_id: Number(value.probe.comment_id) || null,
+                  }
+                : null;
+              return {
+                consecutive_failures: failures,
+                last_failure_at:
+                  typeof value.last_failure_at === 'string'
+                    ? value.last_failure_at
+                    : null,
+                mode: value.mode === 'daily' ? 'daily' : 'normal',
+                next_probe_at:
+                  typeof value.next_probe_at === 'string'
+                    ? value.next_probe_at
+                    : null,
+                available_since:
+                  typeof value.available_since === 'string'
+                    ? value.available_since
+                    : null,
+                probe,
+              };
+            }
+
+            async function readState() {
+              let sha = defaultSha;
+              for (let depth = 0; depth < 5; depth += 1) {
+                const response = await github.rest.checks.listForRef({
+                  owner,
+                  repo,
+                  ref: sha,
+                  check_name: stateName,
+                  filter: 'all',
+                  per_page: 100,
+                });
+                const runs = response.data.check_runs
+                  .filter((run) => run.app?.slug === 'github-actions')
+                  .sort((a, b) => b.id - a.id);
+                for (const run of runs) {
+                  if (!run.output?.summary) continue;
+                  try {
+                    return normalizeState(JSON.parse(run.output.summary));
+                  } catch (error) {
+                    core.warning(`Ignoring malformed Codex retry state: ${error}`);
+                  }
+                }
+
+                const commit = await github.rest.repos.getCommit({
+                  owner,
+                  repo,
+                  ref: sha,
+                });
+                if (!commit.data.parents?.length) break;
+                sha = commit.data.parents[0].sha;
+              }
+              return { ...emptyState };
+            }
+
+            async function writeState(state) {
+              const branch = await github.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: defaultBranch,
+              });
+              await github.rest.checks.create({
+                owner,
+                repo,
+                name: stateName,
+                head_sha: branch.data.commit.sha,
+                status: 'completed',
+                conclusion: 'neutral',
+                completed_at: new Date().toISOString(),
+                output: {
+                  title: 'Codex retry circuit state',
+                  summary: JSON.stringify(state),
+                },
+              });
+            }
+
+            function nextDailyProbe(after) {
+              const earliest = new Date(after.getTime() + 12 * 60 * 60 * 1000);
+              const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Chicago',
+                hour: '2-digit',
+                minute: '2-digit',
+                hourCycle: 'h23',
+              });
+              for (let minute = 0; minute < 48 * 60; minute += 1) {
+                const candidate = new Date(earliest.getTime() + minute * 60 * 1000);
+                const parts = Object.fromEntries(
+                  formatter
+                    .formatToParts(candidate)
+                    .map((part) => [part.type, part.value]),
+                );
+                if (parts.hour === '03' && parts.minute === '15') {
+                  return candidate;
+                }
+              }
+              return new Date(after.getTime() + 24 * 60 * 60 * 1000);
+            }
+
+            async function latestGateRun(headSha) {
+              const response = await github.rest.checks.listForRef({
+                owner,
+                repo,
+                ref: headSha,
+                check_name: gateName,
+                filter: 'all',
+                per_page: 100,
+              });
+              return response.data.check_runs
+                .filter((run) => run.app?.slug === 'github-actions')
+                .sort((a, b) => b.id - a.id)[0];
+            }
+
+            async function createPendingGate(
+              pull,
+              requireHeadUpdate = false,
+              requestCommentId = null,
+            ) {
+              const waitingSummary = requestCommentId
+                ? [
+                    `Request comment: ${requestCommentId}`,
+                    'Waiting for managed Codex to review this pull request commit.',
+                  ].join('\n')
+                : 'Waiting for managed Codex to review this pull request commit.';
+              const created = await github.rest.checks.create({
+                owner,
+                repo,
+                name: gateName,
+                head_sha: pull.head.sha,
+                external_id: `${gateVersion}:${pull.base.sha}`,
+                status: 'in_progress',
+                started_at: now.toISOString(),
+                details_url: `${context.serverUrl}/${owner}/${repo}/pull/${pull.number}`,
+                output: {
+                  title: requireHeadUpdate
+                    ? 'Codex review waiting for branch update'
+                    : 'Codex review pending',
+                  summary: requireHeadUpdate
+                    ? 'The default branch changed after this head commit was reviewed. Update or rebase the pull request so it has a new head commit before Codex review can complete.'
+                    : waitingSummary,
+                },
+              });
+              return created.data;
+            }
+
+            async function ensureAmbiguousSharedHeadGate(pulls) {
+              const headSha = pulls[0].head.sha;
+              const run = await latestGateRun(headSha);
+              const externalId = `${gateVersion}:ambiguous`;
+              const details = pulls
+                .slice()
+                .sort((a, b) => a.number - b.number)
+                .map((pull) => `#${pull.number} @ ${pull.base.sha}`)
+                .join(', ');
+              const output = {
+                title: 'Codex review blocked by shared head',
+                summary: [
+                  'Multiple reviewable pull requests reuse this head commit against different base commits.',
+                  'A commit-scoped required check cannot safely represent those different diffs.',
+                  `Conflicting pull requests: ${details}`,
+                  'Give the pull requests distinct head commits, close one, or convert one to draft before Codex review can proceed.',
+                ].join('\n'),
+              };
+
+              if (run?.external_id === externalId) {
+                await github.rest.checks.update({
+                  owner,
+                  repo,
+                  check_run_id: run.id,
+                  status: 'completed',
+                  conclusion: 'failure',
+                  completed_at: now.toISOString(),
+                  output,
+                });
+                return run;
+              }
+
+              const created = await github.rest.checks.create({
+                owner,
+                repo,
+                name: gateName,
+                head_sha: headSha,
+                external_id: externalId,
+                status: 'completed',
+                conclusion: 'failure',
+                completed_at: now.toISOString(),
+                details_url: `${context.serverUrl}/${owner}/${repo}/pull/${pulls[0].number}`,
+                output,
+              });
+              return created.data;
+            }
+
+            function requestCommentIdForRun(run) {
+              const summary = String(run.output?.summary || '');
+              const match = summary.match(/^Request comment: (\d+)$/m);
+              return match ? Number(match[1]) : null;
+            }
+
+            async function inspectCodexOutcome(pull, run, quotaFloor) {
+              const startedAt = asDate(run.started_at || run.created_at) || now;
+
+              const [reviews, reviewComments, issueComments] =
+                await Promise.all([
+                  github.paginate(github.rest.pulls.listReviews, {
+                    owner,
+                    repo,
+                    pull_number: pull.number,
+                    per_page: 100,
+                  }),
+                  github.paginate(github.rest.pulls.listReviewComments, {
+                    owner,
+                    repo,
+                    pull_number: pull.number,
+                    per_page: 100,
+                  }),
+                  github.paginate(github.rest.issues.listComments, {
+                    owner,
+                    repo,
+                    issue_number: pull.number,
+                    per_page: 100,
+                  }),
+                ]);
+
+              const storedRequestCommentId = requestCommentIdForRun(run);
+              const reviewRequests = [];
+              for (const comment of issueComments) {
+                if (String(comment.body || '').trim() !== '@codex review') continue;
+                const createdAt = asDate(comment.created_at);
+                const commentId = Number(comment.id);
+                const isTriggeringCommand =
+                  eventPullNumber === pull.number &&
+                  triggeringReviewCommandId === commentId;
+                const isStoredRequest = storedRequestCommentId === commentId;
+                if (
+                  !createdAt ||
+                  (createdAt < startedAt && !isTriggeringCommand && !isStoredRequest)
+                ) {
+                  continue;
+                }
+                if (
+                  !isStoredRequest &&
+                  !(await isTrustedReviewCommand(comment))
+                ) {
+                  continue;
+                }
+                reviewRequests.push({ at: createdAt, id: commentId });
+              }
+              reviewRequests.sort((a, b) => b.at - a.at);
+              const storedRequest = reviewRequests.find(
+                (request) => request.id === storedRequestCommentId,
+              );
+              const resultFloor =
+                storedRequest?.at && storedRequest.at < startedAt
+                  ? storedRequest.at
+                  : startedAt;
+              const floor =
+                quotaFloor && quotaFloor > resultFloor
+                  ? quotaFloor
+                  : resultFloor;
+
+              const reactionsByRequest = new Map();
+              await Promise.all(
+                reviewRequests.map(async (request) => {
+                  const reactions = await github.paginate(
+                    github.rest.reactions.listForIssueComment,
+                    {
+                      owner,
+                      repo,
+                      comment_id: request.id,
+                      per_page: 100,
+                    },
+                  );
+                  reactionsByRequest.set(request.id, reactions);
+                }),
+              );
+              const latestRequestReactions = reviewRequests[0]
+                ? reactionsByRequest.get(reviewRequests[0].id) || []
+                : [];
+              // An eyes acknowledgement is authoritative until Codex removes
+              // it. Aging it out would allow a genuinely long-running review
+              // to report findings after this required check had already
+              // passed. If Codex ever leaves an orphaned eyes reaction behind,
+              // the safe recovery is a new head commit, which starts a new
+              // commit-scoped gate rather than guessing that the old job died.
+              const requestInFlight = reviewRequests.some((request) =>
+                (reactionsByRequest.get(request.id) || []).some(
+                  (reaction) =>
+                    isCodex(reaction.user?.login) && reaction.content === 'eyes',
+                ),
+              );
+
+              const commentsByReview = new Map();
+              for (const comment of reviewComments) {
+                if (!isCodex(comment.user?.login)) continue;
+                // Codex task/agent runs can occasionally attach a non-review
+                // execution summary as an inline PR comment. Those comments are
+                // not findings; all other unknown inline Codex comments remain
+                // fail-closed and count as review findings.
+                if (isCodexTaskSummary(comment.body)) continue;
+                const reviewId = Number(comment.pull_request_review_id);
+                commentsByReview.set(
+                  reviewId,
+                  (commentsByReview.get(reviewId) || 0) + 1,
+                );
+              }
+
+              const findings = [];
+              for (const review of reviews) {
+                if (!isCodex(review.user?.login)) continue;
+                if (review.commit_id !== pull.head.sha) continue;
+                const submittedAt = asDate(review.submitted_at);
+                if (!submittedAt) continue;
+                const findingCount = commentsByReview.get(Number(review.id)) || 0;
+                if (findingCount > 0) {
+                  findings.push({
+                    at: submittedAt,
+                    kind: 'findings',
+                    findingCount,
+                  });
+                }
+              }
+
+              const approvals = [];
+              // A clean approval belongs to the newest request in this review
+              // cycle. Older requests are still inspected above for in-flight
+              // acknowledgements, but cannot satisfy a newer review request.
+              for (const reaction of latestRequestReactions) {
+                if (!isCodex(reaction.user?.login)) continue;
+                if (reaction.content !== '+1') continue;
+                const createdAt = asDate(reaction.created_at);
+                if (!createdAt || createdAt < resultFloor) continue;
+                approvals.push({
+                  at: createdAt,
+                  kind: 'approve',
+                  findingCount: 0,
+                });
+              }
+
+              for (const comment of issueComments) {
+                if (!isCodex(comment.user?.login)) continue;
+                const body = String(comment.body || '');
+                if (!body.startsWith("Codex Review: Didn't find any major issues.")) {
+                  continue;
+                }
+                const reviewed = body.match(
+                  /\*\*Reviewed commit:\*\* `([0-9a-f]{7,40})`/i,
+                );
+                if (!reviewed) {
+                  continue;
+                }
+                if (!pull.head.repo?.full_name) {
+                  core.warning(
+                    `Cannot resolve Codex reviewed commit for PR #${pull.number}: head repository is unavailable.`,
+                  );
+                  continue;
+                }
+                let reviewedSha;
+                try {
+                  const [headOwner, headRepo] = pull.head.repo.full_name.split('/');
+                  const resolved = await github.rest.repos.getCommit({
+                    owner: headOwner,
+                    repo: headRepo,
+                    ref: reviewed[1],
+                  });
+                  reviewedSha = resolved.data.sha;
+                } catch (error) {
+                  core.warning(
+                    `Could not resolve Codex reviewed commit ${reviewed[1]}: ${error}`,
+                  );
+                  continue;
+                }
+                if (reviewedSha !== pull.head.sha) continue;
+                const createdAt = asDate(comment.created_at);
+                const isTriggeringComment =
+                  eventPullNumber === pull.number &&
+                  triggeringIssueCommentId === Number(comment.id);
+                if (
+                  !createdAt ||
+                  (createdAt < resultFloor && !isTriggeringComment)
+                ) {
+                  continue;
+                }
+                approvals.push({
+                  at: createdAt,
+                  kind: 'approve',
+                  findingCount: 0,
+                });
+              }
+
+              const quotas = issueComments
+                .filter((comment) => {
+                  if (!isCodex(comment.user?.login)) return false;
+                  if (!String(comment.body || '').includes(quotaText)) return false;
+                  const createdAt = asDate(comment.created_at);
+                  const isTriggeringComment =
+                    eventPullNumber === pull.number &&
+                    triggeringIssueCommentId === Number(comment.id);
+                  return createdAt && (isTriggeringComment || createdAt >= floor);
+                })
+                .map((comment) => ({
+                  at: asDate(comment.created_at),
+                  id: Number(comment.id),
+                  pr: pull.number,
+                }))
+                .sort((a, b) => b.at - a.at);
+
+              const latestReviewRequestAt = reviewRequests[0]?.at || null;
+
+              findings.sort((a, b) => b.at - a.at);
+              approvals.sort((a, b) => b.at - a.at);
+
+              // Any finding on this exact head remains blocking until the head
+              // changes. A later clean review cannot make unchanged code safe.
+              // Also keep the gate pending while the latest explicit request is
+              // still acknowledged: another overlapping review may yet report
+              // findings, and review-submission events are intentionally not
+              // trusted to execute this write-capable workflow.
+              // A newer quota response also supersedes an older clean result:
+              // that review request did not complete and must be retried.
+              const cleanApproval = !requestInFlight ? approvals[0] || null : null;
+              const terminal =
+                findings[0] ||
+                (cleanApproval &&
+                (!quotas[0] || cleanApproval.at >= quotas[0].at)
+                  ? cleanApproval
+                  : null);
+
+              return {
+                terminal,
+                quota: quotas[0] || null,
+                requestInFlight,
+                reviewRequestCommentId: reviewRequests[0]?.id || null,
+                reviewRequestedAt: latestReviewRequestAt,
+                startedAt,
+              };
+            }
+
+            const originalState = await readState();
+            let state = normalizeState(originalState);
+            const availableSince = asDate(state.available_since);
+            const pullRequests = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'all',
+              per_page: 100,
+            });
+            // The required gate protects the default branch. Two reviewable PRs
+            // with the same head and the same default-branch base have the same
+            // diff, so sharing the commit-scoped gate is safe. PRs targeting a
+            // different base never get a successful gate from this workflow.
+            const reviewablePulls = pullRequests.filter(
+              (pull) =>
+                pull.state === 'open' &&
+                !pull.draft &&
+                pull.base.ref === defaultBranch,
+            );
+            const reviewablePullsByHead = new Map();
+            for (const pull of reviewablePulls) {
+              const siblings = reviewablePullsByHead.get(pull.head.sha) || [];
+              siblings.push(pull);
+              reviewablePullsByHead.set(pull.head.sha, siblings);
+            }
+            const ambiguousHeadShas = new Set();
+            for (const [headSha, siblings] of reviewablePullsByHead) {
+              const baseShas = new Set(siblings.map((pull) => pull.base.sha));
+              if (baseShas.size < 2) continue;
+              ambiguousHeadShas.add(headSha);
+              await ensureAmbiguousSharedHeadGate(siblings);
+            }
+
+            // A trusted manual review request invalidates an earlier success
+            // immediately, even while the PR is draft. Draft PRs are excluded
+            // from reviewablePulls, so doing this before the main loop prevents
+            // a stale success from surviving until ready_for_review.
+            if (triggeringReviewCommandId && eventPullNumber) {
+              const triggeringPull = pullRequests.find(
+                (pull) =>
+                  pull.number === eventPullNumber &&
+                  pull.state === 'open' &&
+                  pull.base.ref === defaultBranch,
+              );
+              if (
+                triggeringPull &&
+                !ambiguousHeadShas.has(triggeringPull.head.sha)
+              ) {
+                const triggerRun = await latestGateRun(triggeringPull.head.sha);
+                const triggerVersionMismatch = Boolean(
+                  triggerRun &&
+                  !String(triggerRun.external_id || '').startsWith(`${gateVersion}:`),
+                );
+                const triggerBaseChanged = Boolean(
+                  triggerRun &&
+                  !triggerVersionMismatch &&
+                  triggerRun.external_id !==
+                    `${gateVersion}:${triggeringPull.base.sha}`,
+                );
+                if (triggerBaseChanged) {
+                  await createPendingGate(triggeringPull, true);
+                } else if (
+                  !triggerRun ||
+                  triggerVersionMismatch ||
+                  (triggerRun.status === 'completed' &&
+                    (triggerRun.conclusion === 'success' ||
+                      triggerRun.conclusion === 'neutral'))
+                ) {
+                  await createPendingGate(
+                    triggeringPull,
+                    false,
+                    triggeringReviewCommandId,
+                  );
+                }
+              }
+            }
+
+            const pending = [];
+            const terminalEvents = [];
+            const quotaEvents = [];
+            const inFlightCheckRunIds = new Set();
+            const inspectedNonReviewableSiblings = new Set();
+
+            for (const pull of reviewablePulls) {
+              if (ambiguousHeadShas.has(pull.head.sha)) continue;
+              const triggeringRequestCommentId =
+                eventPullNumber === pull.number ? triggeringReviewCommandId : null;
+              let run = await latestGateRun(pull.head.sha);
+              const ambiguousRun = Boolean(
+                run && run.external_id === `${gateVersion}:ambiguous`,
+              );
+              const versionMismatch = Boolean(
+                run && !String(run.external_id || '').startsWith(`${gateVersion}:`),
+              );
+              const baseChanged = Boolean(
+                run &&
+                !versionMismatch &&
+                run.external_id !== `${gateVersion}:${pull.base.sha}`,
+              );
+              if (ambiguousRun || versionMismatch) {
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  triggeringRequestCommentId,
+                );
+              } else if (baseChanged) {
+                run = await createPendingGate(pull, true);
+                continue;
+              }
+              if (!run) {
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  triggeringRequestCommentId,
+                );
+              }
+
+              // A base-only change cannot be safely correlated to an opaque
+              // Codex review request. Keep the gate pending until strict branch
+              // protection forces a new head commit that includes the new base.
+              if (
+                run.output?.title === 'Codex review waiting for branch update' ||
+                run.output?.title === 'Codex review required after base update'
+              ) {
+                continue;
+              }
+
+              // Neutral is only used when a previously relevant PR disappears
+              // from the reviewable set. If it becomes reviewable again, a
+              // fresh pending run must replace that merge-satisfying neutral.
+              if (run.status === 'completed' && run.conclusion === 'neutral') {
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  triggeringRequestCommentId,
+                );
+              }
+
+              let completedSuccess =
+                run.status === 'completed' && run.conclusion === 'success';
+              if (run.status === 'completed' && !completedSuccess) continue;
+
+              let outcome = await inspectCodexOutcome(pull, run, availableSince);
+
+              // Reconciliation fallback for a trusted request that arrived
+              // after a successful check while this PR was non-reviewable (or
+              // if its issue_comment run was delayed). Reopen before accepting
+              // any prior success.
+              const completedAt = asDate(run.completed_at);
+              if (
+                completedSuccess &&
+                completedAt &&
+                outcome.reviewRequestedAt &&
+                outcome.reviewRequestedAt > completedAt
+              ) {
+                run = await createPendingGate(
+                  pull,
+                  false,
+                  outcome.reviewRequestCommentId,
+                );
+                completedSuccess = false;
+                outcome = await inspectCodexOutcome(pull, run, availableSince);
+              }
+
+              if (outcome.quota) quotaEvents.push(outcome.quota);
+              if (outcome.requestInFlight) inFlightCheckRunIds.add(run.id);
+
+              // A commit-scoped check can be shared by multiple PRs with the
+              // same head and base. A late finding does not become safe merely
+              // because the PR that received it was closed or made draft.
+              for (const sibling of pullRequests) {
+                if (sibling.state === 'open' && !sibling.draft) continue;
+                if (sibling.head.sha !== pull.head.sha) continue;
+                if (sibling.base.ref !== defaultBranch) continue;
+                if (sibling.base.sha !== pull.base.sha) continue;
+                const siblingKey = `${run.id}:${sibling.number}`;
+                if (inspectedNonReviewableSiblings.has(siblingKey)) continue;
+                inspectedNonReviewableSiblings.add(siblingKey);
+
+                const siblingOutcome = await inspectCodexOutcome(
+                  sibling,
+                  run,
+                  availableSince,
+                );
+                if (siblingOutcome.quota) quotaEvents.push(siblingOutcome.quota);
+                if (siblingOutcome.requestInFlight) {
+                  inFlightCheckRunIds.add(run.id);
+                }
+                if (siblingOutcome.terminal?.kind === 'findings') {
+                  terminalEvents.push({
+                    ...siblingOutcome.terminal,
+                    base_sha: pull.base.sha,
+                    check_run_id: run.id,
+                    head_sha: pull.head.sha,
+                    pr: sibling.number,
+                  });
+                }
+              }
+
+              if (outcome.terminal) {
+                if (completedSuccess && outcome.terminal.kind !== 'findings') {
+                  continue;
+                }
+                terminalEvents.push({
+                  ...outcome.terminal,
+                  base_sha: pull.base.sha,
+                  check_run_id: run.id,
+                  head_sha: pull.head.sha,
+                  pr: pull.number,
+                });
+                continue;
+              }
+              if (completedSuccess) continue;
+
+              pending.push({
+                base_sha: pull.base.sha,
+                check_run_id: run.id,
+                head_sha: pull.head.sha,
+                pr: pull.number,
+                review_requested_at: outcome.reviewRequestedAt,
+                started_at: outcome.startedAt,
+              });
+            }
+
+            const verdictsByCheckRun = new Map();
+            for (const event of terminalEvents) {
+              const existing = verdictsByCheckRun.get(event.check_run_id);
+              if (!existing) {
+                verdictsByCheckRun.set(event.check_run_id, {
+                  ...event,
+                  prs: [event.pr],
+                });
+                continue;
+              }
+
+              if (!existing.prs.includes(event.pr)) existing.prs.push(event.pr);
+              if (event.kind === 'findings') {
+                if (existing.kind !== 'findings' || event.at > existing.at) {
+                  existing.at = event.at;
+                }
+                existing.kind = 'findings';
+                existing.findingCount = Math.max(
+                  existing.findingCount || 0,
+                  event.findingCount || 0,
+                );
+              } else if (existing.kind !== 'findings' && event.at > existing.at) {
+                existing.at = event.at;
+              }
+            }
+
+            const verdictEvents = [...verdictsByCheckRun.values()].filter(
+              (event) =>
+                event.kind === 'findings' ||
+                !inFlightCheckRunIds.has(event.check_run_id),
+            );
+            verdictEvents.sort((a, b) => a.at - b.at);
+            const currentOpenPulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+            for (const event of verdictEvents) {
+              const stillRelevant = currentOpenPulls.some(
+                (current) =>
+                  !current.draft &&
+                  current.base.ref === defaultBranch &&
+                  current.head.sha === event.head_sha &&
+                  current.base.sha === event.base_sha,
+              );
+              const baseChangedWithSameHead = currentOpenPulls.find(
+                (current) =>
+                  !current.draft &&
+                  current.base.ref === defaultBranch &&
+                  current.head.sha === event.head_sha &&
+                  current.base.sha !== event.base_sha,
+              );
+
+              if (!stillRelevant) {
+                // If only the base moved, neutral would satisfy a required
+                // check for the unchanged PR head. Publish a replacement
+                // pending check first and make the stale verdict blocking, so
+                // there is no mergeable window before reconciliation catches
+                // the new default-branch base.
+                if (baseChangedWithSameHead) {
+                  await createPendingGate(baseChangedWithSameHead, true);
+                }
+                await github.rest.checks.update({
+                  owner,
+                  repo,
+                  check_run_id: event.check_run_id,
+                  status: 'completed',
+                  conclusion:
+                    baseChangedWithSameHead || event.kind === 'findings'
+                      ? 'failure'
+                      : 'neutral',
+                  completed_at: now.toISOString(),
+                  output: {
+                    title: baseChangedWithSameHead
+                      ? 'Codex review stale after base update'
+                      : event.kind === 'findings'
+                        ? 'Codex review found blocking issues'
+                      : 'Codex review superseded',
+                    summary: baseChangedWithSameHead
+                      ? 'The default branch changed while the Codex result was being reconciled. Update or rebase the pull request so its new base can be reviewed.'
+                      : event.kind === 'findings'
+                        ? `Managed Codex posted ${event.findingCount} review finding(s) for this commit.`
+                      : 'The pull request head or base changed while its Codex result was being reconciled.',
+                  },
+                });
+                continue;
+              }
+
+              const approved = event.kind === 'approve';
+              const verdictSummary = approved
+                ? 'Managed Codex completed review of this commit without review findings.'
+                : `Managed Codex posted ${event.findingCount} review finding(s) for this commit.`;
+              await github.rest.checks.update({
+                owner,
+                repo,
+                check_run_id: event.check_run_id,
+                status: 'completed',
+                conclusion: approved ? 'success' : 'failure',
+                completed_at: now.toISOString(),
+                output: {
+                  title: approved
+                    ? 'Codex review passed'
+                    : 'Codex review found blocking issues',
+                  summary: verdictSummary,
+                },
+              });
+            }
+
+            // A shared commit-scoped check can collect a terminal verdict from
+            // one PR while a sibling PR was added to pending earlier in this
+            // same reconciliation pass. Never retry a check that already has a
+            // terminal verdict; findings in particular must remain blocking.
+            const verdictCheckRunIds = new Set(
+              verdictEvents.map((event) => event.check_run_id),
+            );
+            const retryPending = pending.filter(
+              (item) =>
+                !verdictCheckRunIds.has(item.check_run_id) &&
+                !inFlightCheckRunIds.has(item.check_run_id),
+            );
+
+            const latestTerminal = verdictEvents
+              .slice()
+              .sort((a, b) => b.at - a.at)[0];
+            const latestQuota = quotaEvents
+              .slice()
+              .sort((a, b) => b.at - a.at)[0];
+
+            if (latestTerminal && (!latestQuota || latestTerminal.at >= latestQuota.at)) {
+              const terminalMatchesProbe =
+                state.probe &&
+                latestTerminal.prs.includes(state.probe.pr) &&
+                latestTerminal.head_sha === state.probe.head_sha &&
+                latestTerminal.base_sha === state.probe.base_sha;
+              state = {
+                ...emptyState,
+                available_since: latestTerminal.at.toISOString(),
+                probe: terminalMatchesProbe ? null : state.probe,
+              };
+            } else if (latestQuota) {
+              const probeRequestedAt = asDate(state.probe?.requested_at);
+              const quotaAnswersProbe =
+                !probeRequestedAt || latestQuota.at >= probeRequestedAt;
+              if (quotaAnswersProbe) {
+                const lastFailure = asDate(state.last_failure_at);
+                const separated =
+                  !lastFailure || latestQuota.at - lastFailure >= fiveHours;
+                if (separated) {
+                  const failures = state.consecutive_failures + 1;
+                  const nextProbe =
+                    failures >= 3
+                      ? nextDailyProbe(latestQuota.at)
+                      : new Date(latestQuota.at.getTime() + retryDelay);
+                  state = {
+                    ...state,
+                    consecutive_failures: failures,
+                    last_failure_at: latestQuota.at.toISOString(),
+                    mode: failures >= 3 ? 'daily' : 'normal',
+                    next_probe_at: nextProbe.toISOString(),
+                    probe: null,
+                  };
+                } else {
+                  state.probe = null;
+                  if (!asDate(state.next_probe_at) && lastFailure) {
+                    const nextProbe =
+                      state.mode === 'daily'
+                        ? nextDailyProbe(lastFailure)
+                        : new Date(lastFailure.getTime() + retryDelay);
+                    state.next_probe_at = nextProbe.toISOString();
+                  }
+                }
+              }
+            }
+
+            const effectiveAvailableSince = asDate(state.available_since);
+
+            const pendingByKey = new Map(
+              retryPending.map((item) => [
+                `${item.pr}:${item.head_sha}:${item.base_sha}`,
+                item,
+              ]),
+            );
+            if (state.probe) {
+              const key = `${state.probe.pr}:${state.probe.head_sha}:${state.probe.base_sha}`;
+              if (!pendingByKey.has(key)) {
+                const requestedAt = asDate(state.probe.requested_at);
+                if (requestedAt) {
+                  const drainUntil = new Date(
+                    requestedAt.getTime() + probeResponseGrace,
+                  );
+                  const nextProbe = asDate(state.next_probe_at);
+                  if (
+                    drainUntil > now &&
+                    (!nextProbe || drainUntil > nextProbe)
+                  ) {
+                    state.next_probe_at = drainUntil.toISOString();
+                  }
+                }
+                state.probe = null;
+              } else {
+                const requestedAt = asDate(state.probe.requested_at);
+                if (requestedAt && now - requestedAt >= probeResponseGrace) {
+                  state.probe = null;
+                  const delayed = new Date(requestedAt.getTime() + retryDelay);
+                  if (!asDate(state.next_probe_at) || delayed > asDate(state.next_probe_at)) {
+                    state.next_probe_at = delayed.toISOString();
+                  }
+                }
+              }
+            }
+
+            retryPending.sort((a, b) => a.started_at - b.started_at || a.pr - b.pr);
+            const candidate = retryPending[0];
+            if (!candidate) {
+              state.probe = null;
+            } else if (!state.probe) {
+              const nextProbe = asDate(state.next_probe_at);
+              const quotaDue = nextProbe ? now >= nextProbe : false;
+              const recoveredQueue =
+                effectiveAvailableSince &&
+                candidate.started_at < effectiveAvailableSince;
+              const automaticReviewExpired =
+                now - candidate.started_at >= automaticReviewGrace;
+              const recentReviewRequestAt = asDate(candidate.review_requested_at);
+              const reviewRequestInFlight =
+                recentReviewRequestAt &&
+                now - recentReviewRequestAt < probeResponseGrace;
+              const shouldTrigger =
+                !reviewRequestInFlight &&
+                (quotaDue ||
+                  (!nextProbe && (recoveredQueue || automaticReviewExpired)));
+
+              if (shouldTrigger) {
+                const comment = await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: candidate.pr,
+                  body: '@codex review',
+                });
+                state.probe = {
+                  pr: candidate.pr,
+                  head_sha: candidate.head_sha,
+                  base_sha: candidate.base_sha,
+                  requested_at: now.toISOString(),
+                  comment_id: Number(comment.data.id),
+                };
+                state.next_probe_at = null;
+                await github.rest.checks.update({
+                  owner,
+                  repo,
+                  check_run_id: candidate.check_run_id,
+                  status: 'in_progress',
+                  output: {
+                    title: 'Codex review requested',
+                    summary: [
+                      `Requested at: ${now.toISOString()}`,
+                      `Request comment: ${Number(comment.data.id)}`,
+                      `Base commit: ${candidate.base_sha}`,
+                      'Requested managed Codex review and waiting for its result.',
+                    ].join('\n'),
+                  },
+                });
+              }
+            }
+
+            const shouldCheckpointDefaultPush =
+              context.eventName === 'push' &&
+              context.ref === `refs/heads/${defaultBranch}`;
+            if (
+              shouldCheckpointDefaultPush ||
+              JSON.stringify(state) !== JSON.stringify(originalState)
+            ) {
+              await writeState(state);
+            }
+
+            const waitUntil = state.probe?.requested_at
+              ? `Codex probe in flight since ${state.probe.requested_at}`
+              : state.next_probe_at
+                ? `Next Codex probe: ${state.next_probe_at}`
+                : 'No Codex retry is currently scheduled.';
+            core.notice(waitUntil);
