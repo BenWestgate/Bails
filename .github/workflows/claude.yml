@@ -39,6 +39,9 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_federation_rule_id: fdrl_014L7wAToKxrpPbEnV1LNSZY
+          anthropic_organization_id: 4729edfa-40b8-4736-b2fe-699027866dab
+          anthropic_service_account_id: svac_01EXrLucX9Ebczg93cUi8Aqy
+          anthropic_workspace_id: wrkspc_01CrVpnUanh3JtdHnoEMH5Hm
           additional_permissions: |
             actions: read
