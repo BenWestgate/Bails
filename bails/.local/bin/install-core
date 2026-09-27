@@ -164,7 +164,7 @@ else # Import a trusted set on first-run.
     master_chainparams="$DOWNLOAD_DIR/chainparams-master.cpp"
     (
         retry_on_fail wget --continue -O "$source_tar" \
-            "$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER/bitcoin-$VER.tar.gz"
+            "$release_url/bitcoin-$VER.tar.gz"
         wget --continue -O "$master_chainparams" "$BITCOIN_CHAINPARAMS_URL" || true
     ) & get_size=$!
 fi
