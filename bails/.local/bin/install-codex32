@@ -24,6 +24,7 @@ set -euo pipefail
 
 readonly REPOSITORY="https://github.com/BenWestgate/python-codex32.git"
 readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
+readonly REVISION_REF="refs/tags/bails-recovery-1938b60"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 
@@ -61,7 +62,7 @@ if [ ! -d "$SOURCE_DIR/.git" ]; then
     git clone --filter=blob:none --no-checkout "$REPOSITORY" "$SOURCE_DIR"
 fi
 
-git -C "$SOURCE_DIR" fetch --depth=1 origin "$REVISION"
+git -C "$SOURCE_DIR" fetch --depth=1 origin "$REVISION_REF"
 git -C "$SOURCE_DIR" checkout --detach --force "$REVISION"
 git -C "$SOURCE_DIR" clean -ffdx
 
