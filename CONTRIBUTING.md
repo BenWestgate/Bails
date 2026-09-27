@@ -149,8 +149,15 @@ pull request to pull request.
 
 When a pull request conflicts with the target branch, you may be asked to rebase it on top of the current target branch.
 
+If you cloned your fork normally, configure the project repository once:
+
+    git remote add upstream https://github.com/BenWestgate/Bails.git
+
+Then fetch and rebase onto the current target branch:
+
     git fetch upstream master  # Fetch the latest commit on the target branch
     git rebase FETCH_HEAD      # Rebuild commits on top of the new base
+    git push --force-with-lease  # Update the pull request with the rebased commits
 
 This project aims to have a clean git history, where code changes are only made in non-merge commits. This simplifies
 auditability because merge commits can be assumed to not contain arbitrary code changes.
