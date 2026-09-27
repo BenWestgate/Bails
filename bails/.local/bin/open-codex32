@@ -33,9 +33,12 @@ python_supported() {
 }
 
 source_is_usable() {
+    local source_status
+
     [ -d "$SOURCE_DIR/.git" ] &&
         [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" = "$REVISION" ] &&
-        [ -z "$(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all --ignored=matching 2>/dev/null)" ] &&
+        source_status="$(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all --ignored=matching 2>/dev/null)" &&
+        [ -z "$source_status" ] &&
         python_supported &&
         PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" \
             python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null

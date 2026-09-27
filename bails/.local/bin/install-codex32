@@ -28,7 +28,10 @@ readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfil
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 
 source_tree_clean() {
-    [ -z "$(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all --ignored=matching 2>/dev/null)" ]
+    local source_status
+
+    source_status="$(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all --ignored=matching 2>/dev/null)" &&
+        [ -z "$source_status" ]
 }
 
 python3 -c 'import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)' || {
