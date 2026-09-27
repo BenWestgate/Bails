@@ -1,4 +1,4 @@
-# ![image](https://github.com/BenWestgate/Bails/raw/master/docs/banner2.png)
+# ![CipherStick: Bitcoin Core on Tails](https://github.com/BenWestgate/Bails/raw/master/docs/repository-bails-bcot.png)
 
 # CipherStick (formerly known as "Bails")
 
