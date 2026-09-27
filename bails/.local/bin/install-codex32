@@ -27,6 +27,10 @@ readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 
+source_tree_clean() {
+    [ -z "$(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all --ignored=matching 2>/dev/null)" ]
+}
+
 python3 -c 'import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)' || {
     echo "python-codex32 requires Python 3.12 or 3.13." >&2
     exit 1
@@ -39,7 +43,9 @@ python3 -c 'import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Adw
 
 if [ -d "$SOURCE_DIR/.git" ] && \
     [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" = "$REVISION" ] && \
-    PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null; then
+    source_tree_clean && \
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" \
+        python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null; then
     exit 0
 fi
 
@@ -53,7 +59,8 @@ if [ ! -d "$SOURCE_DIR/.git" ]; then
 fi
 
 git -C "$SOURCE_DIR" fetch --depth=1 origin "$REVISION"
-git -C "$SOURCE_DIR" checkout --detach "$REVISION"
+git -C "$SOURCE_DIR" checkout --detach --force "$REVISION"
+git -C "$SOURCE_DIR" clean -ffdx
 
 actual_revision="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
 [ "$actual_revision" = "$REVISION" ] || {
@@ -61,4 +68,10 @@ actual_revision="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
     exit 1
 }
 
-PYTHONPATH="$SOURCE_DIR/src" python3 -P -c 'import codex32; import codex32_gui'
+source_tree_clean || {
+    echo "python-codex32 source-tree verification failed." >&2
+    exit 1
+}
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" \
+    python3 -P -c 'import codex32; import codex32_gui'

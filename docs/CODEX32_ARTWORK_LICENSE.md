@@ -3,7 +3,9 @@
 The `codex32` application icon is cropped from the Codex32 book cover.
 
 Copyright © 2022 Blockstream
-Cover and Vovelle Illustrations by Micaela Paez
+Cover and Volvelle Illustrations by Micaela Paez
+
+The source book PDF, `2022-09-26--color.pdf`, places the following MIT license on page 2 immediately before the artwork credits. It is available from <https://secretcodex32.com/docs/2022-09-26--color.pdf>.
 
 ## MIT License
 

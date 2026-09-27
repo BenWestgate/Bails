@@ -31,6 +31,10 @@ To restore with the replacement flow:
 4. type the master fingerprint from the separately stored wallet record before import; if that record is unavailable, verify the recovered fingerprint independently before accepting the explicit warning;
 5. let Bitcoin Core finish scanning, then verify the expected wallet history before relying on the restored wallet.
 
+Legacy backups that reached their threshold with one fewer paper card plus the old seed-backup passphrase cannot yet reconstruct that passphrase-derived share in this flow. Until #242 is implemented, use a full threshold of paper cards.
+
+CipherStick normally prunes old block data to fit smaller USB drives. If the restored wallet predates the oldest retained block, Bitcoin Core cannot complete the historical rescan from the pruned data. Use storage large enough for the full block chain, disable pruning, restart Bitcoin Core with a full `-reindex`, let it download and validate the missing history, and rescan the wallet before treating recovery as complete.
+
 Do not assume a third-party codex32 tool has the same correction or derivation behavior as CipherStick's pinned `python-codex32` revision. Keep the original CipherStick unchanged until recovery has been tested.
 
 ## Migration boundary
