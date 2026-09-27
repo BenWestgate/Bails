@@ -28,6 +28,26 @@
 export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 
+prompt_passphrase() {
+    local passphrase response
+
+    response="$(
+        printf '%s\n' \
+            'SETTITLE Spaced repetition trainer' \
+            'SETDESC Enter the exact Persistent Storage passphrase so CipherStick can help you memorize it.' \
+            'SETPROMPT Passphrase:' \
+            'SETREPEAT Confirm passphrase:' \
+            'SETREPEATERROR Passphrases do not match.' \
+            'GETPIN' | pinentry-gnome3
+    )" || return 1
+
+    passphrase="$(sed -n 's/^D //p' <<< "$response")"
+    [ -n "$passphrase" ] || return 1
+
+    # Assuan escapes literal percent signs in data responses.
+    printf '%s' "${passphrase//%25/%}"
+}
+
 # Check if user password is already set
 passwd_unset=$(passwd -S "$USER" | grep -c NP)
 
@@ -40,12 +60,7 @@ passwd_unset=$(passwd -S "$USER" | grep -c NP)
 pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
     # Check for existing Persistent Storage passphrase
     until [ -f $SET_UP ]; do
-        existing_passphrase="$(python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
-if box.passphrase:
-    print(box.passphrase)
-else:
-    print("")' 2>/dev/null)"
+        existing_passphrase="$(prompt_passphrase)"
         if [ -z "$existing_passphrase" ]; then
             zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
         else
@@ -68,6 +83,7 @@ else:
         # Change user account password to Persistent Storage passphrase for spaced repetition practice.
         printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
     fi
+    unset existing_passphrase
 else
     printf '\033]2;Setup the Persistent Storage\a'
     # Choose passphrase
@@ -101,12 +117,11 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
         zenity --info --title='Spaced repetition trainer' \
             --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
             --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
-        python3 -c 'from bails import set_pass
-box = set_pass.SimplePassphraseDialog(None,"Enter Persistent Storage passphrase")
-if box.passphrase:
-    print(box.passphrase+"\n"+box.passphrase)
-else:
-    print("\n")' 2>/dev/null | passwd
+        passphrase="$(prompt_passphrase)" &&
+            printf '%s\n%s' "$passphrase" "$passphrase" | passwd
+        result=$?
+        unset passphrase
+        ((result == 0))
     }; do
         zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
             --ok-label='Try Again' --ellipsize
