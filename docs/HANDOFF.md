@@ -12,6 +12,6 @@ Use a fresh Tails installation when giving CipherStick to another person. A full
 
 The person performing the handoff decides what optional data the recipient receives. CipherStick must not silently include wallet files, keys, configuration, logs, or other persistent state.
 
-For Bitcoin Core node data, `blocks/` and `chainstate/` may be copied after Bitcoin Core has shut down cleanly. Do not copy `wallets/` unless transferring wallet data is an explicit, separately reviewed decision.
+For Bitcoin Core node data, `blocks/` and `chainstate/` may be copied after Bitcoin Core has shut down cleanly, but only from a source node you trust. Bitcoin Core does not fully revalidate a copied chainstate at startup. If you do not trust the source node, let the recipient synchronize independently. Do not copy `wallets/` unless transferring wallet data is an explicit, separately reviewed decision.
 
 The signed-release work tracked by #206 is required before a repository archive can be treated as an authenticated CipherStick handoff package. Until then, do not represent an ordinary `.zip` or `.tar` download as authenticated.

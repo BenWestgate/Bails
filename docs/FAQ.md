@@ -95,7 +95,7 @@ Use the CipherStick Settings update action provided by the installed version. Re
 
 ## How can I copy the block chain from a Bitcoin node I already have?
 
-Bitcoin Core can reuse `blocks` and `chainstate` from another compatible node, but copying state from an untrusted or inconsistent source can cause failures or force revalidation. Follow Bitcoin Core's data-directory documentation and Tails' guidance for accessing external or internal drives.
+You may copy the `blocks` and `chainstate` folders from a Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location) after Bitcoin Core has shut down cleanly, but only from a node you trust. Bitcoin Core does not fully revalidate a copied chainstate at startup. If you do not trust the source node, let CipherStick synchronize independently instead. Follow Tails' guidance for accessing external or internal drives.
 
 ## What type of backup USB stick should I get?
 
