@@ -32,7 +32,7 @@ screen_is_locked() {
 
 # Prompt for passphrase using pinentry-gnome3
 get_passphrase() {
-    passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 2>&1 | grep D | cut -c3-)"
+    passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 --timeout 0 2>&1 | grep D | cut -c3-)"
     [ "$passphrase" ]
 }
 
@@ -45,7 +45,7 @@ check_passphrase() {
 
 # Initialize variables
 min_interval=5
-interval=30 # initial value
+interval=600 # wait ten minutes before the first practice prompt
 exp=0
 enter='Enter'
 sleep $interval
@@ -55,8 +55,8 @@ while true; do
         continue
     fi
     if ! get_passphrase; then
-        zenity --notification --text="No passphrase entered!\nEnter your passphrase to train your memory."
-        sleep 2
+        zenity --notification --text="Passphrase practice postponed.\nCipherStick will ask again later."
+        sleep $interval
         continue
     fi
     if check_passphrase &>/dev/null <<< "$passphrase"; then
@@ -71,6 +71,6 @@ while true; do
         zenity --notification --text="Passphrase does not match.\nTry again."
         sleep 2
         enter='Re-enter'
-        ((exp = (exp == 0) ? 2 : exp + 1)) 
+        ((exp = (exp == 0) ? 2 : exp + 1))
     fi
 done
