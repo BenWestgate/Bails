@@ -29,7 +29,7 @@ export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/stat
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
 
 open_persistent_storage() {
-    gio launch /usr/share/applications/org.boum.tails.PersistentStorage.desktop
+    gtk-launch org.boum.tails.PersistentStorage
 }
 
 required_features_active() {
