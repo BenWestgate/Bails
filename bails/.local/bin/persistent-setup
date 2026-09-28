@@ -52,7 +52,7 @@ prompt_passphrase() {
             'SETPROMPT Passphrase:' \
             'SETREPEAT Confirm passphrase:' \
             'SETREPEATERROR Passphrases do not match.' \
-            'GETPIN' | pinentry-gnome3
+            'GETPIN' | pinentry-gnome3 --timeout 0
     )" || return 1
 
     passphrase="$(sed -n 's/^D //p' <<< "$response")"
@@ -60,6 +60,42 @@ prompt_passphrase() {
 
     # Assuan escapes literal percent signs in data responses.
     printf '%s' "${passphrase//%25/%}"
+}
+
+offer_spaced_repetition_setup() {
+    local passphrase
+
+    if ! zenity --question --title='Set up passphrase practice?' --no-wrap "$ICON" \
+        --text='You successfully unlocked Persistent Storage this session.
+
+CipherStick can help you memorize its passphrase with spaced repetition. Tails does not expose the passphrase you already entered, so enabling practice requires entering it once more.
+
+You can choose Later and continue without training.' \
+        --ok-label='Set Up Practice' --cancel-label='Later' --default-cancel; then
+        zenity --info --title='Passphrase practice postponed' --no-wrap "$ICON" \
+            --text='Training is not enabled yet. CipherStick will offer it again next time.
+
+Keep your written passphrase safe until you have memorized it.'
+        return 1
+    fi
+
+    passphrase="$(prompt_passphrase)" || {
+        zenity --info --title='Passphrase practice postponed' --no-wrap "$ICON" \
+            --text='Training is not enabled yet. CipherStick will offer it again next time.
+
+Keep your written passphrase safe until you have memorized it.'
+        return 1
+    }
+
+    if printf '%s\n%s' "$passphrase" "$passphrase" | passwd; then
+        unset passphrase
+        return 0
+    fi
+
+    unset passphrase
+    zenity --warning --title='Passphrase practice was not enabled' --no-wrap "$ICON" \
+        --text='CipherStick could not enable passphrase practice. Setup can continue, and CipherStick will offer training again next time.'
+    return 1
 }
 
 # Check if user password is already set
@@ -98,18 +134,26 @@ pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
         printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
     fi
     unset existing_passphrase
+
+    if [ -f "$SET_UP" ] && ((passwd_unset)); then
+        offer_spaced_repetition_setup || :
+    fi
 else
     printf '\033]2;Setup the Persistent Storage\a'
-    # Choose passphrase
-    zenity --warning --title='Choose a strong passphrase' --no-wrap "$ICON" \
-        --text='It is important to select a strong passphrase to protect your Bitcoin data.\n
-We recommend using a suggested passphrase from the Persistent Storage dialog.' \
-        --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage
-    zenity --warning --title='Write your passphrase down' --width=520 "$ICON" \
-        --text='It is impossible to recover your passphrase if you forget it!\n
-To help you remember, write it on paper, seal in an envelope, secure it for a few days in a place like a safe or your wallet, then destroy it once you know it well.\n
-Write on a hard surface to avoid leaving an imprint of the secret.' \
-        --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
+    zenity --question --title='Before choosing your passphrase' --no-wrap "$ICON" \
+        --text='Have pen and paper ready before Tails asks you to choose a Persistent Storage passphrase.
+
+When Tails shows a suggested passphrase:
+ • Write it down immediately, exactly as shown.
+ • Write on a hard surface so you do not leave an imprint of the secret.
+ • Store the paper out of sight, away from your CipherStick.
+ • Practice daily at first, then at least once a week.
+ • Keep the paper until you can reliably recall the passphrase, then destroy it.
+
+Do not rely on memory yet. CipherStick will offer spaced-repetition training on a later session.' \
+        --ok-label='I Have Pen and Paper Ready' --cancel-label='Cancel Setup' --default-cancel \
+        --icon-name=org.gnome.TextEditor || exit 1
+
     # Persistent storage creation
     open_persistent_storage
     notify-send --icon=bails128 'Create Persistent Storage' \
@@ -117,42 +161,13 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     until /usr/local/lib/tpscli is-unlocked; do
         sleep 1
     done
-
-    # Memorization help
-    ((passwd_unset)) && \
-    until {
-        zenity --info --title='Spaced repetition trainer' \
-            --text='Enter the <b>exact</b> same passphrase from Persistent Storage
-so CipherStick can help you memorize it.' \
-            --ok-label='I Will Enter the Exact Same Passphrase' --no-wrap "$ICON"
-        passphrase="$(prompt_passphrase)" &&
-            printf '%s\n%s' "$passphrase" "$passphrase" | passwd
-        result=$?
-        unset passphrase
-        ((result == 0))
-    }; do
-        zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
-            --ok-label='Try Again' --ellipsize
-    done
-
 fi
-if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
-    # Spaced repetition training loop
-    spaced-repetition &
 
-    # Display memorization tips
-    zenity --info --title='Tips for your new passphrase' \
-            --text="Practice entering your passphrase <i>daily at first</i>,
-then at least once a week to commit it to memory.
-
-Keep your passphrase safe:
- • Do not share, photograph, or reuse it.
- • Do not type it into websites, messages, or other accounts.
- • Be mindful of anyone who can see or record you typing it.
- • Change it immediately if you suspect it is compromised.
- • Store the written copy out of sight, away from your CipherSticks.
- • Destroy the written copy once you have memorized it." \
-            --ok-label='I Will Destroy It Once Memorized' --no-wrap "$ICON"
+# Start training only after it has been configured. Fresh installs deliberately
+# defer this until a later session so setup never depends on immediate recall.
+passwd_unset=$(passwd -S "$USER" | grep -c NP)
+if ((passwd_unset == 0)); then
+    pgrep -f spaced-repetition >/dev/null || spaced-repetition &
 fi
 
 # Check features of the Persistent Storage
