@@ -122,8 +122,9 @@ Write on a hard surface to avoid leaving an imprint of the secret.' \
     ((passwd_unset)) && \
     until {
         zenity --info --title='Spaced repetition trainer' \
-            --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
-            --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
+            --text='Enter the <b>exact</b> same passphrase from Persistent Storage
+so CipherStick can help you memorize it.' \
+            --ok-label='I Will Enter the Exact Same Passphrase' --no-wrap "$ICON"
         passphrase="$(prompt_passphrase)" &&
             printf '%s\n%s' "$passphrase" "$passphrase" | passwd
         result=$?
@@ -141,19 +142,17 @@ if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
 
     # Display memorization tips
     zenity --info --title='Tips for your new passphrase' \
-            --text="You will be prompted to enter your passphrase as spaced repetition training.\n\nPractice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n
-    Keep your passphrase safe, DO NOT:
-     • share it with anyone (instead clone them a CipherStick),
-     • give it when someone emails, calls, or messages,
-     • photograph it,
-     • re-use for any other account, or type it outside of Bails.
+            --text="Practice entering your passphrase <i>daily at first</i>,
+then at least once a week to commit it to memory.
 
-    DO:
-     • be mindful of whether you can be seen or recorded typing,
-     • immediately change it when you suspect it is compromised,
-     • store it out of sight away from your CipherSticks, and
-     • destroy it once memorized." \
-            --ok-label='I Will Destroy It Once Memorized' "$ICON"
+Keep your passphrase safe:
+ • Do not share, photograph, or reuse it.
+ • Do not type it into websites, messages, or other accounts.
+ • Be mindful of anyone who can see or record you typing it.
+ • Change it immediately if you suspect it is compromised.
+ • Store the written copy out of sight, away from your CipherSticks.
+ • Destroy the written copy once you have memorized it." \
+            --ok-label='I Will Destroy It Once Memorized' --no-wrap "$ICON"
 fi
 
 # Check features of the Persistent Storage
