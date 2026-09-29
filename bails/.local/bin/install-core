@@ -205,7 +205,6 @@ ps -p $get_core &>/dev/null && fg %"$(jobs -l | grep $get_core | cut -f1 -d' ' |
 # Verify download integrity
 if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
-    stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
     zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
     install-core	# Launch this script again
@@ -217,6 +216,7 @@ source_name="bitcoin-$VER.tar.gz"
 source_hash=$(awk -v file="$source_name" '$2 == file { print $1; exit }' SHA256SUMS)
 if [[ ! "$source_hash" =~ ^[[:xdigit:]]{64}$ ]] || \
     ! printf '%s  %s\n' "$source_hash" "$source_tar" | sha256sum --check --status; then
+    rm -f "$source_tar"
     zenity --error --title="Bitcoin Core source verification failed" \
         --text="Could not authenticate the Bitcoin Core $VER release source." "$ICON"
     exit 1
@@ -268,6 +268,7 @@ if [ "$action" = installation ]; then
 fi
 rm -f "$source_tar"
 
+stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 rm -Rvf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
