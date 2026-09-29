@@ -1,0 +1,34 @@
+# Agent guidance
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing this repository. The
+project treats low-effort maintainability and PELD-inspired design as core
+requirements.
+
+Required background:
+
+- [Tails: Improve Tails source code](https://tails.net/contribute/how/code/)
+- [Tails: Design: specification and implementation](https://tails.net/contribute/design/)
+
+Keep CipherStick a thin integration layer over Tails, Debian, GNOME, Bitcoin
+Core, Python, python-codex32, JoinMarket, and other upstreams. Prefer upstream
+functionality and stable interfaces over local reimplementations.
+
+When modifying dependency-sensitive code:
+
+- Avoid hard-coded Python minor-version paths, desktop application names, GTK
+  generations, executable locations, dialog geometry, and other incidental
+  properties of one release.
+- Prefer runtime capability checks and centralized compatibility adapters.
+- Do not duplicate validation or policy already owned by an upstream component.
+- Preserve Tails' Tor routing, amnesia, explicit-persistence, and safe-default
+  properties. Security-sensitive exceptions must be explicit and documented.
+- Keep errors at integration boundaries visible and actionable; do not silently
+  swallow dependency failures.
+- Search existing issues and upstream history before adding a workaround.
+- Test user-visible integration flows on the supported Tails release when the
+  change depends on Tails, GNOME, Debian, Python, or desktop behavior.
+- When several regressions share a cause, repair the shared boundary rather than
+  applying independent symptom fixes.
+
+Bias toward less project-specific code. A change that removes a brittle local
+implementation in favor of a maintained upstream is usually easier to sustain.
