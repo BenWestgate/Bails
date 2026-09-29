@@ -144,6 +144,9 @@ fi
 
 for dir in guix.sigs/*/; do [ "${dir#*/}" == "$VER/" ] && break; rm -rf "$dir"; done
 for name in guix.sigs/"$VER"/*; do gpg --show-keys "${name/"$VER"/builder-keys}.gpg"; done > builder-keys
+source_tar="$DOWNLOAD_DIR/bitcoin-$VER.tar.gz"
+retry_on_fail wget --continue -O "$source_tar" \
+    "$release_url/bitcoin-$VER.tar.gz" & get_source=$!
 if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
     action=update
     printf '\033]2;Updating all keys from keyserver...\a'
@@ -157,16 +160,11 @@ else # Import a trusted set on first-run.
             echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
-    # Download both an authenticated release baseline and the current master
-    # estimates. Master is fresher, but is only accepted within conservative
-    # bounds derived from the authenticated release.
-    source_tar="$DOWNLOAD_DIR/bitcoin-$VER.tar.gz"
+    # Download the current master estimates. Master is fresher, but is only
+    # accepted within conservative bounds derived from the authenticated
+    # release source downloaded above.
     master_chainparams="$DOWNLOAD_DIR/chainparams-master.cpp"
-    (
-        retry_on_fail wget --continue -O "$source_tar" \
-            "$release_url/bitcoin-$VER.tar.gz"
-        wget --continue -O "$master_chainparams" "$BITCOIN_CHAINPARAMS_URL" || true
-    ) & get_size=$!
+    wget --continue -O "$master_chainparams" "$BITCOIN_CHAINPARAMS_URL" & get_size=$!
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
@@ -214,37 +212,38 @@ else
     exit 1
 fi
 
+ps -p "$get_source" &>/dev/null && fg %"$(jobs -l | grep "$get_source" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+source_name="bitcoin-$VER.tar.gz"
+source_hash=$(awk -v file="$source_name" '$2 == file { print $1; exit }' SHA256SUMS)
+if [[ ! "$source_hash" =~ ^[[:xdigit:]]{64}$ ]] || \
+    ! printf '%s  %s\n' "$source_hash" "$source_tar" | sha256sum --check --status; then
+    zenity --error --title="Bitcoin Core source verification failed" \
+        --text="Could not authenticate the Bitcoin Core $VER release source." "$ICON"
+    exit 1
+fi
+
+source_root="bitcoin-$VER"
+core_doc_dir="$LOCAL_DIR/share/doc/bitcoin-core"
+completion_dir="$LOCAL_DIR/share/bash-completion/completions"
+mkdir -p "$LOCAL_DIR/share/icons" "$core_doc_dir" "$completion_dir"
+
+# Extract only explicit members after the release source archive has passed
+# the signed SHA256SUMS check above. These replace locally vendored copies and
+# keep help/completions matched to the installed Core release on updates too.
+tar -xOf "$source_tar" "$source_root/share/pixmaps/bitcoin128.png" >"$LOCAL_DIR/share/icons/bitcoin128.png" || exit 1
+tar -xOf "$source_tar" "$source_root/share/examples/bitcoin.conf" >"$core_doc_dir/bitcoin.conf.example" || exit 1
+tar -xOf "$source_tar" "$source_root/doc/bitcoin-conf.md" >"$core_doc_dir/bitcoin-conf.md" || exit 1
+tar -xOf "$source_tar" "$source_root/doc/tor.md" >"$core_doc_dir/tor.md" || exit 1
+for completion in bitcoin bitcoin-cli bitcoin-tx bitcoind; do
+    tar -xOf "$source_tar" "$source_root/contrib/completions/bash/$completion.bash" >"$completion_dir/$completion" || exit 1
+done
+
 if [ "$action" = installation ]; then
     # Authenticate pruning metadata before installing bitcoind. A failed
     # metadata check must leave the next attempt on the first-install path.
     ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-    source_name="bitcoin-$VER.tar.gz"
-    source_hash=$(awk -v file="$source_name" '$2 == file { print $1; exit }' SHA256SUMS)
-    if [[ ! "$source_hash" =~ ^[[:xdigit:]]{64}$ ]] || \
-        ! printf '%s  %s\n' "$source_hash" "$source_tar" | sha256sum --check --status; then
-        zenity --error --title="Bitcoin Core source verification failed" \
-            --text="Could not authenticate pruning metadata for Bitcoin Core $VER." "$ICON"
-        exit 1
-    fi
-
-    source_root="bitcoin-$VER"
     release_chainparams="$DOWNLOAD_DIR/chainparams-release.cpp"
-    core_doc_dir="$LOCAL_DIR/share/doc/bitcoin-core"
-    completion_dir="$LOCAL_DIR/share/bash-completion/completions"
-    mkdir -p "$LOCAL_DIR/share/icons" "$core_doc_dir" "$completion_dir"
-
-    # Extract only explicit members after the release source archive has passed
-    # the signed SHA256SUMS check above. These replace locally vendored copies
-    # and keep help/completions matched to the installed Core release.
     tar -xOf "$source_tar" "$source_root/src/kernel/chainparams.cpp" >"$release_chainparams" || exit 1
-    tar -xOf "$source_tar" "$source_root/share/pixmaps/bitcoin128.png" >"$LOCAL_DIR/share/icons/bitcoin128.png" || exit 1
-    tar -xOf "$source_tar" "$source_root/share/examples/bitcoin.conf" >"$core_doc_dir/bitcoin.conf.example" || exit 1
-    tar -xOf "$source_tar" "$source_root/doc/bitcoin-conf.md" >"$core_doc_dir/bitcoin-conf.md" || exit 1
-    tar -xOf "$source_tar" "$source_root/doc/tor.md" >"$core_doc_dir/tor.md" || exit 1
-    for completion in bitcoin bitcoin-cli bitcoin-tx bitcoind; do
-        tar -xOf "$source_tar" "$source_root/contrib/completions/bash/$completion.bash" >"$completion_dir/$completion" || exit 1
-    done
-    rm -f "$source_tar"
 
     release_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$release_chainparams" | sed 's/[^0-9]*//g')
     release_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$release_chainparams" | sed 's/[^0-9]*//g')
@@ -267,6 +266,7 @@ if [ "$action" = installation ]; then
         assumed_blockchain_size=$master_blockchain_size
     fi
 fi
+rm -f "$source_tar"
 
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
