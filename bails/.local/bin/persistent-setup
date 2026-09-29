@@ -27,15 +27,23 @@
 # For security reviewing this use: https://explainshell.com/ for commands that are unclear.
 export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
+persistent_storage_opened_by_setup=false
 
 open_persistent_storage() {
     local desktop=/usr/share/applications/org.boum.tails.PersistentStorage.desktop
 
+    persistent_storage_opened_by_setup=true
     if command -v gtk-abspath-launch >/dev/null 2>&1 && [ -f "$desktop" ]; then
         gtk-abspath-launch --no-dbus-ping "$desktop"
     else
         tails-persistent-storage &
     fi
+}
+
+close_persistent_storage() {
+    # Close only the unprivileged Tails frontend. The root-owned backend
+    # continues managing Persistent Storage after this setup handoff ends.
+    pkill -u "$USER" -f '[t]ps-frontend' 2>/dev/null || :
 }
 
 prompt_passphrase() {
@@ -196,8 +204,9 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
         }
 done
 
-# Close the Persistent Storage window
-pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
+if [ "$persistent_storage_opened_by_setup" = true ]; then
+    close_persistent_storage
+fi
 pkill -f 'zenity --notification' &>/dev/null
 mkdir -vp $XDG_STATE_HOME
 touch $SET_UP
