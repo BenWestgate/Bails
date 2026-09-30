@@ -30,10 +30,9 @@ screen_is_locked() {
     [ "$session_state" = "yes" ]
 }
 
-# Prompt for passphrase using pinentry-gnome3
 get_passphrase() {
-    passphrase="$(echo -e "SETPROMPT $enter Persistent Storage passphrase:\nGETPIN" | pinentry-gnome3 2>&1 | grep D | cut -c3-)"
-    [ "$passphrase" ]
+    passphrase="$(prompt-persistent-passphrase "$enter")"
+    [ -n "$passphrase" ]
 }
 
 check_passphrase() {

@@ -21,17 +21,20 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# Tails Persistent Storage Setup Tutorial
+# Tails Persistent Storage prerequisite setup
 ###############################################################################
 
-# For security reviewing this use: https://explainshell.com/ for commands that are unclear.
 export XDG_STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
 SET_UP="$XDG_STATE_HOME/tps_is_set_up"
+TRAINING_READY="$XDG_STATE_HOME/passphrase_training_initialized"
 persistent_storage_opened_by_setup=false
+first_setup=false
+[ -f "$SET_UP" ] || first_setup=true
 
 open_persistent_storage() {
     local desktop=/usr/share/applications/org.boum.tails.PersistentStorage.desktop
 
+    [ "$persistent_storage_opened_by_setup" = false ] || return 0
     persistent_storage_opened_by_setup=true
     if command -v gtk-abspath-launch >/dev/null 2>&1 && [ -f "$desktop" ]; then
         gtk-abspath-launch --no-dbus-ping "$desktop"
@@ -52,137 +55,31 @@ required_features_active() {
         /usr/local/lib/tpscli is-active Dotfiles
 }
 
-prompt_passphrase() {
-    local passphrase response
+if [ "$first_setup" = true ]; then
+    zenity --title='Welcome to CipherStick' --info \
+        --text="Thank you for choosing CipherStick, a self-custodial Bitcoin wallet and full node.\n\nCipherStick needs an unlocked Tails Persistent Storage with Persistent Folder, GnuPG, and Dotfiles enabled." \
+        --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
+fi
 
-    response="$(
-        printf '%s\n' \
-            'SETTITLE Spaced repetition trainer' \
-            'SETDESC Enter the exact Persistent Storage passphrase so CipherStick can help you memorize it.' \
-            'SETPROMPT Passphrase:' \
-            'SETREPEAT Confirm passphrase:' \
-            'SETREPEATERROR Passphrases do not match.' \
-            'GETPIN' | pinentry-gnome3
-    )" || return 1
-
-    passphrase="$(sed -n 's/^D //p' <<< "$response")"
-    [ -n "$passphrase" ] || return 1
-
-    # Assuan escapes literal percent signs in data responses.
-    printf '%s' "${passphrase//%25/%}"
-}
-
-# Check if user password is already set
-passwd_unset=$(passwd -S "$USER" | grep -c NP)
-
-# Display welcome message
-[ -f $SET_UP ] || zenity --title='Welcome to CipherStick' --info \
-    --text="Thank you for choosing CipherStick, a self-custodial Bitcoin wallet and full node.\n\nDuring this initial setup process, we will guide you through the necessary steps\nto ensure a smooth experience. Let's get started!" \
-    --no-wrap --ok-label='Continue' "$ICON" --icon-name=bails128
-
-# Check for already unlocked Persistent Storage
-pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
-    # Check for existing Persistent Storage passphrase
-    until [ -f $SET_UP ]; do
-        existing_passphrase="$(prompt_passphrase)"
-        if [ -z "$existing_passphrase" ]; then
-            zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
-        else
-            # Estimate passphrase entropy to see if we can proceed
-            entropy=$(keepassxc-cli estimate "${existing_passphrase// /}" | cut -f2 | tr -C -d '[:digit:]')
-            if ((entropy >= 65000)); then
-                break
-            elif ((entropy > 50000)); then
-                zenity --question --icon-name=dialog-warning --title='Warning: Weak Passphrase Detected' \
-                  --text="<b>Your passphrase is too weak to protect against a state-sponsored attacker with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nIf a state-sponsored attacker with physical access to your device is part of your <a href='https://ssd.eff.org/module/your-security-plan'>threat model</a>, you MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue' --default-cancel --cancel-label='Restart Now' && break
-            else
-                zenity --warning --title='WARNING: Weak Passphrase Detected' \
-                  --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nYou MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Restart Now'
-            fi
-            systemctl reboot
-        fi
-    done
-    unset entropy
-    [ -f $SET_UP ] || if ((passwd_unset)); then
-        # Change user account password to Persistent Storage passphrase for spaced repetition practice.
-        printf '%s\n%s' "$existing_passphrase" "$existing_passphrase" | passwd || echo "FAILURE to change passphrase"
-    fi
-    unset existing_passphrase
-else
-    printf '\033]2;Setup the Persistent Storage\a'
-    # Choose passphrase
-    zenity --warning --title='Choose a strong passphrase' --no-wrap "$ICON" \
-        --text='It is important to select a strong passphrase to protect your Bitcoin data.\n
-We recommend using a suggested passphrase from the Persistent Storage dialog.' \
-        --ok-label='I Will Use a Suggested Passphrase' --icon-name=tails-persistent-storage
-    zenity --warning --title='Write your passphrase down' "$ICON" \
-        --text='It is impossible to recover your passphrase if you forget it!\n
-To help you remember, write it on paper, seal in an envelope, secure it for a few days in a place like a safe or your wallet, then destroy it once you know it well.\n
-Write on a hard surface to avoid leaving an imprint of the secret.' \
-        --ok-label='I Will Write My Passphrase Down' --icon-name=org.gnome.TextEditor
-    # Persistent storage creation
+if ! /usr/local/lib/tpscli is-unlocked; then
+    zenity --warning --title='Choose a strong Persistent Storage passphrase' --no-wrap "$ICON" \
+        --text='Use the Tails Persistent Storage passphrase guidance. CipherStick does not score or override a passphrase accepted by Tails.' \
+        --ok-label='Continue' --icon-name=tails-persistent-storage
     open_persistent_storage
     until /usr/local/lib/tpscli is-unlocked; do
-        sleep 12
-        notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
-    done & notifying+=($!)
-
-    until /usr/local/lib/tpscli is-unlocked; do
-        grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-            { open_persistent_storage; notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
         sleep 1
+        if ! pgrep -u "$(id -u)" -f '[t]ps-frontend' >/dev/null 2>&1; then
+            # Closing the creation window cannot complete the prerequisite.
+            # Present it again instead of leaving both setup processes waiting
+            # forever for an unlock that can no longer happen.
+            persistent_storage_opened_by_setup=false
+            open_persistent_storage
+        fi
     done
-
-    # Clear notifications
-    kill "${notifying[@]}" &>/dev/null
-
-    # Memorization help
-    ((passwd_unset)) && \
-    until {
-        zenity --info --title='Spaced repetition trainer' \
-            --text='Enter the <b>exact</b> same passphrase from Persistent Storage so CipherStick can help you memorize it.' \
-            --ok-label='I Will Enter the Exact Same Passphrase' --ellipsize "$ICON"
-        passphrase="$(prompt_passphrase)" &&
-            printf '%s\n%s' "$passphrase" "$passphrase" | passwd
-        result=$?
-        unset passphrase
-        ((result == 0))
-    }; do
-        zenity --warning --text='No passphrase was entered.' --title="Spaced repetition trainer" \
-            --ok-label='Try Again' --ellipsize
-    done
-
-fi
-if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
-    # Spaced repetition training loop
-    spaced-repetition &
-
-    # Display memorization tips
-    zenity --info --title='Tips for your new passphrase' \
-            --text="You will be prompted to enter your passphrase as spaced repetition training.\n\nPractice entering your passphrase <i>daily at first and then at least once a week</i>  to commit it to memory.\n
-    Keep your passphrase safe, DO NOT:
-     • share it with anyone (instead clone them a CipherStick),
-     • give it when someone emails, calls, or messages,
-     • photograph it,
-     • re-use for any other account, or type it outside of Bails.
-
-    DO:
-     • be mindful of whether you can be seen or recorded typing,
-     • immediately change it when you suspect it is compromised,
-     • store it out of sight away from your CipherSticks, and
-     • destroy it once memorized." \
-            --ok-label='I Will Destroy It Once Memorized' "$ICON"
 fi
 
-# Check required Persistent Storage features.
 if ! required_features_active; then
-    # Fresh storage creation has already presented the Tails frontend. Avoid a
-    # second launch/refocus here; if it was closed, the guidance below tells the
-    # user to reopen it from Apps instead.
-    if [ "$persistent_storage_opened_by_setup" = false ]; then
-        open_persistent_storage
-    fi
-
+    open_persistent_storage
     zenity --info --title='Required Persistent Storage features' \
         --text='Turn on these required Persistent Storage features:\n\n• Persistent Folder (PersistentDirectory)\n• GnuPG\n• Dotfiles\n\nNetwork Connections is optional.\n\nSetup will continue automatically when the required features are enabled. If you close Persistent Storage first, reopen it from Apps.' \
         --icon-name=tails-persistent-storage "$ICON" &
@@ -199,5 +96,13 @@ fi
 if [ "$persistent_storage_opened_by_setup" = true ]; then
     close_persistent_storage
 fi
-mkdir -vp $XDG_STATE_HOME
-touch $SET_UP
+
+mkdir -p "$XDG_STATE_HOME"
+touch "$SET_UP"
+
+# Storage setup is complete. Passphrase training is a separate optional entry
+# point and owns its own state, prompting, and cancellation behavior. Restart
+# an initialized trainer on later sessions without re-running initialization.
+if [ "$first_setup" = true ] || [ -e "$TRAINING_READY" ]; then
+    setup-passphrase-training &
+fi
