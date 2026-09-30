@@ -102,6 +102,51 @@ retry_on_fail() {
 }
 
 
+read_configured_prune() {
+    local prune=''
+
+    if [ -f "$DATA_DIR/bails.conf" ]; then
+        prune="$(sed -n 's/^prune=\([0-9][0-9]*\)$/\1/p' "$DATA_DIR/bails.conf" | head -n1)"
+    fi
+    if [ -z "$prune" ] && [ -f "$DATA_DIR/settings.json" ]; then
+        prune="$(python3 - "$DATA_DIR/settings.json" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as settings_file:
+        value = json.load(settings_file).get("prune", "")
+except (OSError, ValueError):
+    value = ""
+
+if isinstance(value, (int, str)) and str(value).isdigit():
+    print(value)
+PY
+)"
+    fi
+    [[ "$prune" =~ ^[0-9]+$ ]] || prune=0
+    printf '%s' "$prune"
+}
+
+
+write_bails_config() {
+    local prune="${1:-}"
+
+    [[ "$prune" =~ ^[0-9]+$ ]] || prune="$(read_configured_prune)"
+    mkdir -p "$DATA_DIR"
+    cat > "$DATA_DIR/bails.conf" <<EOF
+# Managed by CipherStick. Bitcoin Core owns settings.json for GUI/RPC changes.
+datadir=$DATA_DIR
+debuglogfile=$HOME/.bitcoin/debug.log
+rpcport=17600
+proxy=127.0.0.1:9050
+onion=127.0.0.1:9050
+server=1
+prune=$prune
+EOF
+}
+
+
 ###############################################################################
 # Begin execution here
 ###############################################################################
@@ -211,15 +256,14 @@ rm -Rvf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
 until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure CipherStick installed
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
-# Configure data directory
+# Keep the release example intact and include CipherStick's small managed policy.
 rsync -vhb --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
-sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
-sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
-sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
+sed -i "1i# CipherStick integration policy\nincludeconf=$DATA_DIR/bails.conf\n" "$DOTFILES/.bitcoin/bitcoin.conf"
 link-dotfiles
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
+    write_bails_config
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
     # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
@@ -237,13 +281,8 @@ else
     prune_GB=$((space > 2 ? space : 2 ))
     # Disable pruning if USB stick is large enough
     prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
-    echo '{
-        "onion": "127.0.0.1:9050",
-        "proxy": "127.0.0.1:9050",
-        "prune": "'$prune_MiB'",
-        "server": true
-    }' > $DATA_DIR/settings.json # Enable server, proxies for Tor and prune
-    
+    write_bails_config "$prune_MiB"
+
     if ((prune_MiB)); then
         storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."
         prune_explanation="\n\nCipherStick has chosen to limit block chain storage (pruning) to $prune_GB GB. Historical blocks are still downloaded and verified, then deleted to keep disk usage low. Restoring a wallet whose history predates the retained blocks requires full-chain storage, a reindex or redownload, and a rescan."
