@@ -100,7 +100,8 @@ else
     done
     # Install CipherStick to Persistent Storage
     rsync -rvh --perms --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
-    rsync -rvh --perms --delete --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
+    rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
+      "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     remove_legacy_wallet_files "$DOTFILES"
     wallets='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/wallets'
     if [ -d "$wallets" ] && [ ! -L "$wallets" ]; then
