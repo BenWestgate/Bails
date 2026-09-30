@@ -25,6 +25,7 @@ set -euo pipefail
 readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
+readonly BITCOIN_DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
 SCRIPT_DIR="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")"
 readonly SCRIPT_DIR
 
@@ -45,42 +46,93 @@ source_is_usable() {
 }
 
 core_is_compatible() {
-    local info version major
+    local info version
 
-    if info="$(bitcoin-cli getnetworkinfo 2>/dev/null)"; then
-        version="$(sed -n 's/.*"version":[[:space:]]*\([0-9][0-9]*\).*/\1/p' <<< "$info")"
-        [ -n "$version" ] && ((version >= 320000))
-        return
+    if ! info="$(bitcoin-cli -datadir="$BITCOIN_DATA_DIR" getnetworkinfo 2>/dev/null)"; then
+        return 2
     fi
 
-    major="$(bitcoind --version 2>/dev/null | sed -n '1s/.*version v\([0-9][0-9]*\).*/\1/p')"
-    [ -n "$major" ] && ((major >= 32))
+    version="$(sed -n 's/.*"version":[[:space:]]*\([0-9][0-9]*\).*/\1/p' <<< "$info")"
+    [ -n "$version" ] || return 2
+    ((version >= 320000))
 }
 
-if ! source_is_usable; then
-    zenity --question --title='Install codex32?' \
-        --text='CipherStick will install or repair its pinned python-codex32 graphical application.' \
-        --ok-label='Install' --default-cancel || exit 0
+wait_for_core() {
+    local attempts="${1:-120}" core_status
 
-    "$SCRIPT_DIR/install-codex32" 2>&1 | zenity --progress --pulsate --auto-close --no-cancel \
-        --title='Installing codex32' \
-        --text='Installing the graphical codex32 application...' || {
-        zenity --error --title='codex32 installation failed' \
-            --text='The graphical codex32 application could not be installed.'
+    while ((attempts > 0)); do
+        if core_is_compatible; then
+            return 0
+        else
+            core_status=$?
+        fi
+        if ((core_status == 1)); then
+            return 1
+        fi
+        attempts=$((attempts - 1))
+        if ((attempts > 0)); then
+            sleep 1
+        fi
+    done
+    return 2
+}
+
+main() {
+    local core_status install_if_needed=false
+
+    if [ "${1:-}" = "--install" ]; then
+        install_if_needed=true
+        shift
+    fi
+
+    if (($#)); then
+        printf 'usage: %s [--install]\n' "$0" >&2
+        return 2
+    fi
+
+    if ! source_is_usable; then
+        if [ "$install_if_needed" = false ]; then
+            zenity --question --title='Install codex32?' \
+                --text='CipherStick will install or repair its pinned python-codex32 graphical application.' \
+                --ok-label='Install' --default-cancel || return 0
+        fi
+
+        "$SCRIPT_DIR/install-codex32" 2>&1 | zenity --progress --pulsate --auto-close --no-cancel \
+            --title='Installing codex32' \
+            --text='Installing the graphical codex32 application...' || {
+            zenity --error --title='codex32 installation failed' \
+                --text='The graphical codex32 application could not be installed.'
+            exit 1
+        }
+    fi
+
+    if ! source_is_usable; then
+        zenity --error --title='codex32 unavailable' \
+            --text='The graphical codex32 application is not available.'
         exit 1
-    }
-fi
+    fi
 
-if ! source_is_usable; then
-    zenity --error --title='codex32 unavailable' \
-        --text='The graphical codex32 application is not available.'
-    exit 1
-fi
+    if [ "$install_if_needed" = true ]; then
+        wait_for_core || core_status=$?
+    else
+        core_is_compatible || core_status=$?
+    fi
+    core_status="${core_status:-0}"
 
-if ! core_is_compatible; then
-    zenity --error --title='Bitcoin Core 32 required' \
-        --text='codex32 requires Bitcoin Core 32 or newer. Use CipherStick Settings → Update Bitcoin Core, then restart Bitcoin Core before opening codex32.'
-    exit 1
-fi
+    if ((core_status != 0)); then
+        if ((core_status == 1)); then
+            zenity --error --title='Bitcoin Core 32 required' \
+                --text='codex32 requires Bitcoin Core 32 or newer. Use CipherStick Settings > Update Bitcoin Core, then restart Bitcoin Core before opening codex32.'
+        else
+            zenity --error --title='Bitcoin Core unavailable' \
+                --text="codex32 could not reach Bitcoin Core through CipherStick's persistent data directory. Start Bitcoin Core and wait for it to finish starting, then try again."
+        fi
+        exit 1
+    fi
 
-exec env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" python3 -P -m codex32_gui
+    exec env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" python3 -P -m codex32_gui
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
