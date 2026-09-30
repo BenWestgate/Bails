@@ -28,7 +28,7 @@
 
 # Set environment variables and constants
 export PATH="$HOME/.local/bin:$PATH"
-export ICON=--window-icon="$HOME/.local/share/icons/bails128.png"
+export ICON=--icon="$HOME/.local/share/icons/bails128.png"
 export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export TMPDIR=$XDG_RUNTIME_DIR
 export SOURCE="/live/persistence/TailsData_unlocked"
@@ -76,8 +76,8 @@ search_key() {
     if grep '@' "$temp_file" >/dev/null; then 
         sed -i 's/(1)/   /' "$temp_file"
         # shellcheck disable=SC2086
-        if zenity --question --title='Do you trust this individual?' --no-markup --ellipsize \
-        --text="$(<$temp_file)" "$ICON" --icon-name=auth-fingerprint; then
+        if zenity --question --title='Do you trust this individual?' --no-markup --no-wrap \
+        --text="$(<$temp_file)" --icon=auth-fingerprint; then
             # shellcheck disable=SC2086
             gpg $1 --recv-key "$key"
         else
@@ -180,15 +180,24 @@ while true; do
     good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
     # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version number.
     if ((good_sig >= BINVERIFY_MIN_GOOD_SIGS)); then
-        zenity --question --title='Further download verification' --text="Your Bitcoin Core download has been successfully verified by $good_sig signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue Setup' --default-cancel --ok-label='More Verification' "$ICON" --icon-name=gtk-dialog-authentication
+        zenity --question --title='Further download verification' --no-wrap \
+            --text="Your Bitcoin Core $VER download has been successfully verified by $good_sig signatures
+from individuals trusted by $who_trusts.
+
+Further verification is optional and takes around 5 to 10 minutes.
+
+More verification gives additional assurance that the download is authentic
+and has not been tampered with." \
+            --cancel-label='Continue Setup' --default-cancel --ok-label='More Verification' \
+            --icon=security-high
         verified=$?
         ((verified)) && break
         ((BINVERIFY_MIN_GOOD_SIGS++))
     else
-        zenity --warning --title='Verify Bitcoin Core download' --text='Download verification is required.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --ok-label='Verify Now' "$ICON" --icon-name="gtk-dialog-authentication"
+        zenity --warning --title='Verify Bitcoin Core download' --text='Download verification is required.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --ok-label='Verify Now' --icon=security-high
         verified=0
     fi
-    [[ "$who_trusts" == "you" ]] || zenity --info --title="Choose trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. You decide which of these public keys you trust.\n\nTo validate your download's signatures, choose a few individuals who you find trustworthy." "$ICON" --icon-name=security-high
+    [[ "$who_trusts" == "you" ]] || zenity --info --title="Choose trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. You decide which of these public keys you trust.\n\nTo validate your download's signatures, choose a few individuals who you find trustworthy." --icon=security-high
     who_trusts="you"
     check_sigs "$BINVERIFY_MIN_GOOD_SIGS" || BINVERIFY_MIN_GOOD_SIGS=3
 done
@@ -198,7 +207,7 @@ printf '\033]2;Downloading Bitcoin Core...\a'
 ps -p $get_core &>/dev/null && fg %"$(jobs -l | grep $get_core | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 # Verify download integrity
 if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
-    zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
+    zenity --notification --text="Bitcoin Core download integrity successfully verified." --icon=checkbox-checked
     stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
     zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
@@ -220,7 +229,7 @@ link-dotfiles
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
-    zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
+    zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" --icon=bitcoin128 &
 else
     # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
     ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
@@ -248,14 +257,17 @@ else
     if ((prune_MiB)); then
         storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."
         expected_backup_days=$((prune_GB * 10**9 / (2250000 * 86400 / 600)))
-        prune_explanation="\n\nCipherStick has chosen to limit block chain storage (pruning) to $prune_GB GB (sufficient to restore backups $expected_backup_days days old), the historical data must still be downloaded and processed, but will be deleted afterward to keep your disk usage low."
+        prune_explanation="\n\nCipherStick has limited block chain storage (pruning) to $prune_GB GB.
+That is sufficient to restore backups about $expected_backup_days days old.
+Historical blocks are still downloaded and processed, then deleted to keep disk usage low."
     else
         storageRequiresMsg="At least $((assumed_blockchain_size + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage, and it will grow over time."
     fi
-    zenity --info --title Welcome --icon-name=bitcoin128 --text="<i>Welcome to Bitcoin Core.</i>\n\n
-Bitcoin Core will download and store a copy of the Bitcoin block chain. $storageRequiresMsg\n
-Bitcoin Core has begun to download and process the full Bitcoin block chain ($assumed_blockchain_size GB) starting with the earliest transactions in 2009 when Bitcoin initially launched.\n
-This initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.$prune_explanation" "$ICON" &
+    zenity --info --title='Bitcoin Core synchronization' --icon=bitcoin128 --no-wrap \
+        --text="After you click OK, Bitcoin Core will download and verify the block chain ($assumed_blockchain_size GB total).
+$storageRequiresMsg$prune_explanation
+
+You can close Bitcoin Core and resume later."
     # Update $PATH environment variable to include new user bin
     # shellcheck source=/dev/null
     . "$HOME"/.profile
