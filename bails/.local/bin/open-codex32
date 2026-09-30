@@ -26,6 +26,7 @@ readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 readonly BITCOIN_DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
+readonly BITCOIN_DESKTOP="$DATA_HOME/applications/bitcoin-qt.desktop"
 SCRIPT_DIR="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")"
 readonly SCRIPT_DIR
 
@@ -77,11 +78,93 @@ wait_for_core() {
     return 2
 }
 
+core_process_running() {
+    local datadir_pattern
+
+    # The managed desktop entry starts "wrapped bitcoin-qt ...", so matching
+    # the full command line sees both that pre-bitcoin-qt launch interval and
+    # the eventual bitcoin-qt child. Bind the match to our persistent datadir
+    # so an unrelated Core process owned by the same user is ignored.
+    datadir_pattern="${BITCOIN_DATA_DIR//./[.]}"
+    pgrep -u "$(id -u)" -f -- \
+        "bitcoin-qt[[:space:]].*[[:space:]]-datadir=${datadir_pattern}([[:space:]]|$)" \
+        >/dev/null 2>&1
+}
+
+wait_for_running_core() {
+    local attempts="${1:-120}" core_status
+
+    while ((attempts > 0)); do
+        if core_is_compatible; then
+            return 0
+        else
+            core_status=$?
+        fi
+        if ((core_status == 1)); then
+            return 1
+        fi
+        core_process_running || return 3
+        attempts=$((attempts - 1))
+        if ((attempts > 0)); then
+            sleep 1
+        fi
+    done
+    return 2
+}
+
+start_core() {
+    [ -f "$BITCOIN_DESKTOP" ] && command -v gio >/dev/null 2>&1 || return 1
+    gio launch "$BITCOIN_DESKTOP"
+}
+
+ensure_core_ready() {
+    local handoff="${1:-false}" core_status
+
+    if core_is_compatible; then
+        return 0
+    else
+        core_status=$?
+    fi
+
+    if ((core_status == 1)); then
+        return 1
+    fi
+
+    if [ "$handoff" = false ]; then
+        # Give an already-starting Core a short chance to expose RPC. If it is
+        # still starting after that, wait for that process instead of launching
+        # a second Bitcoin Core instance.
+        if wait_for_core 5; then
+            return 0
+        else
+            core_status=$?
+        fi
+        if ((core_status == 1)); then
+            return 1
+        fi
+        if core_process_running; then
+            if wait_for_running_core; then
+                return 0
+            else
+                core_status=$?
+            fi
+            case "$core_status" in
+                1|2) return "$core_status" ;;
+                3) : ;; # The managed launch exited; start it again below.
+                *) return 2 ;;
+            esac
+        fi
+        start_core || return 2
+    fi
+
+    wait_for_core
+}
+
 main() {
-    local core_status install_if_needed=false
+    local core_status handoff=false
 
     if [ "${1:-}" = "--install" ]; then
-        install_if_needed=true
+        handoff=true
         shift
     fi
 
@@ -91,12 +174,6 @@ main() {
     fi
 
     if ! source_is_usable; then
-        if [ "$install_if_needed" = false ]; then
-            zenity --question --title='Install codex32?' \
-                --text='CipherStick will install or repair its pinned python-codex32 graphical application.' \
-                --ok-label='Install' --default-cancel || return 0
-        fi
-
         "$SCRIPT_DIR/install-codex32" 2>&1 | zenity --progress --pulsate --auto-close --no-cancel \
             --title='Installing codex32' \
             --text='Installing the graphical codex32 application...' || {
@@ -112,12 +189,11 @@ main() {
         exit 1
     fi
 
-    if [ "$install_if_needed" = true ]; then
-        wait_for_core || core_status=$?
+    if ensure_core_ready "$handoff"; then
+        core_status=0
     else
-        core_is_compatible || core_status=$?
+        core_status=$?
     fi
-    core_status="${core_status:-0}"
 
     if ((core_status != 0)); then
         if ((core_status == 1)); then
