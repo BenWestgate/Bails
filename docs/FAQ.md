@@ -139,6 +139,7 @@ For reliability, it SHOULD be a new USB stick, not a heavily used one, and it SH
 # After Setup
 
 ## If I wanted to unplug CipherStick and use the computer for another task will the core download just restart where it left off on the next time I log in?
+For a short absence, lock the Tails screen. For longer absences, shut down safely as described below and store your CipherStick USB securely.
 If you shutdown Bitcoin Core safely, waiting for it to exit before shutting down Tails (from the menu in the upper right) it will resume where you left off the next time you start Tails, unlock its Persistent Storage, and connect to Tor.
 If you shutdown Tails without exiting Bitcoin Core safely, or by yanking the USB stick out, it is possible to corrupt the blockchain database and lose your progress. Only remove the USB to shutdown Tails in an emergency.
 
