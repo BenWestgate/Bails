@@ -34,6 +34,38 @@ BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD="$(git --git-dir="$BAILS_DIR/.git" log -1 --format='%h, %cs' 2>/dev/null)"
 FULL_VERSION="$VERSION${BUILD:+ ($BUILD)}"
 
+stop_process_tree() {
+  local pid="${1:?}" child
+
+  while read -r child; do
+    stop_process_tree "$child"
+  done < <(pgrep -P "$pid" 2>/dev/null || :)
+  kill "$pid" 2>/dev/null || :
+}
+
+stop_obsolete_ibd_watchers() {
+  local root="${1:?}" pid cmdline
+
+  while read -r pid; do
+    cmdline="/proc/$pid/cmdline"
+    if grep -Fzqx -- "$root/.local/bin/ibd-progress" "$cmdline" 2>/dev/null ||
+      grep -Fzqx -- "$root/.local/bin/wallet-watch" "$cmdline" 2>/dev/null; then
+      stop_process_tree "$pid"
+    fi
+  done < <(pgrep -u "$USER" -f 'ibd-progress|wallet-watch' 2>/dev/null || :)
+}
+
+remove_obsolete_ibd_watcher_files() {
+  local root="${1:?}"
+
+  stop_obsolete_ibd_watchers "$root"
+  rm -f -- \
+    "$root/.local/bin/ibd-progress" \
+    "$root/.local/bin/wallet-watch" \
+    "$root/.config/autostart/ibd-progress.desktop" \
+    "$root/.config/autostart/wallet-watch.desktop" \
+    "$root/.local/state/ibd_backedup"
+}
 if [ "$1" == "--version" ]; then
   echo "CipherStick version $FULL_VERSION"
   exit 0
@@ -62,6 +94,7 @@ else
     while IFS= read -r -d '' f; do
       [ -e "$BAILS_DIR/bails/$f" ] || rm -fv -- "$HOME/$f" "$DOTFILES/$f"
     done
+  remove_obsolete_ibd_watcher_files "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   # The background setup deletes BAILS_DIR after persisting it. Leave the
@@ -80,6 +113,7 @@ else
     [ -e "$DOTFILES/$qt_conf" ] || cp "$BAILS_DIR/bails/$qt_conf" "$DOTFILES/$qt_conf"
     rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
       "$BAILS_DIR"/ $DOTFILES/.local/share/bails
+    remove_obsolete_ibd_watcher_files "$DOTFILES"
     wallets='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/wallets'
     if [ -d "$wallets" ] && [ ! -L "$wallets" ]; then
       chmod u+w "$wallets"
