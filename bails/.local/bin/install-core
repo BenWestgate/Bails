@@ -298,6 +298,8 @@ This initial synchronisation is very demanding, and may expose hardware problems
     . "$HOME"/.profile
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
-wrapped bitcoin-qt -min -startupnotify=chainstate-preload
+bitcoin-qt -conf="$DOTFILES/.bitcoin/bitcoin.conf" -datadir="$DATA_DIR" -min -startupnotify=chainstate-preload &
+core_pid=$!
+disown "$core_pid"
 wait
 touch $XDG_STATE_HOME/installed
