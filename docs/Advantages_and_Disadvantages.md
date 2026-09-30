@@ -8,7 +8,7 @@ CipherStick is a script that installs Bitcoin Core on Tails. The legacy in-tree 
 
 1. **Encrypted Persistent Storage**: Tails Persistent Storage protects persistent application and Bitcoin data while the storage is locked.
 
-1. **Codex32 Seed Backups**: CipherStick uses easy-to-write Codex32 seed backups, providing privacy and redundancy and tolerating loss or breach of 1-2 locations.
+1. **External Codex32 Seed Backups**: Replacement codex32 software is maintained separately. This removal does not generate recovery shares; the replacement integration is tracked in #215.
 
 1. **Planned Multi-sig for High-Value Bitcoin Savings**: The planned savings design uses 2-of-2 multi-sig between online and offline Codex32-backed signers, so compromising one signing device is insufficient to spend.
 
