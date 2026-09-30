@@ -51,19 +51,6 @@ if ((old_prune == 0)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )
     zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
 fi
 
-old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-
-if [ -z "$old_dbcache" ]; then
-    last_run=$(find $DATA_DIR/blocks -exec stat -c "%Y %n" {} + | grep blk | sort -nr | head -n1 | awk '{print $1}')
-    if ((last_run < $(date -d "2 weeks ago" +%s))); then # Add dbcache setting
-        sed -i '2a\    "dbcache": "450",' settings.json
-        old_dbcache=450
-    fi
-fi
-# If set, change dbcache to available memory minus 2 GiB
-new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
-sed -i 's/"dbcache": "'"$old_dbcache"'/"dbcache": "'$new_dbcache/ "$DATA_DIR/settings.json"
-
 if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         # 1 out of 20 start-ups show donation message
     export DONT_ASK_DONATIONS=1 # We already asked for donations NOTE: if this doesn't work use a TEMP file.

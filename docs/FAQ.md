@@ -22,7 +22,7 @@ You don't need any storage available on your test laptop. You just need a 32+ GB
 
 ## How does it run on 32GB USB sticks, I thought the blockchain was 600+ GB?
 
-CipherStick uses [pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning) when the USB stick is less than 1 TB. All block chain data will be downloaded and verified but the oldest blocks will be removed so your USB stick does not run out of space. Unless you wish to restore an old wallet, this doesn't matter.
+CipherStick uses [pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning) when the USB stick is less than 1 TB. All block chain data will be downloaded and verified but the oldest blocks will be removed so your USB stick does not run out of space. Restoring an old wallet whose transactions predate the retained blocks requires full block history, a reindex or redownload, and a rescan; see [Legacy wallet recovery](LEGACY_WALLET_RECOVERY.md#codex32-backups).
 
 ## What is the difference between Codex32, Shamir Secret Sharing and Multisig?
 

@@ -71,6 +71,20 @@ remove_legacy_wallet_files() {
     "$root/.local/share/applications/decrypt-vault.desktop"
 }
 
+remove_legacy_dbcache() {
+  local root="${1:?}"
+  local settings="${2:?}"
+  local wrapper="$root/.local/bin/wrapped"
+
+  # Migrate only installations whose still-installed wrapper proves that
+  # CipherStick owned dbcache and rewrote it from available RAM on every launch.
+  if [ -f "$wrapper" ] && [ -f "$settings" ] && \
+    grep -Fq "old_dbcache=\$(grep" "$wrapper" && \
+    grep -Fq "new_dbcache=\$(( \$(grep Available /proc/meminfo" "$wrapper"; then
+    sed -i '/^[[:space:]]*"dbcache"[[:space:]]*:/d' "$settings"
+  fi
+}
+
 if [ "$1" == "--version" ]; then
   echo "CipherStick version $VERSION"
   exit 0
@@ -98,6 +112,11 @@ else
       [ -d "$DOTFILES" ] && [ -w "$DOTFILES" ]; do
         sleep 1
     done
+    # Core can persist dynamic settings during shutdown. Stop it before removing
+    # the legacy CipherStick-owned dbcache value so it cannot be written back.
+    stop-btc
+    remove_legacy_dbcache "$DOTFILES" \
+      /live/persistence/TailsData_unlocked/Persistent/.bitcoin/settings.json
     # Install CipherStick to Persistent Storage
     rsync -rvh --perms --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
     rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
