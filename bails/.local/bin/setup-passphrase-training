@@ -74,10 +74,10 @@ if ! account_password_unset; then
 fi
 
 # Enrollment is persistent, but the Tails account password is not. On each new
-# session, re-enter the Persistent Storage passphrase once so the trainer can
-# validate later recall without storing the secret.
+# session, re-enter and confirm the Persistent Storage passphrase so the trainer
+# can validate later recall without storing the secret.
 if [ -e "$TRAINING_READY" ]; then
-    if capture_session_password false; then
+    if capture_session_password true; then
         start_trainer
         exit 0
     else
