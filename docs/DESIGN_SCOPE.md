@@ -6,10 +6,11 @@ The current alpha is primarily an installer and configuration layer for a dedica
 - Help configure Tails Persistent Storage for Bitcoin Core.
 - Install and configure Bitcoin Core on Tails.
 - Provide passphrase memorization assistance.
+- Install the pinned `python-codex32` graphical application for Codex32 backup and recovery.
 
-No wallet coordinator is bundled or installed. Choosing and installing wallet software is left to the user.
+No general-purpose wallet coordinator is bundled or installed. The supported `python-codex32` application is limited to Codex32 backup and recovery through Bitcoin Core.
 
-The legacy custom wallet and bundled Codex32 implementation have been removed from this repository. Replacement Codex32 restoration is tracked separately in issue #215. The current Clone and Backup menu workflows remain separate unfinished work.
+The legacy custom wallet and bundled Codex32 implementation have been removed from this repository. Their supported replacement is the pinned `python-codex32` application. The current Clone and Backup menu workflows remain separate unfinished work.
 
 ## Legacy MVP scope
 
@@ -24,7 +25,6 @@ The historical MVP included the following goals. Items in this section describe 
 - Fresh-Tails handoff with explicit, user-selected data transfer.
 - Reminders after initial block download to create a backup.
 - Use AssumeUTXO to shorten time to usefulness.
-- Replacement Codex32 restore flow using `python-codex32`.
 - Watch-only and panic-mode wallet workflows.
 - Optional Codex32 QR workflows.
 
