@@ -1,0 +1,119 @@
+#!/bin/bash
+
+set -euo pipefail
+
+readonly STATE_HOME="/live/persistence/TailsData_unlocked/dotfiles/.local/state"
+readonly TRAINING_READY="$STATE_HOME/passphrase_training_initialized"
+readonly SESSION_READY="${XDG_RUNTIME_DIR:?}/cipherstick-passphrase-training-ready"
+readonly SESSION_SKIPPED="$XDG_RUNTIME_DIR/cipherstick-passphrase-training-skipped"
+retry=false
+
+if [ "${1:-}" = "--retry" ]; then
+    retry=true
+    shift
+fi
+if (($#)); then
+    printf 'usage: %s [--retry]\n' "$0" >&2
+    exit 2
+fi
+
+# Remove the obsolete persistent marker from pre-merge test runs. Whether an
+# administration password exists is a property of this Tails session, not a
+# durable reason to disable training in future sessions.
+rm -f "$STATE_HOME/passphrase_training_unavailable" 2>/dev/null || :
+
+start_trainer() {
+    if ! pgrep -u "$(id -u)" -f '(^|/|[[:space:]])spaced-repetition([[:space:]]|$)' >/dev/null 2>&1; then
+        spaced-repetition &
+    fi
+}
+
+account_password_unset() {
+    passwd -S "$USER" | awk '$2 == "NP" { found=1 } END { exit !found }'
+}
+
+capture_session_password() {
+    local confirm="${1:-false}" passphrase
+
+    if [ "$confirm" = true ]; then
+        passphrase="$(prompt-persistent-passphrase --confirm)" || return 1
+    else
+        passphrase="$(prompt-persistent-passphrase)" || return 1
+    fi
+
+    if ! printf '%s\n%s' "$passphrase" "$passphrase" | passwd; then
+        unset passphrase
+        return 2
+    fi
+    unset passphrase
+    : > "$SESSION_READY"
+    rm -f "$SESSION_SKIPPED"
+}
+
+if [ "$retry" = true ]; then
+    rm -f "$SESSION_SKIPPED"
+elif [ -e "$SESSION_SKIPPED" ]; then
+    exit 0
+fi
+
+if [ -e "$SESSION_READY" ]; then
+    start_trainer
+    exit 0
+fi
+
+# A Tails administration password is session-local. Do not overwrite one we did
+# not set, and do not persist that conflict into a later boot. The explicit
+# Settings retry explains the condition; automatic setup stays quiet.
+if ! account_password_unset; then
+    : > "$SESSION_SKIPPED"
+    if [ "$retry" = true ]; then
+        zenity --info --title='Passphrase training unavailable this session' \
+            --text='A Tails administration password is already set for this session. CipherStick will not replace it. Try Passphrase Training in a later Tails session without an administration password.' "$ICON"
+    fi
+    exit 0
+fi
+
+# Enrollment is persistent, but the Tails account password is not. On each new
+# session, re-enter the Persistent Storage passphrase once so the trainer can
+# validate later recall without storing the secret.
+if [ -e "$TRAINING_READY" ]; then
+    if capture_session_password false; then
+        start_trainer
+        exit 0
+    else
+        status=$?
+    fi
+    : > "$SESSION_SKIPPED"
+    if ((status == 2)); then
+        zenity --error --title='Passphrase training unavailable' \
+            --text='CipherStick could not initialize passphrase training for this Tails session. Persistent Storage remains unchanged.' "$ICON"
+        exit 1
+    fi
+    exit 0
+fi
+
+zenity --info --title='Spaced repetition trainer' \
+    --text='Optional passphrase training can use your Persistent Storage passphrase as the temporary Tails account password for this session. Cancel the passphrase prompt to skip training.' \
+    --ok-label='Continue' "$ICON"
+
+if capture_session_password true; then
+    :
+else
+    status=$?
+    if ((status == 1)); then
+        : > "$SESSION_SKIPPED"
+        zenity --notification --text='Passphrase training skipped. Start it later from CipherStick Settings > Passphrase Training.' --timeout=5
+        exit 0
+    fi
+    zenity --error --title='Passphrase training unavailable' \
+        --text='CipherStick could not initialize passphrase training. Persistent Storage setup is complete and remains unchanged.' "$ICON"
+    exit 1
+fi
+
+mkdir -p "$STATE_HOME"
+touch "$TRAINING_READY"
+start_trainer
+
+zenity --info --title='Tips for your passphrase' \
+    --text='Practice the passphrase periodically until you can recall it reliably. Keep any written reminder separate from your CipherStick, and destroy the reminder once you no longer need it.' \
+    --ok-label='Continue' "$ICON"

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+set -euo pipefail
+
+confirm=false
+enter='Enter'
+if [ "${1:-}" = "--confirm" ]; then
+    confirm=true
+    shift
+fi
+if (($#)); then
+    enter="$1"
+    shift
+fi
+if (($#)); then
+    printf 'usage: %s [--confirm] [Enter|Re-enter]\n' "$0" >&2
+    exit 2
+fi
+
+commands=(
+    'SETTITLE Spaced repetition trainer'
+    "SETPROMPT $enter Persistent Storage passphrase:"
+)
+if [ "$confirm" = true ]; then
+    commands+=(
+        'SETREPEAT Confirm passphrase:'
+        'SETREPEATERROR Passphrases do not match.'
+    )
+fi
+commands+=('GETPIN')
+
+response="$(printf '%s\n' "${commands[@]}" | pinentry-gnome3 --timeout 0)" || exit 1
+passphrase="$(sed -n 's/^D //p' <<< "$response")"
+[ -n "$passphrase" ] || exit 1
+
+# Assuan escapes literal percent signs in data responses.
+printf '%s' "${passphrase//%25/%}"
+unset passphrase response
