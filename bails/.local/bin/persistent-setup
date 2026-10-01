@@ -162,7 +162,7 @@ if /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active Dotfiles; then
         :
 else
-    reopen_persistent_storage 'You must turn on needed features of the Persistent Storage.'
+    tps_frontend_running || tails-persistent-storage &
 
     # Let the Persistent Storage window appear first so the guidance opens on top of it.
     for ((wait = 0; wait < 10; wait++)); do
@@ -170,25 +170,27 @@ else
         sleep 1
     done
     sleep 2
-    zenity --info --title='Features of the Persistent Storage' \
-        --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
-        --icon-name=tails-persistent-storage "$ICON" --no-wrap &
+    zenity --info --title='Required Persistent Storage features' --width=480 \
+        --text='Turn on these required Persistent Storage features:\n\n• Persistent Folder\n• GnuPG\n• Dotfiles\n\nNetwork Connections is optional.\n\nSetup will continue automatically when the required features are enabled.' \
+        --icon-name=tails-persistent-storage "$ICON" &
+    feature_dialog=$!
 fi
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
     reopen_persistent_storage 'You must turn on needed features of the Persistent Storage.'
-    # Point out each feature once, in order, instead of repeating every cycle.
-    { /usr/local/lib/tpscli is-active PersistentDirectory ||
-        { feature_hint PersistentDirectory 'Persistent Folder must be toggled on.' folder; false; }; } &&
-    { /usr/local/lib/tpscli is-active NetworkConnections ||
-        { feature_hint NetworkConnections 'Toggle on "Network Connections".\nThis will remember your Wi-Fi.' gnome-dev-ethernet; true; }; } &&
-    { /usr/local/lib/tpscli is-active GnuPG ||
-        { feature_hint GnuPG '"GnuPG" must be toggled on.' gcr-key; false; }; } &&
-    { /usr/local/lib/tpscli is-active Dotfiles ||
-        { feature_hint Dotfiles '"Dotfiles" must be toggled on.' gnome-settings; false; }; }
+    # After 10 seconds, point out each required feature still off, once.
+    if ((++feature_wait >= 10)); then
+        /usr/local/lib/tpscli is-active PersistentDirectory ||
+            feature_hint PersistentDirectory 'Persistent Folder must be toggled on.' folder
+        /usr/local/lib/tpscli is-active GnuPG ||
+            feature_hint GnuPG '"GnuPG" must be toggled on.' gcr-key
+        /usr/local/lib/tpscli is-active Dotfiles ||
+            feature_hint Dotfiles '"Dotfiles" must be toggled on.' gnome-settings
+    fi
     sleep 1
 done
+[ -n "$feature_dialog" ] && kill "$feature_dialog" &>/dev/null
 
 # Close the Persistent Storage window
 pkill -u "$(id -u)" -f '[t]ps-frontend' &>/dev/null
