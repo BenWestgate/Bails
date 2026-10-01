@@ -62,6 +62,8 @@ if [ ! -d "$SOURCE_DIR/.git" ]; then
     git clone --filter=blob:none --no-checkout "$REPOSITORY" "$SOURCE_DIR"
 fi
 
+# A corrupt index makes fetch and checkout fail; checkout --force rebuilds it.
+rm -f -- "$SOURCE_DIR/.git/index"
 git -C "$SOURCE_DIR" fetch --depth=1 origin "$REVISION_REF"
 git -C "$SOURCE_DIR" checkout --detach --force "$REVISION"
 git -C "$SOURCE_DIR" clean -ffdx
