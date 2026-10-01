@@ -1,4 +1,4 @@
-# ![image](https://github.com/BenWestgate/Bails/raw/master/docs/banner2.png)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/balls-dark.png"><img alt="Balls: Bitcoin anonymous live low-profile system" src="docs/balls.png"></picture>
 
 # CipherStick (formerly known as "Bails")
 
