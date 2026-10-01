@@ -62,14 +62,6 @@ reopen_persistent_storage() {
     reopen_notified=1
 }
 
-# Show a feature notification once per feature.
-declare -A feature_hinted
-feature_hint() {
-    [ -n "${feature_hinted[$1]}" ] && return
-    feature_hinted[$1]=1
-    zenity --notification --text="$2" --window-icon="$3" --timeout=6 &
-}
-
 # Check if user password is already set
 passwd_unset=$(passwd -S "$USER" | grep -c NP)
 
@@ -179,14 +171,15 @@ until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
     reopen_persistent_storage 'You must turn on needed features of the Persistent Storage.'
-    # After 10 seconds, point out each required feature still off, once.
-    if ((++feature_wait >= 10)); then
-        /usr/local/lib/tpscli is-active PersistentDirectory ||
-            feature_hint PersistentDirectory 'Persistent Folder must be toggled on.' folder
-        /usr/local/lib/tpscli is-active GnuPG ||
-            feature_hint GnuPG '"GnuPG" must be toggled on.' gcr-key
-        /usr/local/lib/tpscli is-active Dotfiles ||
-            feature_hint Dotfiles '"Dotfiles" must be toggled on.' gnome-settings
+    # After 10 seconds, list the required features still off in one
+    # notification. Separate zenity notifications replace each other, so
+    # only the last one would stay visible.
+    if ((++feature_wait == 10)); then
+        missing=()
+        /usr/local/lib/tpscli is-active PersistentDirectory || missing+=('• Persistent Folder')
+        /usr/local/lib/tpscli is-active GnuPG || missing+=('• GnuPG')
+        /usr/local/lib/tpscli is-active Dotfiles || missing+=('• Dotfiles')
+        notify-send --icon=tails-persistent-storage 'Turn on these required features:' "$(printf '%s\n' "${missing[@]}")"
     fi
     sleep 1
 done
