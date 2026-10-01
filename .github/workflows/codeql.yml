@@ -24,10 +24,6 @@ on:
   schedule:
     - cron: '31 9 * * 3'
 
-env:
-  CODEQL_EXTRACTOR_PYTHON_DISABLE_AUTOMATIC_VENV_EXCLUDE: 1
-  CODEQL_EXTRACTOR_PYTHON_DISABLE_AUTOMATIC_PIP_BUILD_DIR_EXCLUDE: 1
-
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
@@ -53,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - language: python
+        - language: actions
           build-mode: none
         # CodeQL supports the following values keywords for 'language': 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
         # Use `c-cpp` to analyze code written in C, C++ or both
@@ -66,8 +62,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    - name: Rename .local to local
-      run: mv ./bails/.local ./bails/local
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
