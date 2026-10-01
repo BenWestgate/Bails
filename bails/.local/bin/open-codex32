@@ -32,13 +32,55 @@ python_supported() {
     python3 -c 'import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)'
 }
 
-source_is_usable() {
-    local source_status
+# Compare every file under the checkout with the pinned tree by content hash.
+# git status trusts index flags such as assume-unchanged, so it is not used.
+source_tree_clean() {
+    git -C "$SOURCE_DIR" ls-tree -r -z --full-tree "$REVISION" 2>/dev/null |
+        python3 -P -c '
+import hashlib, os, stat, sys
 
+root = sys.argv[1]
+expected = {}
+for entry in sys.stdin.buffer.read().split(b"\0"):
+    if not entry:
+        continue
+    meta, path = entry.split(b"\t", 1)
+    mode, kind, oid = meta.split(b" ")
+    if kind != b"blob":
+        sys.exit(1)
+    expected[os.fsdecode(path)] = (mode, oid.decode())
+if not expected:
+    sys.exit(1)
+
+seen = set()
+for top, dirs, files in os.walk(root):
+    if top == root:
+        dirs[:] = [d for d in dirs if d != ".git"]
+    for name in files + [d for d in dirs if os.path.islink(os.path.join(top, d))]:
+        full = os.path.join(top, name)
+        rel = os.path.relpath(full, root)
+        if rel not in expected:
+            sys.exit(1)
+        mode, oid = expected[rel]
+        info = os.lstat(full)
+        if mode == b"120000" and stat.S_ISLNK(info.st_mode):
+            data = os.fsencode(os.readlink(full))
+        elif mode in (b"100644", b"100755") and stat.S_ISREG(info.st_mode):
+            with open(full, "rb") as f:
+                data = f.read()
+        else:
+            sys.exit(1)
+        if hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest() != oid:
+            sys.exit(1)
+        seen.add(rel)
+sys.exit(0 if seen == set(expected) else 1)
+' "$SOURCE_DIR"
+}
+
+source_is_usable() {
     [ -d "$SOURCE_DIR/.git" ] &&
         [ "$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)" = "$REVISION" ] &&
-        source_status="$(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all --ignored=matching 2>/dev/null)" &&
-        [ -z "$source_status" ] &&
+        source_tree_clean &&
         python_supported &&
         PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" \
             python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null
