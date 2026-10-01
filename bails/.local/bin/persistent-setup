@@ -48,6 +48,28 @@ prompt_passphrase() {
     printf '%s' "${passphrase//%25/%}"
 }
 
+# Match the Persistent Storage frontend however Tails names its interpreter.
+tps_frontend_running() {
+    pgrep -u "$(id -u)" -f '[t]ps-frontend' >/dev/null 2>&1
+}
+
+# Reopen Persistent Storage if it was closed, telling the user only once.
+reopen_persistent_storage() {
+    tps_frontend_running && return
+    tails-persistent-storage &
+    [ -n "$reopen_notified" ] && return
+    notify-send --icon=tails-persistent-storage "$1"
+    reopen_notified=1
+}
+
+# Show a feature notification once per feature.
+declare -A feature_hinted
+feature_hint() {
+    [ -n "${feature_hinted[$1]}" ] && return
+    feature_hinted[$1]=1
+    zenity --notification --text="$2" --window-icon="$3" --timeout=6 &
+}
+
 # Check if user password is already set
 passwd_unset=$(passwd -S "$USER" | grep -c NP)
 
@@ -101,18 +123,12 @@ Write it on paper, on a hard surface to avoid leaving an imprint. Seal it in an 
         --ok-label='I Will Write My Passphrase Down' --icon-name=tails-persistent-storage
     # Persistent storage creation
     until /usr/local/lib/tpscli is-unlocked; do
-        sleep 12
-        notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
-    done & notifying+=($!)
-
-    until /usr/local/lib/tpscli is-unlocked; do
-        grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-            { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'Click Continue to create a Persistent Storage'; }
+        reopen_persistent_storage 'Click Continue to create a Persistent Storage'
+        # Once the passphrase step is likely on screen, give this hint once.
+        ((++waited == 12)) && notify-send --icon=bails128 'Important: Click ↻ or choose the suggested passphrase.' 'To help remember:\n\nCreate a mental image or mnemonic using the words, in order.\nIt might be a story, scenario, or sentence that you can remember and that reminds you of the particular passphrase you chose.'
         sleep 1
     done
-
-    # Clear notifications
-    kill "${notifying[@]}" &>/dev/null
+    unset reopen_notified waited
 
     # Memorization help
     ((passwd_unset)) && zenity --info --title='Spaced repetition trainer' --width=480 \
@@ -146,39 +162,36 @@ if /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active Dotfiles; then
         :
 else
-    grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
+    reopen_persistent_storage 'You must turn on needed features of the Persistent Storage.'
 
+    # Let the Persistent Storage window appear first so the guidance opens on top of it.
+    for ((wait = 0; wait < 10; wait++)); do
+        tps_frontend_running && break
+        sleep 1
+    done
+    sleep 2
     zenity --info --title='Features of the Persistent Storage' \
         --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
         --icon-name=tails-persistent-storage "$ICON" --no-wrap &
-    sleep 4
 fi
 until /usr/local/lib/tpscli is-active PersistentDirectory && \
     /usr/local/lib/tpscli is-active GnuPG && \
     /usr/local/lib/tpscli is-active Dotfiles; do
-    grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-        { tails-persistent-storage & notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
-    {
-        /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; false; }
-    } &&
-        {
-            /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=gnome-dev-ethernet --timeout=6; true; }
-        } &&
-        {
-            /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=6; false; }
-        } &&
-        {
-            /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; false; }
-        }
+    reopen_persistent_storage 'You must turn on needed features of the Persistent Storage.'
+    # Point out each feature once, in order, instead of repeating every cycle.
+    { /usr/local/lib/tpscli is-active PersistentDirectory ||
+        { feature_hint PersistentDirectory 'Persistent Folder must be toggled on.' folder; false; }; } &&
+    { /usr/local/lib/tpscli is-active NetworkConnections ||
+        { feature_hint NetworkConnections 'Toggle on "Network Connections".\nThis will remember your Wi-Fi.' gnome-dev-ethernet; true; }; } &&
+    { /usr/local/lib/tpscli is-active GnuPG ||
+        { feature_hint GnuPG '"GnuPG" must be toggled on.' gcr-key; false; }; } &&
+    { /usr/local/lib/tpscli is-active Dotfiles ||
+        { feature_hint Dotfiles '"Dotfiles" must be toggled on.' gnome-settings; false; }; }
+    sleep 1
 done
 
 # Close the Persistent Storage window
-pkill -f "python3 /usr/local/lib/tps-frontend" &>/dev/null
+pkill -u "$(id -u)" -f '[t]ps-frontend' &>/dev/null
 pkill -f 'zenity --notification' &>/dev/null
 mkdir -vp $XDG_STATE_HOME
 touch $SET_UP
