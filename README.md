@@ -1,4 +1,4 @@
-# ![Balls: Bitcoin anonymous live low-profile system](docs/balls.png)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/balls-dark.png"><img alt="Balls: Bitcoin anonymous live low-profile system" src="docs/balls.png"></picture>
 
 # CipherStick (formerly known as "Bails")
 
