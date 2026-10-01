@@ -1,4 +1,4 @@
-# ![image](https://github.com/BenWestgate/Bails/raw/master/docs/banner2.png)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/balls-dark.png"><img alt="Balls: Bitcoin anonymous live low-profile system" src="docs/balls.png"></picture>
 
 # CipherStick (formerly known as "Bails")
 
@@ -6,7 +6,9 @@ CipherStick is the most private way to transact and store bitcoin. It ensures yo
 
 ## Bitcoin Core on Tails
 
-Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails and create a wallet backup.
+Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails.
+
+The legacy Codex32 wallet create/restore flow has been removed. The **codex32** application installs CipherStick's pinned `python-codex32` GUI into Persistent Storage on first use. Start Bitcoin Core, open **codex32**, choose **Restore my wallet**, enter the required shares, and verify the recovered master fingerprint against your separately stored wallet record before Bitcoin Core is changed. If the record is unavailable, the GUI shows the recovered fingerprint and requires an explicit warning acknowledgement before restore.
 
 Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet.
 - [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
@@ -99,14 +101,6 @@ To contact Ben Westgate by email `benwestgate@protonmail.com`.
 ## Advantages and Disadvantages
 
 For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the CipherStick platform.
-
-### CipherStick is the First Codex32-enabled (BIP93) Wallet
-
-Find more information on [Codex32](https://secretcodex32.com/index.html) and [BIP93](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki).
-
-### Compliant with Auditable Bitcoin Wallets Standard
-
-Refer to the [Auditable Bitcoin Wallets Standard](https://github.com/oleganza/bitcoin-papers/blob/master/AuditableBitcoinWallets.md) for compliance details. All necessary information to audit `bails-wallet` is displayed by the terminal.
 
 ## Source Code Headers
 
