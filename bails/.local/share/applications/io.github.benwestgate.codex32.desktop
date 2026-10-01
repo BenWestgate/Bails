@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=codex32
+Comment=Create and restore Bitcoin Core wallets with codex32
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/open-codex32
+Terminal=false
+Type=Application
+Icon=io.github.benwestgate.codex32
+Categories=Finance;Utility;
