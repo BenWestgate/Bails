@@ -2,33 +2,31 @@
 
 # CipherStick (formerly known as "Bails")
 
-CipherStick is the most private way to transact and store bitcoin. It ensures your money is protected from surveillance, censorship, and confiscation, leaving no trace of your Bitcoin use on the computer or the Internet. Combining Bitcoin Core and Tails, CipherStick offers strong anonymity for transactions and secure encrypted storage.
+CipherStick is experimental setup automation for Bitcoin Core on a dedicated Tails USB. It helps configure Persistent Storage and install Bitcoin Core; it does not itself guarantee anonymity, censorship resistance, confiscation resistance, or protection from compromised hardware, software, keys, or user mistakes. The project has not received an independent security audit.
 
 ## Bitcoin Core on Tails
 
-Bitcoin Core and Tails are relied upon by millions to safeguard their online privacy and security, particularly in sensitive and high-risk situations. This repository provides a script to install Bitcoin Core on Tails.
+CipherStick builds on Tails and Bitcoin Core; it does not replace either project's security model. This repository provides a script to install Bitcoin Core on Tails.
 
 The legacy Codex32 wallet create/restore flow has been removed. The **codex32** application installs CipherStick's pinned `python-codex32` GUI into Persistent Storage on first use. Start Bitcoin Core, open **codex32**, choose **Restore my wallet**, enter the required shares, and verify the recovered master fingerprint against your separately stored wallet record before Bitcoin Core is changed. If the record is unavailable, the GUI shows the recovered fingerprint and requires an explicit warning acknowledgement before restore.
 
 Bitcoin Core connects to the Bitcoin network to download and validate blocks and transactions, featuring a user-friendly interface and built-in wallet.
 - [Bitcoin Core :: About](https://bitcoincore.org/en/about/)
 
-
 Tails is a portable operating system that defends against surveillance and censorship, exclusively utilizing the Tor anonymity network.
 - [Tails - How Tails works](https://tails.net/about/index.en.html)
-
 
 ## Why use Bitcoin Core?
 
 ### Full Validation
 
-Bitcoin Core ensures the validity of every block and transaction, this protects you from counterfieting and **prevents miners and banks from seizing control of Bitcoin**.
+Bitcoin Core validates blocks and transactions against Bitcoin's consensus rules instead of relying on a remote wallet service for that validation. It cannot protect funds from compromised keys, software, hardware, or user mistakes.
 
 [Learn about full validation](https://bitcoin.org/en/bitcoin-core/features/validation)
 
-### Excellent Privacy
+### Privacy
 
-Bitcoin Core provides **exclusive privacy features**, making it challenging for anyone to link your transactions to you.
+Using a personal node avoids disclosing every wallet query to a third-party wallet server. Tor reduces direct network-location exposure, but counterparties, transaction analysis, timing, and compromised endpoints can still reveal information.
 
 [Discover the privacy advantages](https://bitcoin.org/en/bitcoin-core/features/privacy)
 
@@ -37,22 +35,22 @@ Bitcoin Core provides **exclusive privacy features**, making it challenging for 
 ## You need
 - **1 USB stick** or memory card, 32 GB minimum
     - If you need a USB stick, see our [recommended USB sticks](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#what-type-of-flash-drive-should-i-get) for top speed
-- **2 GB of RAM** computer made in the last 15 years
+- **2 GB of RAM** computer supported by Tails
     - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save money
 - **A smartphone** to follow the instructions
 - **Pen or pencil**
 - **Couple pieces of paper**
 - **Hard surface** to write on
-- **1 hour in total** 1.4 GB to download, ½ hour to install Tails, ¼ hour to setup CipherStick
+- **Time for initial synchronization**: Bitcoin Core initial block download can take hours or days, depending on hardware, storage, network conditions, and chain state.
 
 ## Your steps
 
-First, open these instructions on another device. 
+First, open these instructions on another device.
 
 ![image](https://user-images.githubusercontent.com/73506583/203773811-b157925d-404f-4b91-bd86-6d2e6b454a59.png)
 
 In the next steps, you will shut down the computer. To be able to follow the rest of the instructions afterwards, you can either:
-- Scan this QR code on your smartphone or tablet:    
+- Scan this QR code on your smartphone or tablet:
    ![image](https://github.com/BenWestgate/Bails/assets/73506583/72496200-fa4f-4ce3-94de-06cc88296e73)
 - Print these instructions on paper.
 - Take note of the URL of this page:
@@ -69,7 +67,7 @@ In the next steps, you will shut down the computer. To be able to follow the res
 1. [Connect to a local network](https://tails.net/doc/anonymous_internet/networkmanager/index.en.html#index1h1).
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the _Tor Connection_ window appears.
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
-1.  Type or Paste the following in Terminal, then press Enter:
+1. Type or Paste the following in Terminal, then press Enter:
     ```bash
     git clone https://github.com/benwestgate/bails&&bails/b
     ```
@@ -88,7 +86,11 @@ To contact Ben Westgate by email `benwestgate@protonmail.com`.
 
 ## Advantages and Disadvantages
 
-For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the unique features and limitations of the CipherStick platform.
+For a discussion on the pros and cons of using CipherStick, refer to the [detailed document](docs/Advantages_and_Disadvantages.md). It describes the current capabilities and limitations of the CipherStick platform.
+
+### Current scope
+
+On this branch, CipherStick installs and configures Bitcoin Core, guides Persistent Storage setup, provides passphrase practice, and installs the pinned `python-codex32` application for codex32 backup and recovery. Clone/Backup actions and the removed legacy `bails-wallet` implementation are not supported recovery interfaces.
 
 ## Source Code Headers
 
@@ -100,17 +102,17 @@ doesn't comply with the license.)
 MIT header:
 
     Copyright (c) 2025 Ben Westgate
-    
+
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
     in the Software without restriction, including without limitation the rights
     to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
     copies of the Software, and to permit persons to whom the Software is
     furnished to do so, subject to the following conditions:
-    
+
     The above copyright notice and this permission notice shall be included in
     all copies or substantial portions of the Software.
-    
+
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
