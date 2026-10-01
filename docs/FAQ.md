@@ -95,7 +95,7 @@ Use the CipherStick Settings update action provided by the installed version. Re
 
 ## How can I copy the block chain from a Bitcoin node I already have?
 
-Bitcoin Core can reuse `blocks` and `chainstate` from another compatible node, but copying state from an untrusted or inconsistent source can cause failures or force revalidation. Follow Bitcoin Core's data-directory documentation and Tails' guidance for accessing external or internal drives.
+You may copy the `blocks` and `chainstate` folders from a Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location) after Bitcoin Core has shut down cleanly, but only from a node you trust. Bitcoin Core does not fully revalidate a copied chainstate at startup. If you do not trust the source node, let CipherStick synchronize independently instead. Follow Tails' guidance for accessing external or internal drives.
 
 ## What type of backup USB stick should I get?
 
@@ -110,3 +110,9 @@ If you are preserving an older CipherStick because you depend on the removed leg
 ## How should I handle independently created backup media?
 
 Keep backup media physically secure, cool, and clearly distinguishable from the active device. Test recovery before relying on it. Do not store a backup beside all of the secrets needed to decrypt or spend from it, and do not assume CipherStick can recover data that Tails, Bitcoin Core, or the media itself can no longer read.
+
+## How do I give CipherStick to someone else?
+
+Do not clone your Persistent Storage. Follow the [fresh-Tails handoff](HANDOFF.md): the recipient creates their own Tails installation and Persistent Storage, receives authenticated CipherStick software, and you explicitly choose any additional data to copy.
+
+Wallet files, configuration, logs, and other persistent state are not part of the default handoff.
