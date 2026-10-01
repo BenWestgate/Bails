@@ -45,3 +45,6 @@ jobs:
           anthropic_workspace_id: wrkspc_01CrVpnUanh3JtdHnoEMH5Hm
           additional_permissions: |
             actions: read
+          # Temporary: print the error behind every run failing in ~0.3 s.
+          # Remove once fixed; full output can expose tool results in public logs.
+          show_full_output: true
