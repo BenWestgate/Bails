@@ -32,11 +32,14 @@ python_supported() {
     python3 -c 'import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)'
 }
 
-# Compare every file under the checkout with the pinned tree by content hash.
+# Compare every file under the checkout with the pinned tree by content hash,
+# so a corrupt, partial or modified checkout is repaired before it runs.
 # git status trusts index flags such as assume-unchanged, so it is not used.
+# This guards against corruption and accidents, not a local attacker: anyone
+# who can write this checkout can also edit these dotfiles scripts.
 source_tree_clean() {
     git -C "$SOURCE_DIR" ls-tree -r -z --full-tree "$REVISION" 2>/dev/null |
-        python3 -P -c '
+        python3 -I -c '
 import hashlib, os, stat, sys
 
 root = sys.argv[1]
@@ -53,7 +56,10 @@ if not expected:
     sys.exit(1)
 
 seen = set()
-for top, dirs, files in os.walk(root):
+def fail(error):
+    sys.exit(1)
+
+for top, dirs, files in os.walk(root, onerror=fail):
     if top == root:
         dirs[:] = [d for d in dirs if d != ".git"]
     for name in files + [d for d in dirs if os.path.islink(os.path.join(top, d))]:
@@ -83,7 +89,7 @@ source_is_usable() {
         source_tree_clean &&
         python_supported &&
         PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" \
-            python3 -P -c 'import codex32; import codex32_gui' 2>/dev/null
+            python3 -s -P -c 'import codex32; import codex32_gui' 2>/dev/null
 }
 
 core_is_compatible() {
@@ -125,4 +131,4 @@ if ! core_is_compatible; then
     exit 1
 fi
 
-exec env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" python3 -P -m codex32_gui
+exec env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" python3 -s -P -m codex32_gui
