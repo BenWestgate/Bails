@@ -31,6 +31,46 @@ export DOTFILES='/live/persistence/TailsData_unlocked/dotfiles'
 readonly SECURITY_IN_A_BOX_TOR_URL="http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/"
 BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+remove_legacy_wallet_files() {
+  local root="${1:?}"
+  local associations
+
+  if [ -e "$root/.local/bin/Sparrow" ] || \
+    [ -e "$root/.local/lib/app/Sparrow.cfg" ] || \
+    [ -e "$root/.local/lib/sparrow-Sparrow.desktop" ] || \
+    [ -e "$root/.local/share/applications/sparrow-Sparrow.desktop" ]; then
+    rm -rf -- \
+      "$root/.local/bin/Sparrow" \
+      "$root/.local/lib/Sparrow.png" \
+      "$root/.local/lib/app" \
+      "$root/.local/lib/libapplauncher.so" \
+      "$root/.local/lib/runtime" \
+      "$root/.local/lib/sparrow-Sparrow-MimeInfo.xml" \
+      "$root/.local/lib/sparrow-Sparrow.desktop" \
+      "$root/.local/share/applications/sparrow-Sparrow.desktop" \
+      "$root/.local/share/icons/Sparrow.png" \
+      "$root/.local/share/mime/packages/sparrow-Sparrow-MimeInfo.xml" \
+      "$root/.local/share/sparrow"
+  fi
+
+  for associations in "$root/.local/share/applications/defaults.list" \
+    "$root/.local/share/applications/mimeinfo.cache"; do
+    if [ -f "$associations" ] && [ ! -L "$associations" ]; then
+      sed -i '/^x-scheme-handler\/bitcoin=/s/sparrow-Sparrow\.desktop/bitcoin-qt.desktop/g' \
+        "$associations"
+    fi
+  done
+
+  rm -rf -- \
+    "$root/.local/bin/bails-wallet" \
+    "$root/.local/bin/decrypt-vault" \
+    "$root/.local/bin/install-sparrow" \
+    "$root/.local/lib/python3.11/site-packages/bails-wallet" \
+    "$root/.local/lib/python3.11/site-packages/codex32" \
+    "$root/.local/lib/python3.11/site-packages/bails" \
+    "$root/.local/share/applications/decrypt-vault.desktop"
+}
+
 if [ "$1" == "--version" ]; then
   echo "CipherStick version $VERSION"
   exit 0
@@ -48,6 +88,7 @@ else
   printf '\033]2;Welcome to CipherStick!\a'
   # Install CipherStick to tmpfs
   rsync -rvh --perms "$BAILS_DIR/bails/" "$HOME"
+  remove_legacy_wallet_files "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   (
@@ -59,13 +100,19 @@ else
     done
     # Install CipherStick to Persistent Storage
     rsync -rvh --perms --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
-    rsync -rvh --perms --remove-source-files "$BAILS_DIR"/ $DOTFILES/.local/share/bails
+    rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
+      "$BAILS_DIR"/ $DOTFILES/.local/share/bails
+    remove_legacy_wallet_files "$DOTFILES"
+    wallets='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/wallets'
+    if [ -d "$wallets" ] && [ ! -L "$wallets" ]; then
+      chmod u+w "$wallets"
+    fi
     rm -rvf "$BAILS_DIR"
     link-dotfiles
   ) & # Run persistent setup in background
   if [ -z "$1" ]; then # Install/Update core if ran without a parameter
     # shellcheck disable=SC1091
-    . install-core && bails-wallet
+    . install-core
     wait
     # Display info about IBD, keeping Tails private and extra reading material
     zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your CipherStick USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
