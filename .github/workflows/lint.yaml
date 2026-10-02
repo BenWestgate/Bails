@@ -7,6 +7,8 @@ on:
       - 'b'
       - 'bails/.local/bin/*'
       - '**.py'
+permissions:
+  contents: read
 jobs:
   shell-lint:
     name: Check shell code
