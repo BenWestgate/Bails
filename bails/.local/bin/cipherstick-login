@@ -40,10 +40,19 @@ persistent-setup # Checks needed persistent features are on.
 # Symlink at default datadir to our custom datadir
 ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
 
-# Update favorite apps list
+# Put CipherStick, Bitcoin Core and codex32 first in the dock. Keep every other
+# favorite as Tails or the user set it, so renamed or replaced Tails apps need
+# no change.
+if favorites=$(gsettings get org.gnome.shell favorite-apps | python3 -c '
+import ast
+import sys
 
-favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
-gsettings set org.gnome.shell favorite-apps "$favorites"
+ours = ["bails.desktop", "bitcoin-qt.desktop", "io.github.benwestgate.codex32.desktop"]
+current = ast.literal_eval(sys.stdin.read().removeprefix("@as "))
+print([*ours, *(app for app in current if app not in ours)])
+'); then
+    gsettings set org.gnome.shell favorite-apps "$favorites"
+fi
 
 # Warn if prune is off and space is low
 if [ "$(core-dbcache prune)" = 0 ] && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
