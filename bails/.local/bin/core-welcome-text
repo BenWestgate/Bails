@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Print the first-install Welcome text, built from Bitcoin Core's own Intro
+# dialog strings in an authenticated release source tree.
+#
+# Usage: core-welcome-text INTRO_UI INTRO_CPP REQUIRED_GB BLOCKCHAIN_GB \
+#            PRUNE_GB BACKUP_DAYS
+#
+# PRUNE_GB is 0 when pruning is off. Exits non-zero, printing nothing, when a
+# string is missing or no longer reads the way CipherStick adapts it, so the
+# caller can fall back to its built-in text.
+
+set -u
+
+[ "$#" -eq 6 ] || exit 2
+intro_ui=$1 intro_cpp=$2 required_gb=$3 blockchain_gb=$4 prune_gb=$5 backup_days=$6
+for n in "$required_gb" "$blockchain_gb" "$prune_gb" "$backup_days"; do
+    [[ "$n" =~ ^[0-9]+$ ]] || exit 2
+done
+[ -r "$intro_ui" ] && [ -r "$intro_cpp" ] || exit 1
+
+client='Bitcoin Core'
+
+xml_unescape() {
+    sed 's/&quot;/"/g; s/&apos;/'"'"'/g; s/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g'
+}
+
+# zenity renders --text as Pango markup.
+markup_escape() {
+    local s=${1//&/&amp;}
+    s=${s//</&lt;}
+    printf '%s' "${s//>/&gt;}"
+}
+
+# Print the first Intro string that starts with $1, from intro.ui or tr("...")
+# in intro.cpp. Fail if it is absent.
+core_string() {
+    local s
+    s=$(grep -m1 -oP "(?<=<string>)\Q$1\E[^<]*(?=</string>)" "$intro_ui" | xml_unescape)
+    [ -n "$s" ] || s=$(grep -m1 -oP "(?<=tr\(\")\Q$1\E[^\"]*(?=\")" "$intro_cpp")
+    [ -n "$s" ] || return 1
+    printf '%s' "$s"
+}
+
+# Replace the literal $2 in $1 with $3. Fail if $2 does not occur.
+adapt() {
+    [[ "$1" == *"$2"* ]] || return 1
+    printf '%s' "${1//"$2"/"$3"}"
+}
+
+welcome=$(core_string 'Welcome to %1.') || exit 1
+download=$(core_string '%1 will download and store a copy of the Bitcoin block chain.') || exit 1
+begin=$(core_string 'When you click OK, %1 will begin to download') || exit 1
+demanding=$(core_string 'This initial synchronisation is very demanding') || exit 1
+
+welcome=${welcome//%1/$client}
+download=${download//%1/$client}
+begin=${begin//%1/$client}
+begin=${begin//%2/$blockchain_gb}
+begin=${begin//%3/2009}
+begin=${begin//%4/Bitcoin}
+demanding=${demanding//%1/$client}
+
+# CipherStick fixes the data directory inside Persistent Storage and chooses the
+# prune target itself, so adapt Core's wording for both.
+if ((prune_gb)); then
+    storage=$(core_string 'Approximately %1 GB of data will be stored in this directory.') || exit 1
+    pruning=$(core_string 'If you have chosen to limit block chain storage (pruning),') || exit 1
+    backup=$(core_string '(sufficient to restore backups %n day(s) old)') || exit 1
+    days=days
+    ((backup_days == 1)) && days=day
+    backup=$(adapt "$backup" '%n day(s)' "$backup_days $days") || exit 1
+    pruning=$(adapt "$pruning" 'If you have chosen to limit block chain storage (pruning),' \
+        "CipherStick has chosen to limit block chain storage (pruning) to $prune_gb GB $backup,") || exit 1
+else
+    storage=$(core_string 'At least %1 GB of data will be stored in this directory') || exit 1
+    pruning=
+fi
+storage=${storage//%1/$required_gb}
+storage=$(adapt "$storage" 'in this directory' 'in your Persistent Storage') || exit 1
+
+text="<i>$(markup_escape "$welcome")</i>
+
+$(markup_escape "$download $storage")
+
+$(markup_escape "$begin")
+
+$(markup_escape "$demanding")"
+[ -n "$pruning" ] && text+="
+
+$(markup_escape "$pruning")"
+printf '%s\n' "$text"

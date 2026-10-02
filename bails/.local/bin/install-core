@@ -265,6 +265,11 @@ if [ "$action" = installation ]; then
         ((master_blockchain_size >= release_blockchain_size && master_blockchain_size <= release_blockchain_size * 2)); then
         assumed_blockchain_size=$master_blockchain_size
     fi
+    # Keep Bitcoin Core's own first-run Intro strings for the Welcome dialog.
+    # A missing file only falls back to CipherStick's built-in text.
+    intro_dir=$(mktemp -d)
+    tar -xOf "$source_tar" "$source_root/src/qt/forms/intro.ui" >"$intro_dir/intro.ui" &&
+        tar -xOf "$source_tar" "$source_root/src/qt/intro.cpp" >"$intro_dir/intro.cpp"
 fi
 rm -f "$source_tar"
 
@@ -306,17 +311,27 @@ else
         "server": true
     }' > $DATA_DIR/settings.json # Enable server, proxies for Tor and prune
     
+    expected_backup_days=0
     if ((prune_MiB)); then
-        storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."
+        required_GB=$((prune_GB + assumed_chain_state_size))
+        storageRequiresMsg="Approximately $required_GB GB of data will be stored in your Persistent Storage."
         expected_backup_days=$((prune_GB * 10**9 / (2250000 * 86400 / 600)))
         prune_explanation="\n\nCipherStick has chosen to limit block chain storage (pruning) to $prune_GB GB (sufficient to restore backups $expected_backup_days days old), the historical data must still be downloaded and processed, but will be deleted afterward to keep your disk usage low."
     else
-        storageRequiresMsg="At least $((assumed_blockchain_size + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage, and it will grow over time."
+        required_GB=$((assumed_blockchain_size + assumed_chain_state_size))
+        storageRequiresMsg="At least $required_GB GB of data will be stored in your Persistent Storage, and it will grow over time."
     fi
-    zenity --info --title Welcome --icon-name=bitcoin128 --text="<i>Welcome to Bitcoin Core.</i>\n\n
+    # Prefer Bitcoin Core's own Intro wording from the authenticated release
+    # source; fall back to the built-in copy if any string has changed.
+    if ! welcome_text=$(core-welcome-text "${intro_dir:-}/intro.ui" "${intro_dir:-}/intro.cpp" \
+        "$required_GB" "$assumed_blockchain_size" "$((prune_MiB ? prune_GB : 0))" "$expected_backup_days"); then
+        welcome_text="<i>Welcome to Bitcoin Core.</i>\n\n
 Bitcoin Core will download and store a copy of the Bitcoin block chain. $storageRequiresMsg\n
 Bitcoin Core has begun to download and process the full Bitcoin block chain ($assumed_blockchain_size GB) starting with the earliest transactions in 2009 when Bitcoin initially launched.\n
-This initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.$prune_explanation" "$ICON" &
+This initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.$prune_explanation"
+    fi
+    rm -rf "${intro_dir:-}"
+    zenity --info --title Welcome --icon-name=bitcoin128 --text="$welcome_text" "$ICON" &
     # Update $PATH environment variable to include new user bin
     # shellcheck source=/dev/null
     . "$HOME"/.profile
