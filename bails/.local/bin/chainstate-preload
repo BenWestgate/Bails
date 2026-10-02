@@ -32,6 +32,8 @@ total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 link-dotfiles --core-startup
 
 cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
+# On first run the chainstate is empty or tiny, so "preloading" it says nothing useful.
+chainstate_mib=$(du -sm chainstate 2>/dev/null | cut -f1)
 if ! grep 'progress=0.999' debug.log; then
     sleep 30
     if passwd -S "$USER" | grep NP; then
@@ -60,6 +62,7 @@ until grep 'progress=0.999' debug.log; do
     sleep $((++i))
     # exit if cat command finishes and can't be killed. Means entire chainstate was preloaded.
     if ! kill $full_speed &>/dev/null; then
+        (( ${chainstate_mib:-0} < 100 )) && exit 0
         zenity --info --title='Chainstate preloaded to RAM' --text='Bitcoin chainstate preloaded to memory.' "$ICON" --icon-name=drive-harddisk-solidstate --timeout=4
         sleep 20
         exit 0
