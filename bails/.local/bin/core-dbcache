@@ -20,27 +20,180 @@
 # THE SOFTWARE.
 
 
-# Set Bitcoin Core's dbcache for this computer just before Core starts.
-# CipherStick moves between computers, so it is recalculated at each launch.
+
+# Give Bitcoin Core a dbcache that suits this computer without ever writing a
+# value derived from its RAM to Persistent Storage.
 #
-# Usage: core-dbcache DATA_DIR
+# The persistent bitcoin.conf is a template. Each session, CipherStick writes
+# ~/.bitcoin/bitcoin.conf in RAM from it, adding dbcache. The data directory's
+# bitcoin.conf links to that copy, so Core reads it however it is started.
+#
+# When the node's tip is more than 14 days behind, as after weeks unused, the
+# dbcache is the largest Bitcoin Core does not warn about, to catch up faster
+# with fewer writes to the USB stick. Nearer the tip, Core picks its own
+# default, so users who log in weekly never wait for a large cache to flush at
+# shutdown.
+#
+# Usage:
+#   core-dbcache login        at login: write this session's bitcoin.conf
+#   core-dbcache refresh      rewrite it after the template changes
+#   core-dbcache watch        while Core runs, record the time of its tip
+#   core-dbcache far-behind   succeed if the tip is more than 14 days behind
 
-data_dir=${1:?DATA_DIR}
-conf="$data_dir/bitcoin.conf"
-note='# Set by CipherStick at each Bitcoin Core launch to suit this computer.'
+DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
+STATE_DIR=${STATE_DIR:-/live/persistence/TailsData_unlocked/dotfiles/.local/state}
+TEMPLATE=${TEMPLATE:-/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf}
+SESSION_CONF=${SESSION_CONF:-$HOME/.bitcoin/bitcoin.conf}
+tip="$STATE_DIR/bitcoin-core-tip"
+migrated="$STATE_DIR/dbcache-in-bitcoin-conf"
+startup='startupnotify=core-started'
 
-# Largest whole MiB Bitcoin Core does not warn about (ShouldWarnOversizedDbCache):
-# max(450 MiB, 75% of (total RAM - 2 GiB)), with total RAM as Core reads it.
-ram=$(( $(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) ))
-((ram > 0)) || { echo "core-dbcache: cannot read total RAM" >&2; exit 1; }
-mib=$((1024 * 1024))
-reserved=$((2048 * mib))
-# Divide before multiplying, exactly as Core does, so both round the same way.
-# shellcheck disable=SC2017
-cap=$(( ram > reserved ? (ram - reserved) / 4 * 3 : 0 ))
-dbcache=$(( cap > 450 * mib ? cap / mib : 450 ))
+cli() { bitcoin-cli -datadir="$DATA_DIR" "$@"; }
 
-# Keep the setting first in bitcoin.conf, before any network section.
-[ -f "$conf" ] || exit 0
-rest=$(grep -v -x -F -e "$note" "$conf" | grep -v -x 'dbcache=.*')
-printf '%s\ndbcache=%s\n%s\n' "$note" "$dbcache" "$rest" > "$conf"
+core_pid() { pgrep -xo bitcoin-qt || pgrep -xo bitcoind; }
+
+# Succeed if Core's tip is more than 14 days old, or was never recorded.
+far_behind() { [ -z "$(find "$tip" -mtime -14 2>/dev/null)" ]; }
+
+# Print the largest dbcache in MiB that Core does not warn about
+# (ShouldWarnOversizedDbCache): max(450 MiB, 75% of (total RAM - 2 GiB)), with
+# total RAM as Core reads it.
+warning_cap() {
+    local ram mib=$((1024 * 1024)) reserved cap
+    ram=$(( $(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) ))
+    ((ram > 0)) || { echo "core-dbcache: cannot read total RAM" >&2; return 1; }
+    reserved=$((2048 * mib))
+    # Divide before multiplying, exactly as Core does, so both round the same way.
+    # shellcheck disable=SC2017
+    cap=$(( ram > reserved ? (ram - reserved) / 4 * 3 : 0 ))
+    echo $(( cap > 450 * mib ? cap / mib : 450 ))
+}
+
+# Print the dbcache in MiB to start Core with, or nothing to let Core choose.
+wanted_dbcache() {
+    far_behind || return 0
+    warning_cap
+}
+
+# Keep the template free of dbcache, and start it with the startup steps that
+# every way of starting Core should run.
+prepare_template() {
+    [ -f "$TEMPLATE" ] || return 0
+    local updated
+    updated=$(printf '%s\n' "$startup"; grep -v -x -F "$startup" "$TEMPLATE" | grep -v -x 'dbcache=.*')
+    [ "$updated" = "$(cat "$TEMPLATE")" ] || printf '%s\n' "$updated" >"$TEMPLATE"
+}
+
+# Write this session's bitcoin.conf in RAM: the template, plus dbcache when $1
+# is set.
+write_session_conf() {
+    [ -f "$TEMPLATE" ] || return 0
+    local tmp
+    mkdir -p "${SESSION_CONF%/*}"
+    tmp=$(mktemp "${SESSION_CONF%/*}/.bitcoin.conf.XXXXXX") || return 1
+    {
+        [ -z "$1" ] || echo "dbcache=$1"
+        cat "$TEMPLATE"
+    } >"$tmp" && mv -f "$tmp" "$SESSION_CONF"
+}
+
+# Point the data directory's bitcoin.conf, which Bitcoin Core's window reads,
+# at the session copy. The link holds only a path, nothing about this computer.
+# A real file there is the user's own, so leave it alone.
+link_datadir_conf() {
+    local conf="$DATA_DIR/bitcoin.conf"
+    [ -d "$DATA_DIR" ] || return 0
+    [ "$(readlink "$conf")" = "$SESSION_CONF" ] && return
+    if [ -e "$conf" ] && [ ! -L "$conf" ]; then
+        echo "core-dbcache: $conf is not a link; Core will not get its dbcache" >&2
+        return
+    fi
+    ln -sfn "$SESSION_CONF" "$conf"
+}
+
+# Print the dbcache an older CipherStick wrote to settings.json, if any.
+settings_dbcache() {
+    python3 - "$DATA_DIR/settings.json" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as settings_file:
+        print(json.load(settings_file).get("dbcache", ""))
+except FileNotFoundError:
+    pass
+PY
+}
+
+# Older CipherStick versions wrote dbcache to settings.json, which overrides
+# bitcoin.conf. Remove it once; after that, a dbcache there is the user's own.
+migrate_settings() {
+    [ -e "$migrated" ] && return
+    mkdir -p "$STATE_DIR"
+    python3 - "$DATA_DIR/settings.json" <<'PY' && touch "$migrated"
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, encoding="utf-8") as settings_file:
+        settings = json.load(settings_file)
+except FileNotFoundError:
+    sys.exit(0)
+if settings.pop("dbcache", None) is not None:
+    with open(path, "w", encoding="utf-8") as settings_file:
+        json.dump(settings, settings_file, indent=4)
+        settings_file.write("\n")
+PY
+}
+
+refresh() {
+    migrate_settings
+    prepare_template
+    write_session_conf "$(wanted_dbcache)"
+    link_datadir_conf
+}
+
+# Succeed if settings.json still holds an older CipherStick's dbcache, set on
+# another computer, that Core would warn is too large for this one.
+dbcache_too_big() {
+    local old
+    [ -e "$migrated" ] && return 1
+    old=$(settings_dbcache) && [[ "$old" =~ ^[0-9]+$ ]] && ((old > $(warning_cap)))
+}
+
+# Core's own autostart entry may start Core before this runs, without this
+# session's settings. Core's default dbcache is safe, so leave Core running,
+# unless what it read could fill the computer's RAM or, when PRUNE_TOO_BIG is
+# set, the USB stick. Then restart it at once, while its cache is small.
+login() {
+    local restart=
+    if core_pid >/dev/null && { dbcache_too_big || [ -n "${PRUNE_TOO_BIG:-}" ]; }; then
+        restart=1
+        stop-btc
+    fi
+    refresh
+    [ -z "$restart" ] || setsid -f bitcoin-qt -min -chain=main >/dev/null 2>&1
+}
+
+# While Core runs, give the marker the time of Core's tip block, so the next
+# login knows how far behind the node is.
+watch() {
+    local time
+    while sleep 600; do
+        core_pid >/dev/null || continue
+        time=$(cli getblockheader "$(cli getbestblockhash)" 2>/dev/null |
+            python3 -c 'import json, sys; print(json.load(sys.stdin)["time"])') || continue
+        mkdir -p "$STATE_DIR" && touch -d "@$time" "$tip"
+    done
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    case ${1:-} in
+        login) login ;;
+        refresh) refresh ;;
+        watch) watch ;;
+        far-behind) far_behind ;;
+        *) echo "usage: core-dbcache login | refresh | watch | far-behind" >&2; exit 2 ;;
+    esac
+fi

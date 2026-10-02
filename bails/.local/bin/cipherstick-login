@@ -20,7 +20,8 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# wraps Bitcoin executables to sometimes ask for donations.
+# CipherStick's login steps, run by cipherstick.desktop. They are kept apart
+# from Bitcoin Core's own autostart entry, which its options can replace.
 ###############################################################################
 BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
 BITCOIN_ADDRESS_SELFISH=	# TODO: add these
@@ -30,6 +31,23 @@ export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
+# MiB the blocks may use: what they use now plus the free space.
+room=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
+  $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 ))
+space=$(( room - 10240 ))
+space=$(( space > 1907 ? space : 1907 ))
+old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
+if ((space < old_prune)); then # Reduce prune as needed to not run out of space
+    sed -i 's/"prune": "'"$old_prune"'/"prune": "'$space/ "$DATA_DIR/settings.json"
+    # If Core already runs with the old target, restart it only if that target
+    # would leave less than 1 GiB free.
+    ((old_prune > room - 1024)) && export PRUNE_TOO_BIG=1
+fi
+# Write this session's bitcoin.conf before Bitcoin Core's own autostart reads it.
+core-dbcache login
+core-dbcache watch &
+# Far behind, read the chainstate into memory while Core starts and finds peers.
+core-dbcache far-behind && chainstate-preload &
 persistent-setup # Checks needed persistent features are on.
 # Symlink at default datadir to our custom datadir
 ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
@@ -39,20 +57,10 @@ ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
 favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
 gsettings set org.gnome.shell favorite-apps "$favorites"
 
-space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
-  $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
-space=$(( space > 1907 ? space : 1907 ))
-old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-if ((space < old_prune)); then # Reduce prune as needed to not run out of space
-    sed -i 's/"prune": "'"$old_prune"'/"prune": "'$space/ "$DATA_DIR/settings.json"
-fi
 # Warn if prune is off and space is low
 if ((old_prune == 0)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
     zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
 fi
-
-# Size Bitcoin Core's cache for this computer's RAM before Core starts.
-[ "$1" = bitcoin-qt ] && core-dbcache "$DATA_DIR"
 
 if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         # 1 out of 20 start-ups show donation message
@@ -72,4 +80,3 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         exit 0
     fi
 fi
-"$@" &

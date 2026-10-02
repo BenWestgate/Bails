@@ -1,0 +1,45 @@
+#!/bin/bash
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+#################################################
+# Run by Bitcoin Core through startupnotify each time it has started.
+#################################################
+
+export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
+
+# Refresh persistent links and schedule the delayed no-peer/Tor reminder for
+# every Bitcoin Core start, not only the installation launch.
+link-dotfiles --core-startup
+
+cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
+if ! grep 'progress=0.999' debug.log; then
+    sleep 30
+    if passwd -S "$USER" | grep NP; then
+        zenity --info --title='Remember to lock your screen' --text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...' --icon-name=system-lock-screen "$ICON" --timeout=10 &
+        tails-screen-locker
+    fi
+else
+    sleep 200
+    if passwd -S "$USER" | grep NP; then
+        zenity --info --title='Remember to lock your screen' --text='Always lock your screen before stepping away from the PC.' --icon-name=system-lock-screen "$ICON" --timeout=5 &
+        tails-screen-locker
+    fi
+fi &>/dev/null &

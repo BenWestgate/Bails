@@ -4,52 +4,129 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/bin" "$work/data"
+mkdir -p "$work/data" "$work/state" "$work/dotfiles" "$work/home"
 
 fail() {
     echo "$*" >&2
     exit 1
 }
 
-# Fake total RAM for core-dbcache.
-cat >"$work/bin/getconf" <<'SH'
-#!/bin/bash
-case $1 in
-    PAGE_SIZE) echo 4096 ;;
-    _PHYS_PAGES) echo $((FAKE_RAM_MIB * 256)) ;;
-esac
-SH
-chmod +x "$work/bin/getconf"
+export DATA_DIR="$work/data" STATE_DIR="$work/state"
+export TEMPLATE="$work/dotfiles/bitcoin.conf" SESSION_CONF="$work/home/bitcoin.conf"
+# shellcheck disable=SC1091
+. "$repo_root/bails/.local/bin/core-dbcache"
 
-run() {
-    PATH="$work/bin:$PATH" "$repo_root/bails/.local/bin/core-dbcache" "$work/data"
-}
+# Fakes for the system and Bitcoin Core, called from the sourced functions.
+# shellcheck disable=SC2329
+getconf() { [ "$1" = PAGE_SIZE ] && echo 4096 || echo $((FAKE_RAM_MIB * 256)); }
+# shellcheck disable=SC2329
+core_pid() { ((core_running)) && echo 4242; }
+core_running=0
 
-conf="$work/data/bitcoin.conf"
-settings="$work/data/settings.json"
+tip="$STATE_DIR/bitcoin-core-tip"
+settings="$DATA_DIR/settings.json"
 
-# Bitcoin Core warns when dbcache > max(450 MiB, 3/4 of (RAM - 2 GiB)).
-# Expect the largest whole MiB at or below that cap.
-for case in 1024:450 2048:450 2648:450 4096:1536 8192:4608 16384:10752 32768:23040; do
-    export FAKE_RAM_MIB=${case%%:*}
-    printf '%s\n' '#rpcport=<port>' '[main]' >"$conf"
-    run
-    got=$(sed -n 's/^dbcache=//p' "$conf")
+# Far behind: the largest whole MiB at or below Core's warning cap,
+# max(450 MiB, 3/4 of (RAM - 2 GiB)).
+for case in 1024:450 2048:450 2648:450 3072:768 4096:1536 8192:4608 12288:7680 16384:10752 32768:23040; do
+    FAKE_RAM_MIB=${case%%:*}
+    got=$(wanted_dbcache)
     [ "$got" = "${case##*:}" ] || fail "RAM ${FAKE_RAM_MIB} MiB: dbcache=$got, want ${case##*:}"
 done
 
-# The setting stays first, before any network section, and is not duplicated.
-export FAKE_RAM_MIB=8192
-run
-run
-[ "$(grep -c '^dbcache=' "$conf")" = 1 ] || fail 'dbcache duplicated'
-sed -n 2p "$conf" | grep -qx 'dbcache=4608' || fail 'dbcache is not before network sections'
-grep -qx '\[main\]' "$conf" || fail 'existing config lost'
+# Tip within 14 days: let Core choose. Further behind: large again, even
+# if the node was fully synced before it went unused.
+FAKE_RAM_MIB=8192
+touch -d '13 days ago' "$tip"
+[ -z "$(wanted_dbcache)" ] || fail 'node 13 days behind should use Core default'
+far_behind && fail 'node 13 days behind counted as far behind'
+touch -d '15 days ago' "$tip"
+[ "$(wanted_dbcache)" = 4608 ] || fail 'node 15 days behind should use large dbcache'
+far_behind || fail 'node 15 days behind not counted as far behind'
+touch -d '6 months ago' "$tip"
+[ "$(wanted_dbcache)" = 4608 ] || fail 'node 6 months behind should use large dbcache'
 
-# Leave Bitcoin Core's settings.json under Bitcoin Core's control.
-printf '{\n    "dbcache": "6000",\n    "prune": "1907"\n}\n' >"$settings"
-cp "$settings" "$work/settings.before"
-run
-cmp -s "$work/settings.before" "$settings" || fail 'settings.json changed'
+# The session copy in RAM gets dbcache; the persistent template never does.
+printf '%s\n' '#rpcport=<port>' 'datadir=/data' 'dbcache=9999' '[main]' >"$TEMPLATE"
+refresh
+refresh
+grep -q dbcache "$TEMPLATE" && fail 'dbcache left in the persistent template'
+[ "$(sed -n 1p "$TEMPLATE")" = 'startupnotify=core-started' ] || fail 'startup steps not first in template'
+[ "$(grep -c '^startupnotify=' "$TEMPLATE")" = 1 ] || fail 'startup steps duplicated in template'
+grep -qx 'datadir=/data' "$TEMPLATE" || fail 'template setting lost'
+grep -qx '\[main\]' "$TEMPLATE" || fail 'template network section lost'
+[ ! -L "$SESSION_CONF" ] || fail 'session config is still a link to the template'
+[ "$(grep -c '^dbcache=' "$SESSION_CONF")" = 1 ] || fail 'session dbcache missing or duplicated'
+sed -n 1p "$SESSION_CONF" | grep -qx 'dbcache=4608' || fail 'dbcache not before network sections'
+[ "$(readlink "$DATA_DIR/bitcoin.conf")" = "$SESSION_CONF" ] || fail 'data directory config not linked to the session copy'
+grep -qx 'datadir=/data' "$SESSION_CONF" || fail 'session config lacks template settings'
+
+# Near the tip, the session copy carries no dbcache, so Core picks its default.
+touch "$tip"
+refresh
+grep -q dbcache "$SESSION_CONF" && fail 'node near the tip still given a dbcache'
+
+# A session copy replaces a link to the template without changing the template.
+rm -f "$SESSION_CONF"
+ln -s "$TEMPLATE" "$SESSION_CONF"
+cp "$TEMPLATE" "$work/template-before"
+touch -d '15 days ago' "$tip"
+refresh
+[ ! -L "$SESSION_CONF" ] || fail 'link to the template not replaced'
+cmp -s "$TEMPLATE" "$work/template-before" || fail 'writing the session copy changed the template'
+
+# A real bitcoin.conf in the data directory is the user's own: keep it.
+rm -f "$DATA_DIR/bitcoin.conf"
+echo 'user=1' >"$DATA_DIR/bitcoin.conf"
+refresh 2>/dev/null
+[ "$(cat "$DATA_DIR/bitcoin.conf")" = user=1 ] || fail "user's own data directory config replaced"
+rm -f "$DATA_DIR/bitcoin.conf"
+
+# At login, Core started by its own autostart keeps running on its default
+# dbcache, unless what it read could fill the RAM or the USB stick.
+# shellcheck disable=SC2329
+stop-btc() { core_running=0; echo stop >>"$work/calls"; }
+# shellcheck disable=SC2329
+setsid() { echo start >>"$work/calls"; }
+login_with() { # $1: settings.json, $2: Core running, $3: PRUNE_TOO_BIG
+    rm -f "$STATE_DIR/dbcache-in-bitcoin-conf"
+    : >"$work/calls"
+    printf '%s\n' "$1" >"$settings"
+    core_running=$2
+    PRUNE_TOO_BIG=$3 login
+    calls=$(tr '\n' ' ' <"$work/calls" 2>/dev/null)
+}
+login_with '{"dbcache": "6000", "prune": "1907"}' 1 ''
+[ "$calls" = 'stop start ' ] || fail "another computer's dbcache too big for this RAM did not restart Core: $calls"
+python3 -c 'import json, sys; s = json.load(open(sys.argv[1])); assert s == {"prune": "1907"}, s' "$settings" ||
+    fail 'old dbcache not removed cleanly'
+login_with '{"dbcache": "3000"}' 1 ''
+[ -z "$calls" ] || fail "a dbcache that fits this RAM restarted Core: $calls"
+grep -q dbcache "$settings" && fail 'old dbcache kept while Core ran'
+login_with '{}' 1 ''
+[ -z "$calls" ] || fail "Core restarted only for starting before CipherStick: $calls"
+login_with '{}' 1 1
+[ "$calls" = 'stop start ' ] || fail "prune target too big for the stick did not restart Core: $calls"
+login_with '{}' 0 1
+[ -z "$calls" ] || fail "Core started at login although it was not running: $calls"
+
+# After that one migration, a dbcache the user sets in Core's options is kept.
+printf '{\n    "dbcache": "3000"\n}\n' >"$settings"
+migrate_settings
+grep -q '"dbcache": "3000"' "$settings" || fail 'user dbcache removed after migration'
+
+# The watcher stamps the marker with the tip block's time, not the clock's.
+# shellcheck disable=SC2329
+cli() {
+    case $1 in
+        getbestblockhash) echo 00ab ;;
+        getblockheader) [ "$2" = 00ab ] && echo '{"hash": "00ab", "time": 1700000000}' ;;
+    esac
+}
+# shellcheck disable=SC2329
+sleep() { ((++sleeps < 2)); }
+core_running=1 sleeps=0
+watch
+[ "$(stat -c %Y "$tip")" = 1700000000 ] || fail 'tip marker not set to the tip block time'
 
 printf '%s\n' 'core-dbcache: PASS'

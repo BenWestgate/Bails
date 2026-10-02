@@ -238,7 +238,8 @@ else
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
     ln --symbolic --force -b /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
     ln --symbolic --force -b {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
-    ln --symbolic --force -b $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
+    ln --symbolic --force -b $DOTFILES/.bitcoin/README.md $DATA_DIR # symlinks to dotfiles/.bitcoin
+    ln --symbolic --force -b "$HOME"/.bitcoin/bitcoin.conf $DATA_DIR # symlinks to the session copy in RAM
     # Calculate space available for block file storage
     space=$(($(df --output=avail $SOURCE | tail -1) * 1024 / 10 ** 9 - assumed_chain_state_size - 10))
     prune_GB=$((space > 2 ? space : 2 ))
@@ -267,5 +268,6 @@ This initial synchronisation is very demanding, and may expose hardware problems
     . "$HOME"/.profile
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
-wrapped bitcoin-qt -min -startupnotify=chainstate-preload
+core-dbcache refresh
+setsid -f bitcoin-qt -min >/dev/null 2>&1
 touch $XDG_STATE_HOME/installed

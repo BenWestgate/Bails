@@ -92,6 +92,7 @@ else
   # Install CipherStick to tmpfs
   rsync -rvh --perms "$BAILS_DIR/bails/" "$HOME"
   remove_legacy_wallet_files "$HOME"
+  rm -f -- "$HOME/.local/bin/wrapped" # Replaced by cipherstick-login
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   (
@@ -106,6 +107,7 @@ else
     rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
       "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     remove_legacy_wallet_files "$DOTFILES"
+    rm -f -- "$DOTFILES/.local/bin/wrapped"
     wallets='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/wallets'
     if [ -d "$wallets" ] && [ ! -L "$wallets" ]; then
       chmod u+w "$wallets"

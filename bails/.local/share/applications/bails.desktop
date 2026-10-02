@@ -2,7 +2,7 @@
 Version=1.0
 Name=CipherStick
 Comment=Configure Bitcoin Core on Tails.
-Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/wrapped bails-menu
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bails-menu
 Terminal=false
 Type=Application
 Icon=bails128
