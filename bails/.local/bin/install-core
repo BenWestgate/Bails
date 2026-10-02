@@ -219,7 +219,11 @@ until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure CipherStick inst
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
+# Keep the RPC server, Tor proxies and prune target across updates, which
+# replace the template with the new release's example bitcoin.conf.
+kept=$(grep -E '^(server|proxy|onion|prune)=' "$DOTFILES/.bitcoin/bitcoin.conf" 2>/dev/null)
 rsync -vhb --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
+[ -z "$kept" ] || sed -i "1i ${kept//$'\n'/\\n}" "$DOTFILES/.bitcoin/bitcoin.conf"
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
@@ -245,12 +249,11 @@ else
     prune_GB=$((space > 2 ? space : 2 ))
     # Disable pruning if USB stick is large enough
     prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
-    echo '{
-        "onion": "127.0.0.1:9050",
-        "proxy": "127.0.0.1:9050",
-        "prune": "'$prune_MiB'",
-        "server": true
-    }' > $DATA_DIR/settings.json # Enable server, proxies for Tor and prune
+    # Enable the RPC server, Tor proxies and prune in the persistent
+    # bitcoin.conf, leaving settings.json to Core's options window.
+    for setting in server=1 proxy=127.0.0.1:9050 onion=127.0.0.1:9050 prune=$prune_MiB; do
+        sed -i "/^#\?${setting%%=*}=/d; 1i $setting" "$DOTFILES/.bitcoin/bitcoin.conf"
+    done
     
     if ((prune_MiB)); then
         storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."

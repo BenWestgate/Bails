@@ -19,9 +19,13 @@ export TEMPLATE="$work/dotfiles/bitcoin.conf" SESSION_CONF="$work/home/bitcoin.c
 # Fakes for the system and Bitcoin Core, called from the sourced functions.
 # shellcheck disable=SC2329
 getconf() { [ "$1" = PAGE_SIZE ] && echo 4096 || echo $((FAKE_RAM_MIB * 256)); }
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 core_pid() { ((core_running)) && echo 4242; }
 core_running=0
+# MiB the block files may use: what they use now plus the free space.
+# shellcheck disable=SC2329
+block_room() { echo "$FAKE_ROOM_MIB"; }
+FAKE_ROOM_MIB=100000
 
 tip="$STATE_DIR/bitcoin-core-tip"
 settings="$DATA_DIR/settings.json"
@@ -47,11 +51,11 @@ touch -d '6 months ago' "$tip"
 [ "$(wanted_dbcache)" = 4608 ] || fail 'node 6 months behind should use large dbcache'
 
 # The session copy in RAM gets dbcache; the persistent template never does.
-printf '%s\n' '#rpcport=<port>' 'datadir=/data' 'dbcache=9999' '[main]' >"$TEMPLATE"
+printf '%s\n' 'startupnotify=core-started' '#rpcport=<port>' 'datadir=/data' 'dbcache=9999' '[main]' >"$TEMPLATE"
 refresh
 refresh
 grep -q dbcache "$TEMPLATE" && fail 'dbcache left in the persistent template'
-[ "$(sed -n 1p "$TEMPLATE")" = 'startupnotify=core-started' ] || fail 'startup steps not first in template'
+[ "$(sed -n 1p "$TEMPLATE")" = 'startupnotify=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/core-started' ] || fail 'startup steps not first in template'
 [ "$(grep -c '^startupnotify=' "$TEMPLATE")" = 1 ] || fail 'startup steps duplicated in template'
 grep -qx 'datadir=/data' "$TEMPLATE" || fail 'template setting lost'
 grep -qx '\[main\]' "$TEMPLATE" || fail 'template network section lost'
@@ -82,38 +86,77 @@ refresh 2>/dev/null
 [ "$(cat "$DATA_DIR/bitcoin.conf")" = user=1 ] || fail "user's own data directory config replaced"
 rm -f "$DATA_DIR/bitcoin.conf"
 
+# Each start retargets the persisted prune target to leave 10 GiB free when
+# it would leave more than 11 GiB or less than 1 GiB free, never below
+# 1907 MiB. Unpruned stays unpruned.
+prune_after() { # $1: template target, $2: MiB for blocks; prints new target
+    sed -i '/^prune=/d' "$TEMPLATE"
+    sed -i "1i prune=$1" "$TEMPLATE"
+    FAKE_ROOM_MIB=$2
+    refresh
+    [ "$(grep -c '^prune=' "$TEMPLATE")" = 1 ] || fail 'prune target duplicated in template'
+    template_prune
+}
+[ "$(prune_after 20000 30000)" = 20000 ] || fail 'prune target changed with 10 GiB free'
+[ "$(prune_after 20000 31000)" = 20000 ] || fail 'prune target raised with under 11 GiB free'
+[ "$(prune_after 20000 32000)" = 21760 ] || fail 'prune target not raised with over 11 GiB free'
+[ "$(prune_after 20000 21500)" = 20000 ] || fail 'prune target lowered with over 1 GiB free'
+[ "$(prune_after 20000 20500)" = 10260 ] || fail 'prune target not lowered with under 1 GiB free'
+grep -qx 'prune=10260' "$SESSION_CONF" || fail 'session copy lacks the new prune target'
+[ "$(prune_after 4000 4500)" = 1907 ] || fail 'prune target lowered below 1907 MiB'
+[ "$(prune_after 0 500000)" = 0 ] || fail 'unpruned node given a prune target'
+[ "$(effective_prune)" = 0 ] || fail 'unpruned node not reported as unpruned'
+FAKE_ROOM_MIB=100000
+
+# settings.json is Core's: CipherStick never edits it, and a prune target set
+# in Core's options wins.
+printf '{\n    "dbcache": "6000",\n    "prune": "2000"\n}\n' >"$settings"
+cp "$settings" "$work/settings-before"
+core_running=0
+refresh
+cmp -s "$settings" "$work/settings-before" || fail 'settings.json edited'
+[ "$(effective_prune)" = 2000 ] || fail "user's prune target not reported"
+
 # At login, Core started by its own autostart keeps running on its default
-# dbcache, unless what it read could fill the RAM or the USB stick.
+# dbcache, unless the template's prune target could fill the USB stick.
 # shellcheck disable=SC2329
 stop-btc() { core_running=0; echo stop >>"$work/calls"; }
 # shellcheck disable=SC2329
 setsid() { echo start >>"$work/calls"; }
-login_with() { # $1: settings.json, $2: Core running, $3: PRUNE_TOO_BIG
-    rm -f "$STATE_DIR/dbcache-in-bitcoin-conf"
+login_with() { # $1: settings.json, $2: Core running, $3: MiB for blocks
     : >"$work/calls"
     printf '%s\n' "$1" >"$settings"
-    core_running=$2
-    PRUNE_TOO_BIG=$3 login
-    calls=$(tr '\n' ' ' <"$work/calls" 2>/dev/null)
+    cp "$settings" "$work/settings-before"
+    core_running=$2 FAKE_ROOM_MIB=$3
+    login
+    calls=$(tr '\n' ' ' <"$work/calls")
+    cmp -s "$settings" "$work/settings-before" || fail 'settings.json edited at login'
 }
-login_with '{"dbcache": "6000", "prune": "1907"}' 1 ''
-[ "$calls" = 'stop start ' ] || fail "another computer's dbcache too big for this RAM did not restart Core: $calls"
-python3 -c 'import json, sys; s = json.load(open(sys.argv[1])); assert s == {"prune": "1907"}, s' "$settings" ||
-    fail 'old dbcache not removed cleanly'
-login_with '{"dbcache": "3000"}' 1 ''
-[ -z "$calls" ] || fail "a dbcache that fits this RAM restarted Core: $calls"
-grep -q dbcache "$settings" && fail 'old dbcache kept while Core ran'
-login_with '{}' 1 ''
+sed -i 's/^prune=.*/prune=4000/' "$TEMPLATE"
+login_with '{"dbcache": "6000"}' 1 100000
+[ -z "$calls" ] || fail "a dbcache in settings.json restarted Core: $calls"
+login_with '{}' 1 100000
 [ -z "$calls" ] || fail "Core restarted only for starting before CipherStick: $calls"
-login_with '{}' 1 1
-[ "$calls" = 'stop start ' ] || fail "prune target too big for the stick did not restart Core: $calls"
-login_with '{}' 0 1
+login_with '{}' 1 4500
+[ "$calls" = 'stop start ' ] || fail "template prune target too big for the stick did not restart Core: $calls"
+grep -qx 'prune=1907' "$TEMPLATE" || fail 'prune target not lowered on restart'
+grep -qx 'prune=1907' "$SESSION_CONF" || fail 'session copy lacks the lowered prune target'
+sed -i 's/^prune=.*/prune=4000/' "$TEMPLATE"
+login_with '{"prune": "9000"}' 1 4500
+[ -z "$calls" ] || fail "a prune target in settings.json restarted Core: $calls"
+sed -i 's/^prune=.*/prune=4000/' "$TEMPLATE"
+login_with '{}' 0 4500
 [ -z "$calls" ] || fail "Core started at login although it was not running: $calls"
-
-# After that one migration, a dbcache the user sets in Core's options is kept.
-printf '{\n    "dbcache": "3000"\n}\n' >"$settings"
-migrate_settings
-grep -q '"dbcache": "3000"' "$settings" || fail 'user dbcache removed after migration'
+# Core's autostart starting Core after the first check, while refresh runs,
+# still gets a restart.
+core_checks=0
+# shellcheck disable=SC2317,SC2329
+core_pid() { ((core_checks++)) && echo 4242; }
+sed -i 's/^prune=.*/prune=4000/' "$TEMPLATE"
+login_with '{}' 0 4500
+[ "$calls" = 'stop start ' ] || fail "Core started during refresh kept a prune target too big for the stick: $calls"
+# shellcheck disable=SC2317,SC2329
+core_pid() { ((core_running)) && echo 4242; }
 
 # The watcher stamps the marker with the tip block's time, not the clock's.
 # shellcheck disable=SC2329

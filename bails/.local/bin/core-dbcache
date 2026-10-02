@@ -39,14 +39,16 @@
 #   core-dbcache refresh      rewrite it after the template changes
 #   core-dbcache watch        while Core runs, record the time of its tip
 #   core-dbcache far-behind   succeed if the tip is more than 14 days behind
+#   core-dbcache prune        print the prune target Core uses, 0 if unpruned
 
 DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
 STATE_DIR=${STATE_DIR:-/live/persistence/TailsData_unlocked/dotfiles/.local/state}
 TEMPLATE=${TEMPLATE:-/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf}
 SESSION_CONF=${SESSION_CONF:-$HOME/.bitcoin/bitcoin.conf}
 tip="$STATE_DIR/bitcoin-core-tip"
-migrated="$STATE_DIR/dbcache-in-bitcoin-conf"
-startup='startupnotify=core-started'
+# A full path: Core may run without ~/.local/bin on PATH, as in the session
+# that installed CipherStick, which logged in before that folder existed.
+startup='startupnotify=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/core-started'
 
 cli() { bitcoin-cli -datadir="$DATA_DIR" "$@"; }
 
@@ -54,6 +56,54 @@ core_pid() { pgrep -xo bitcoin-qt || pgrep -xo bitcoind; }
 
 # Succeed if Core's tip is more than 14 days old, or was never recorded.
 far_behind() { [ -z "$(find "$tip" -mtime -14 2>/dev/null)" ]; }
+
+# Print MiB the block files may use: what they use now plus the free space.
+block_room() {
+    local free blocks
+    free=$(df --output=avail "$DATA_DIR" | tail -1)
+    blocks=$(du --summarize "$DATA_DIR/blocks" 2>/dev/null | cut -f1)
+    echo $(( (free + ${blocks:-0}) / 1024 ))
+}
+
+# Print the template's prune target in MiB, 0 if unpruned.
+template_prune() {
+    local prune
+    prune=$(sed -n 's/^prune=\([0-9]*\)$/\1/p' "$TEMPLATE" 2>/dev/null | head -1)
+    echo "${prune:-0}"
+}
+
+# Set a key in the template's default section, replacing any earlier value
+# or commented example of it.
+set_template() {
+    [ -f "$TEMPLATE" ] || return 0
+    sed -i "/^#\?$1=/d" "$TEMPLATE"
+    sed -i "1i $1=$2" "$TEMPLATE"
+}
+
+# Keep the template's prune target near 10 GiB of free space, the margin
+# Bitcoin Core's welcome dialog uses. Retarget, raising or lowering it, only
+# when it would leave more than 11 GiB or less than 1 GiB free, so it is not
+# rewritten at every start. Never below 1907 MiB, Core's 2 GB default. An
+# unpruned node stays unpruned. The target is persisted: a pruned blocks
+# folder shows the stick's size anyway.
+fit_prune() {
+    local prune room target
+    prune=$(template_prune)
+    ((prune)) || return 0
+    room=$(block_room)
+    (( room - prune > 11264 || room - prune < 1024 )) || return 0
+    target=$(( room - 10240 > 1907 ? room - 10240 : 1907 ))
+    ((target == prune)) || set_template prune "$target"
+}
+
+# Print the prune target Core uses: the user's choice in Core's options, kept
+# in settings.json, or else the template's. 0 if unpruned.
+effective_prune() {
+    local prune
+    prune=$(settings_value prune)
+    [[ "$prune" =~ ^[0-9]+$ ]] && { echo "$prune"; return; }
+    template_prune
+}
 
 # Print the largest dbcache in MiB that Core does not warn about
 # (ShouldWarnOversizedDbCache): max(450 MiB, 75% of (total RAM - 2 GiB)), with
@@ -80,7 +130,7 @@ wanted_dbcache() {
 prepare_template() {
     [ -f "$TEMPLATE" ] || return 0
     local updated
-    updated=$(printf '%s\n' "$startup"; grep -v -x -F "$startup" "$TEMPLATE" | grep -v -x 'dbcache=.*')
+    updated=$(printf '%s\n' "$startup"; grep -v -x -e 'startupnotify=\(.*/\)\?core-started' -e 'dbcache=.*' "$TEMPLATE")
     [ "$updated" = "$(cat "$TEMPLATE")" ] || printf '%s\n' "$updated" >"$TEMPLATE"
 }
 
@@ -111,68 +161,55 @@ link_datadir_conf() {
     ln -sfn "$SESSION_CONF" "$conf"
 }
 
-# Print the dbcache an older CipherStick wrote to settings.json, if any.
-settings_dbcache() {
-    python3 - "$DATA_DIR/settings.json" <<'PY'
+# Print a value from Core's settings.json, if set.
+settings_value() {
+    python3 - "$DATA_DIR/settings.json" "$1" <<'PY'
 import json
 import sys
 
 try:
     with open(sys.argv[1], encoding="utf-8") as settings_file:
-        print(json.load(settings_file).get("dbcache", ""))
+        print(json.load(settings_file).get(sys.argv[2], ""))
 except FileNotFoundError:
     pass
 PY
 }
 
-# Older CipherStick versions wrote dbcache to settings.json, which overrides
-# bitcoin.conf. Remove it once; after that, a dbcache there is the user's own.
-migrate_settings() {
-    [ -e "$migrated" ] && return
-    mkdir -p "$STATE_DIR"
-    python3 - "$DATA_DIR/settings.json" <<'PY' && touch "$migrated"
-import json
-import sys
-
-path = sys.argv[1]
-try:
-    with open(path, encoding="utf-8") as settings_file:
-        settings = json.load(settings_file)
-except FileNotFoundError:
-    sys.exit(0)
-if settings.pop("dbcache", None) is not None:
-    with open(path, "w", encoding="utf-8") as settings_file:
-        json.dump(settings, settings_file, indent=4)
-        settings_file.write("\n")
-PY
-}
-
 refresh() {
-    migrate_settings
     prepare_template
+    fit_prune
     write_session_conf "$(wanted_dbcache)"
     link_datadir_conf
 }
 
-# Succeed if settings.json still holds an older CipherStick's dbcache, set on
-# another computer, that Core would warn is too large for this one.
-dbcache_too_big() {
-    local old
-    [ -e "$migrated" ] && return 1
-    old=$(settings_dbcache) && [[ "$old" =~ ^[0-9]+$ ]] && ((old > $(warning_cap)))
+# Succeed if the template's prune target, which Core started with, would leave
+# under 1 GiB free. A target in settings.json is the user's choice in Core's
+# options and wins over the template, so restarting would not change it.
+prune_too_big() {
+    local prune
+    [[ "$(settings_value prune)" =~ ^[0-9]+$ ]] && return 1
+    prune=$(template_prune)
+    ((prune)) && ((prune > $(block_room) - 1024))
 }
 
 # Core's own autostart entry may start Core before this runs, without this
 # session's settings. Core's default dbcache is safe, so leave Core running,
-# unless what it read could fill the computer's RAM or, when PRUNE_TOO_BIG is
-# set, the USB stick. Then restart it at once, while its cache is small.
+# unless its prune target could fill the USB stick. Then restart it at once,
+# while its cache is small.
 login() {
-    local restart=
-    if core_pid >/dev/null && { dbcache_too_big || [ -n "${PRUNE_TOO_BIG:-}" ]; }; then
+    local too_big='' restart=''
+    prune_too_big && too_big=1
+    if [ -n "$too_big" ] && core_pid >/dev/null; then
         restart=1
         stop-btc
     fi
     refresh
+    # Core's autostart may have started it while refresh ran, before the
+    # lowered prune target was written.
+    if [ -n "$too_big" ] && [ -z "$restart" ] && core_pid >/dev/null; then
+        restart=1
+        stop-btc
+    fi
     [ -z "$restart" ] || setsid -f bitcoin-qt -min -chain=main >/dev/null 2>&1
 }
 
@@ -194,6 +231,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
         refresh) refresh ;;
         watch) watch ;;
         far-behind) far_behind ;;
-        *) echo "usage: core-dbcache login | refresh | watch | far-behind" >&2; exit 2 ;;
+        prune) effective_prune ;;
+        *) echo "usage: core-dbcache login | refresh | watch | far-behind | prune" >&2; exit 2 ;;
     esac
 fi

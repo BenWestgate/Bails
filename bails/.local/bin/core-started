@@ -24,6 +24,12 @@
 #################################################
 
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
+# Bitcoin Core may run this without ~/.local/bin on PATH: the session
+# that installed CipherStick logged in before that folder existed.
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) PATH="$HOME/.local/bin:$PATH" ;;
+esac
 
 # Refresh persistent links and schedule the delayed no-peer/Tor reminder for
 # every Bitcoin Core start, not only the installation launch.

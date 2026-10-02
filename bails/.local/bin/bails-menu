@@ -31,6 +31,12 @@ export WAYLAND_DISPLAY=""
 export DOTFILES="/live/persistence/TailsData_unlocked/dotfiles"
 export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
 XDG_DATA_HOME="$DOTFILES/.local/share"
+# The menu entry may start this without ~/.local/bin on PATH: the session
+# that installed CipherStick logged in before that folder existed.
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) PATH="$HOME/.local/bin:$PATH" ;;
+esac
 
 
 onlynet_onion() {
