@@ -32,7 +32,7 @@ expect_failure() {
     [ -z "$out" ] || fail "expected no output on failure, got: $out"
 }
 
-begin='When you click OK, Bitcoin Core will begin to download and process the full Bitcoin block chain (897 GB) starting with the earliest transactions in 2009 when Bitcoin initially launched.'
+begin='Bitcoin Core has begun to download and process the full Bitcoin block chain (897 GB) starting with the earliest transactions in 2009 when Bitcoin initially launched.'
 demanding='This initial synchronisation is very demanding, and may expose hardware problems with your computer that had previously gone unnoticed. Each time you run Bitcoin Core, it will continue downloading where it left off.'
 
 expect_text "<i>Welcome to Bitcoin Core.</i>
