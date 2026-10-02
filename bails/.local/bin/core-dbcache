@@ -1,0 +1,68 @@
+#!/bin/bash
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+
+# Set Bitcoin Core's dbcache for this computer just before Core starts.
+# CipherStick moves between computers, so it is recalculated at each launch.
+#
+# Usage: core-dbcache DATA_DIR [STATE_DIR]
+
+data_dir=${1:?DATA_DIR}
+conf="$data_dir/bitcoin.conf"
+migrated=${2:-/live/persistence/TailsData_unlocked/dotfiles/.local/state}/dbcache-in-bitcoin-conf
+note='# Set by CipherStick at each Bitcoin Core launch to suit this computer.'
+
+# Largest whole MiB Bitcoin Core does not warn about (ShouldWarnOversizedDbCache):
+# max(450 MiB, 75% of (total RAM - 2 GiB)), with total RAM as Core reads it.
+ram=$(( $(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) ))
+((ram > 0)) || { echo "core-dbcache: cannot read total RAM" >&2; exit 1; }
+mib=$((1024 * 1024))
+reserved=$((2048 * mib))
+# Divide before multiplying, exactly as Core does, so both round the same way.
+# shellcheck disable=SC2017
+cap=$(( ram > reserved ? (ram - reserved) / 4 * 3 : 0 ))
+dbcache=$(( cap > 450 * mib ? cap / mib : 450 ))
+
+# Older CipherStick versions wrote dbcache to settings.json, which overrides
+# bitcoin.conf. Remove it once, and only while Core cannot write it back.
+if [ ! -e "$migrated" ] && ! pgrep -x bitcoin-qt >/dev/null && ! pgrep -x bitcoind >/dev/null; then
+    mkdir -p "${migrated%/*}"
+    python3 - "$data_dir/settings.json" <<'PY' && touch "$migrated"
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, encoding="utf-8") as settings_file:
+        settings = json.load(settings_file)
+except FileNotFoundError:
+    sys.exit(0)
+if settings.pop("dbcache", None) is not None:
+    with open(path, "w", encoding="utf-8") as settings_file:
+        json.dump(settings, settings_file, indent=4)
+        settings_file.write("\n")
+PY
+fi
+
+# Keep the setting first in bitcoin.conf, before any network section.
+[ -f "$conf" ] || exit 0
+rest=$(grep -v -x -F -e "$note" "$conf" | grep -v -x 'dbcache=.*')
+printf '%s\ndbcache=%s\n%s\n' "$note" "$dbcache" "$rest" > "$conf"
