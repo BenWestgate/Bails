@@ -29,6 +29,14 @@ readonly BITCOIN_DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitc
 SCRIPT_DIR="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")"
 readonly SCRIPT_DIR
 
+# link-dotfiles puts bitcoin-cli in ~/.local/bin, which the desktop session
+# only has on its PATH if it existed at login. It does not exist yet in the
+# session that installs CipherStick, so the menu entry must add it.
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) PATH="$HOME/.local/bin:$PATH" ;;
+esac
+
 python_supported() {
     python3 -c 'import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)'
 }
@@ -129,7 +137,7 @@ main() {
                 --text='codex32 requires Bitcoin Core 32 or newer. Use CipherStick Settings > Update Bitcoin Core, then restart Bitcoin Core before opening codex32.'
         else
             zenity --error --title='Bitcoin Core unavailable' \
-                --text="codex32 could not reach Bitcoin Core through CipherStick's persistent data directory. Start Bitcoin Core and wait for it to finish starting, then try again."
+                --text="codex32 could not reach Bitcoin Core through CipherStick's persistent data directory. Start Bitcoin Core and wait for it to finish starting, then try again.\n\nIf a Bitcoin Core message is open, it stops Bitcoin Core from finishing starting until you answer it."
         fi
         exit 1
     fi
