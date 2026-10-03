@@ -136,8 +136,8 @@ retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
 retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
     "$release_url/bitcoin-$VER-x86_64-linux-gnu.tar.gz" & get_core=$!
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
-if cd guix.sigs 2>/dev/null; then
-    retry_on_fail git pull -v # Update guix.sigs
+if [ -d guix.sigs ]; then
+    retry_on_fail git -C guix.sigs pull -v # Update guix.sigs
 else
     retry_on_fail git clone $GUIX_SIGS_REPO_URL --depth=1
 fi 
