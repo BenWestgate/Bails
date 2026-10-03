@@ -26,6 +26,7 @@ If applicable, add screenshots to help explain your problem.
 **Desktop (please complete the following information):**
  - USB Stick: [e.g. 64 GB SanDisk Cruzer]
  - RAM: [e.g. 16 GB]
+ - CipherStick version: [from Menu > Help > About, or run `~/.local/share/bails/b --version`; e.g. v0.7.2-alpha (abc1234, 2026-10-03)]
  - CipherStick Installation Date: [e.g. Jan 03, 2024]
 
 **Additional context**
