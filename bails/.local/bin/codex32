@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+###############################################################################
+# Runs the pinned python-codex32 command-line tool, installing or repairing it
+# first if needed. The ms32 command runs this with CODEX32_PROG=ms32, which
+# adds the Bitcoin master-seed commands such as "ms32 wallet".
+###############################################################################
+
+set -euo pipefail
+
+CODEX32_BIN="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")"
+# shellcheck disable=SC1091
+. "$CODEX32_BIN/open-codex32"
+
+case "${CODEX32_PROG:-codex32}" in
+    codex32) entry=main ;;
+    ms32) entry=ms_main ;;
+    *) echo "unknown CODEX32_PROG: $CODEX32_PROG" >&2; exit 2 ;;
+esac
+
+if ! source_is_usable; then
+    echo "Installing the pinned python-codex32..." >&2
+    "$CODEX32_BIN/install-codex32" >&2 || true
+    if ! source_is_usable; then
+        echo "python-codex32 could not be installed." >&2
+        exit 1
+    fi
+fi
+
+# The checkout is run from source, not pip-installed, so it has no package
+# metadata for "codex32 --version"; take the version from pyproject.toml.
+exec env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" CODEX32_SOURCE="$SOURCE_DIR" \
+    python3 -P -c "
+import importlib.metadata, os, tomllib
+installed = importlib.metadata.version
+def version(name):
+    if name != 'codex32':
+        return installed(name)
+    with open(os.path.join(os.environ['CODEX32_SOURCE'], 'pyproject.toml'), 'rb') as file:
+        return tomllib.load(file)['project']['version']
+importlib.metadata.version = version
+from codex32.cli import $entry
+raise SystemExit($entry())
+" "$@"
