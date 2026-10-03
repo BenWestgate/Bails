@@ -20,33 +20,18 @@
 # THE SOFTWARE.
 #
 #################################################
-# autostart: Preloads the chainstate into memory while waiting to connect to peers.
-# quits as soon as progress is made, RAM is full or chainstate is loaded.
+# Run by cipherstick-login when the node is far behind: reads the chainstate
+# into memory in large, fast reads, so catching up needs fewer slow small reads
+# from the USB stick. Quits once the node is nearly synced, RAM is nearly full
+# or the whole chainstate is loaded.
 #################################################
 
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 
-# Refresh persistent links and schedule the delayed no-peer/Tor reminder for
-# every normal Bitcoin Core start, not only the installation launch.
-link-dotfiles --core-startup
-
 cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
 # On first run the chainstate is empty or tiny, so "preloading" it says nothing useful.
 chainstate_mib=$(du -sm chainstate 2>/dev/null | cut -f1)
-if ! grep 'progress=0.999' debug.log; then
-    sleep 30
-    if passwd -S "$USER" | grep NP; then
-        zenity --info --title='Remember to lock your screen' --text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...' --icon-name=system-lock-screen "$ICON" --timeout=10 &
-        tails-screen-locker
-    fi
-else
-    sleep 200
-    if passwd -S "$USER" | grep NP; then
-        zenity --info --title='Remember to lock your screen' --text='Always lock your screen before stepping away from the PC.' --icon-name=system-lock-screen "$ICON" --timeout=5 &
-        tails-screen-locker
-    fi
-fi &>/dev/null &
 
 until grep 'progress=0.999' debug.log; do
     cat chainstate/* &> /dev/null & full_speed=$!
