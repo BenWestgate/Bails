@@ -26,7 +26,8 @@ set -o pipefail
 
 export WAYLAND_DISPLAY=""
 export TEXTDOMAIN='tails'
-export BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export BIN_DIR
 export PYTHONPATH=${PYTHONPATH}:${HOME}/.local/lib/python3/site-packages
 export DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 export LOCAL_DIR=/live/persistence/TailsData_unlocked/dotfiles/.local
@@ -37,13 +38,13 @@ export ICON="--window-icon=$LOCAL_DIR/share/icons/bails128.png"
 [ "$LOCATIONS" ] || LOCATIONS=2
 [ "$THRESHOLD" ] || THRESHOLD='a threshold of'
 
-wallets_made=$(ls $DATA_DIR/wallets | wc -l)
+wallets_made=$(find "$DATA_DIR/wallets" -mindepth 1 -maxdepth 1 -not -name '.*' | wc -l)
 progress=$(tail $DATA_DIR/debug.log | grep -m1 'progress=' | awk '{print $10}' | cut -d'=' -f2)
 
 [ "$LOCATIONS" ] || LOCATIONS=2
 
 ((LOCATIONS > 2)) && plur=s || plur=''
-((LOCATIONS > 2)) && { plurt=s ;plurtt=are; } || { plurt=''; plurtt=is; }
+if ((LOCATIONS > 2)); then plurtt=are; else plurtt=is; fi
 
 # Require backup at 99.9% progress, otherwise check again in 10 minutes.
 [ -e $LOCAL_DIR/state/ibd_backedup ] || if (( $(echo "$progress > 0.999" | bc -l) )); then
@@ -60,7 +61,7 @@ progress=$(tail $DATA_DIR/debug.log | grep -m1 'progress=' | awk '{print $10}' |
     done
 else
     sleep 600
-    $BIN_DIR/ibd-progress
+    "$BIN_DIR"/ibd-progress
     exit 0
 fi
 
@@ -86,8 +87,12 @@ done; touch $LOCAL_DIR/state/ibd_backedup; }
 # Instruct User to distribute their backups offsite
 if (( wallets_made )); then
     zenity --info --title="Distribute your backup USB stick$plur offsite" --text="It is time to distribute your backup USB stick$plur and passphrase fallback command$plur offsite.\n\nThe backup USB stick$plur should be kept cool to retain data.\nIt is more important backup USBs aren't lost than aren't stolen, as they are useless without the passphrase.\n\nA tamper proof bag, safe, locked drawer or cabinent or area under survelliance is better than out in the open if you fear they may get tampered with.\nIf you suspect a backup USB has been tampered with, do <b>NOT</b> boot it, use a different backup or if that is not possible, make a new Tails, start it and then insert the suspect backup to retrieve your data.\n\nEach passphrase fallback command should be stored relatively nearby each CipherStick for convenience, but since these are paper, heat is less important than avoiding moisture. If desired, they can be hidden better than the USB sticks to make your passphrase safer from theft.\n\nEach offsite backup location should be at least a few miles from another, if possible, to protect against natural disasters.\n\nFinally for inheritance, your heirs must be able to find $THRESHOLD paper fallback commands and one CipherStick to access your Bitcoin data.\n\nIf you do not think heirs will be able to do so, you should leave them hints on the whereabouts of these items so they will and educate them how to use CipherStick and the fallback commands.\n\nClick Ok once you understand these instructions." --ellipsize $ICON
-    zenity --question --title='Confirm backups have been tested & secured offsite.' --text="If your backup$plur have been tested and secured to offsite location$plur click 'Yes', if you have not done so, click 'No' and you will be reminded later." --default-cancel $ICON && { rm $DOTFILES/.config/autostart/{ibd-progress,wallet-watch}.desktop; exit 0; } || zenity --warning --title='Risk of Bitcoin data loss' --text='Warning: If you fund a wallet but do not geographically distribute your backup USB sticks and passphrase fallbacks and something happens to your current location, you will <b>LOSE ALL YOUR BITCOINS</b>!\n\nDo you understand this risk?' $ICON &
+    if zenity --question --title='Confirm backups have been tested & secured offsite.' --text="If your backup$plur have been tested and secured to offsite location$plur click 'Yes', if you have not done so, click 'No' and you will be reminded later." --default-cancel $ICON; then
+        rm $DOTFILES/.config/autostart/{ibd-progress,wallet-watch}.desktop
+        exit 0
+    fi
+    zenity --warning --title='Risk of Bitcoin data loss' --text='Warning: If you fund a wallet but do not geographically distribute your backup USB sticks and passphrase fallbacks and something happens to your current location, you will <b>LOSE ALL YOUR BITCOINS</b>!\n\nDo you understand this risk?' $ICON &
     # wait 24 hours
     sleep 86400
 fi
-$BIN_DIR/ibd-progress
+"$BIN_DIR"/ibd-progress
