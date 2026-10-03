@@ -245,7 +245,6 @@ else
     # Disable pruning if USB stick is large enough
     prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
     echo '{
-        "dbcache": "450",
         "onion": "127.0.0.1:9050",
         "proxy": "127.0.0.1:9050",
         "prune": "'$prune_MiB'",
