@@ -68,6 +68,11 @@ fi
 assumed_sizes="/live/persistence/TailsData_unlocked/dotfiles/.local/state/core-assumed-sizes"
 assumed_chain_state_gb="$(sed -n 's/^chain_state_gb=\([0-9][0-9]*\)$/\1/p' "$assumed_sizes" 2>/dev/null)"
 assumed_blockchain_gb="$(sed -n 's/^blockchain_gb=\([0-9][0-9]*\)$/\1/p' "$assumed_sizes" 2>/dev/null)"
+if [[ ! "$assumed_chain_state_gb" =~ ^[0-9]+$ ]]; then
+    zenity --error --title='Unable to check chainstate size' \
+        --text="CipherStick could not find Bitcoin Core's expected chainstate size, so it cannot check that AssumeUTXO will fit. Update Bitcoin Core from Settings, then try again."
+    exit 1
+fi
 chain_bytes="$(sed -n 's/^[[:space:]]*"size_on_disk"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\),\{0,1\}[[:space:]]*$/\1/p' <<<"$chain_info")"
 if [[ ! "$chain_bytes" =~ ^[0-9]+$ ]]; then
     zenity --error --title='Unable to check block storage' \
@@ -97,9 +102,7 @@ future_block_growth=0
 # The snapshot file is packed, so the chainstate Core builds from it is
 # larger. Use 1.5 times the file, or Core's own chainstate estimate if larger.
 chainstate_bytes=$((snapshot_bytes * 3 / 2))
-if [[ "$assumed_chain_state_gb" =~ ^[0-9]+$ ]] && ((assumed_chain_state_gb * 1000000000 > chainstate_bytes)); then
-    chainstate_bytes=$((assumed_chain_state_gb * 1000000000))
-fi
+((assumed_chain_state_gb * 1000000000 > chainstate_bytes)) && chainstate_bytes=$((assumed_chain_state_gb * 1000000000))
 
 # During background validation Bitcoin Core keeps both the snapshot chainstate
 # and the historical chainstate. Reserve both, the remaining block growth, and
