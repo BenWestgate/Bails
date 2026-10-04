@@ -64,33 +64,52 @@ if [[ ! "$snapshot_bytes" =~ ^[0-9]+$ || ! "$available_bytes" =~ ^[0-9]+$ ]]; th
     exit 1
 fi
 
-# A pruned node can still grow its blocks/ directory back to the configured
-# target after import. Account for that future growth now, in addition to both
-# chainstates, so the drive cannot pass this check and later fill simply because
-# automatic pruning has not reached its target yet.
-future_block_growth=0
+# Sizes Bitcoin Core assumed for this chain, recorded by install-core.
+assumed_sizes="/live/persistence/TailsData_unlocked/dotfiles/.local/state/core-assumed-sizes"
+assumed_chain_state_gb="$(sed -n 's/^chain_state_gb=\([0-9][0-9]*\)$/\1/p' "$assumed_sizes" 2>/dev/null)"
+assumed_blockchain_gb="$(sed -n 's/^blockchain_gb=\([0-9][0-9]*\)$/\1/p' "$assumed_sizes" 2>/dev/null)"
+chain_bytes="$(sed -n 's/^[[:space:]]*"size_on_disk"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\),\{0,1\}[[:space:]]*$/\1/p' <<<"$chain_info")"
+if [[ ! "$chain_bytes" =~ ^[0-9]+$ ]]; then
+    zenity --error --title='Unable to check block storage' \
+        --text="CipherStick could not read how much block data Bitcoin Core stores, so it cannot check that AssumeUTXO will fit."
+    exit 1
+fi
+
+# blocks/ keeps growing after import: up to the prune target on a pruned node,
+# or to the whole blockchain on an unpruned one.
 if grep -q '"pruned"[[:space:]]*:[[:space:]]*true' <<<"$chain_info"; then
-    prune_target_bytes="$(sed -n 's/^[[:space:]]*"prune_target_size"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\),\{0,1\}[[:space:]]*$/\1/p' <<<"$chain_info")"
-    chain_bytes="$(sed -n 's/^[[:space:]]*"size_on_disk"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\),\{0,1\}[[:space:]]*$/\1/p' <<<"$chain_info")"
-    if [[ ! "$prune_target_bytes" =~ ^[0-9]+$ || ! "$chain_bytes" =~ ^[0-9]+$ ]]; then
+    block_limit_bytes="$(sed -n 's/^[[:space:]]*"prune_target_size"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\),\{0,1\}[[:space:]]*$/\1/p' <<<"$chain_info")"
+    if [[ ! "$block_limit_bytes" =~ ^[0-9]+$ ]]; then
         zenity --error --title='Unable to check prune reserve' \
-            --text="CipherStick could not read Bitcoin Core's current prune target, so it cannot safely reserve space for both AssumeUTXO chainstates."
+            --text="CipherStick could not read Bitcoin Core's current prune target, so it cannot check that AssumeUTXO will fit."
         exit 1
     fi
-    if ((prune_target_bytes > chain_bytes)); then
-        future_block_growth=$((prune_target_bytes - chain_bytes))
-    fi
+elif [[ "$assumed_blockchain_gb" =~ ^[0-9]+$ ]]; then
+    block_limit_bytes=$((assumed_blockchain_gb * 1000000000))
+else
+    zenity --error --title='Unable to check block storage' \
+        --text="CipherStick could not find the expected blockchain size for this unpruned node, so it cannot check that AssumeUTXO will fit. Continue with normal synchronization."
+    exit 1
+fi
+future_block_growth=0
+((block_limit_bytes > chain_bytes)) && future_block_growth=$((block_limit_bytes - chain_bytes))
+
+# The snapshot file is packed, so the chainstate Core builds from it is
+# larger. Use 1.5 times the file, or Core's own chainstate estimate if larger.
+chainstate_bytes=$((snapshot_bytes * 3 / 2))
+if [[ "$assumed_chain_state_gb" =~ ^[0-9]+$ ]] && ((assumed_chain_state_gb * 1000000000 > chainstate_bytes)); then
+    chainstate_bytes=$((assumed_chain_state_gb * 1000000000))
 fi
 
 # During background validation Bitcoin Core keeps both the snapshot chainstate
-# and the historical chainstate. Reserve two snapshot-sized state stores, the
-# remaining automatic-prune growth, and 2 GB of working headroom.
-required_bytes=$((snapshot_bytes * 2 + future_block_growth + 2000000000))
+# and the historical chainstate. Reserve both, the remaining block growth, and
+# 2 GB of working headroom.
+required_bytes=$((chainstate_bytes * 2 + future_block_growth + 2000000000))
 if ((available_bytes < required_bytes)); then
     missing_gb=$(((required_bytes - available_bytes + 999999999) / 1000000000))
     future_growth_gb=$(((future_block_growth + 999999999) / 1000000000))
     zenity --error --title='More Persistent Storage required' \
-        --text="AssumeUTXO needs room for two chainstates and up to ${future_growth_gb} GB of additional block growth before pruning reaches its target. Free at least ${missing_gb} GB more, or continue with normal synchronization."
+        --text="AssumeUTXO needs room for two chainstates and up to ${future_growth_gb} GB of additional block data. Free at least ${missing_gb} GB more, or continue with normal synchronization."
     exit 1
 fi
 
