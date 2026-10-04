@@ -62,7 +62,34 @@ A new wallet's export is about 12 KB, too big for one QR code. Compressed
 it is about 2.4 KB, which fits in one large, dense QR code. Hold the
 screens steady and close together when scanning.
 
+## Send bitcoin
+
+Every crossing uses the same two commands: show a file as a QR code on
+one stick, and scan it on the other.
+
+```bash
+gzip -9 < FILE | qr --error-correction=L > FILE.png && xdg-open FILE.png   # show
+zbarcam --raw -Sbinary --oneshot | gunzip > FILE                           # scan
+```
+
+1. **CipherStick:** in the **Send** tab, fill in the payment and click
+   **Create Unsigned**. Save it as `unsigned.psbt` and show it.
+2. **CryoStick:** scan it into `unsigned.psbt`. Choose **File** >
+   **Load PSBT from file**, check the amount and address, click
+   **Sign Tx**, save it as `signed.psbt` and show it.
+3. **CipherStick:** scan it into `signed.psbt`. Choose **File** >
+   **Load PSBT from file** and click **Broadcast Tx**.
+
+A one-input payment is about 500 bytes, so its QR code is small.
+
+## Testing without two computers
+
+`tests/cryostick-qr-roundtrip.sh` runs the whole flow on one computer:
+both sticks' wallets on one regtest node, and every crossing through a
+real QR image read back with `zbarimg` instead of a webcam. Only the
+camera itself needs two real computers.
+
 ## Still to do
 
-Tracked in #312: scripting the QR crossings for addresses and PSBTs, and
-the receive-address check.
+Tracked in #312: the receive-address check, and scripting the
+crossings so users don't type commands.
