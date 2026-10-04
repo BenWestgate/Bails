@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# A CryoStick is a CipherStick that never goes online and is used to
+# create the signing wallet and sign. Started at every login, this asks
+# once, on a computer with no network, whether this stick is a CryoStick.
+# On a CryoStick it shows a red desktop and the CryoStick launcher so it
+# can't be mistaken for a CipherStick, and shuts Tails down as soon as any
+# network device appears.
+
+# shellcheck source=/dev/null
+. ~/.profile
+DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
+CRYOSTICK="$DOTFILES/.local/state/cryostick"
+CIPHERSTICK="$DOTFILES/.local/state/cipherstick"
+
+# True if Linux sees any network device besides loopback. Tails' Offline
+# Mode loads no network drivers, and the CryoStick guide also disables
+# networking in the BIOS, so on a CryoStick only "lo" should exist.
+network_found() {
+    local dev
+    for dev in /sys/class/net/*; do
+        [ "${dev##*/}" = lo ] || return 0
+    done
+    return 1
+}
+
+if [ ! -e "$CRYOSTICK" ]; then
+    [ -e "$CIPHERSTICK" ] || network_found && exit 0
+    if zenity --question --title='Make a CryoStick?' --width=480 \
+        --icon-name=cryostick128 --ok-label='Make CryoStick' \
+        --cancel-label='Keep CipherStick' --default-cancel \
+        --text='This computer has no network. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
+
+A CryoStick has a red desktop, and shuts down if it ever finds a network.'; then
+        touch "$CRYOSTICK"
+    else
+        touch "$CIPHERSTICK"
+        exit 0
+    fi
+fi
+
+gsettings set org.gnome.desktop.background picture-options none
+gsettings set org.gnome.desktop.background color-shading-type solid
+gsettings set org.gnome.desktop.background primary-color '#c01c28'
+# Updates restore the CipherStick launcher, so reapply this at every login.
+sed --in-place 's/^Name=CipherStick$/Name=CryoStick/; s/^Icon=bails128$/Icon=cryostick128/' \
+    "$DOTFILES/.local/share/applications/bails.desktop"
+
+until network_found; do sleep 5; done
+zenity --error --title='CryoStick found a network' --width=480 --timeout=30 \
+    --icon-name=cryostick128 --ok-label='Shut Down' \
+    --text='This CryoStick must never go online, but this computer has a network device. Tails will shut down now.
+
+Start it again with networking disabled in the BIOS, and with Offline Mode turned on in the Welcome Screen.'
+stop-btc
+systemctl poweroff
