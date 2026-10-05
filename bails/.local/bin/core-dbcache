@@ -1,0 +1,308 @@
+#!/bin/bash
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+
+
+# Give Bitcoin Core a dbcache that suits this computer without ever writing a
+# value derived from its RAM to Persistent Storage.
+#
+# The persistent bitcoin.conf is a template. Each session, CipherStick writes
+# ~/.bitcoin/bitcoin.conf in RAM from it, adding dbcache. The data directory's
+# bitcoin.conf links to that copy, so Core reads it however it is started.
+#
+# When the node's tip is more than 14 days behind, as after weeks unused, the
+# dbcache is the largest Bitcoin Core does not warn about, to catch up faster
+# with fewer writes to the USB stick. Nearer the tip, Core picks its own
+# default, so users who log in weekly never wait for a large cache to flush at
+# shutdown.
+#
+# Usage:
+#   core-dbcache login [missed-autostart]
+#                             at login: write this session's bitcoin.conf;
+#                             replay Core's autostart if Persistent Folder was off
+#   core-dbcache refresh      rewrite it after the template changes
+#   core-dbcache watch        while Core runs, record the time of its tip
+#   core-dbcache far-behind   succeed if the tip is more than 14 days behind
+#   core-dbcache prune        print the prune target Core uses, 0 if unpruned
+
+DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
+STATE_DIR=${STATE_DIR:-/live/persistence/TailsData_unlocked/dotfiles/.local/state}
+TEMPLATE=${TEMPLATE:-/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf}
+SESSION_CONF=${SESSION_CONF:-$HOME/.bitcoin/bitcoin.conf}
+AUTOSTART=${AUTOSTART:-$HOME/.config/autostart/bitcoin.desktop}
+tip="$STATE_DIR/bitcoin-core-tip"
+
+cli() { bitcoin-cli -datadir="$DATA_DIR" "$@"; }
+
+core_pid() { pgrep -xo bitcoin-qt || pgrep -xo bitcoind; }
+
+# Succeed if Core's own login autostart, set in its options, is on.
+autostart_on() { [ -f "$AUTOSTART" ] && ! grep -qx 'Hidden=true' "$AUTOSTART"; }
+
+# Wait up to $1 seconds for Core to start. Fail if it does not.
+wait_core() {
+    local i
+    for ((i = 0; i < $1; i++)); do
+        core_pid >/dev/null && return
+        sleep 1
+    done
+    core_pid >/dev/null
+}
+
+# Succeed if Core's tip is more than 14 days old, or was never recorded.
+far_behind() { [ -z "$(find "$tip" -mtime -14 2>/dev/null)" ]; }
+
+# Print MiB the block files and chainstate could use: what the block files use
+# now plus the free space.
+disk_room() {
+    local free blocks
+    free=$(df --output=avail "$DATA_DIR" | tail -1)
+    blocks=$(du --summarize "$DATA_DIR/blocks" 2>/dev/null | cut -f1)
+    echo $(( (free + ${blocks:-0}) / 1024 ))
+}
+
+# Print MiB the chainstate uses now, 0 before Core has created it.
+chainstate_mib() {
+    local mib
+    mib=$(du --summarize --block-size=1M "$DATA_DIR/chainstate" 2>/dev/null | cut -f1)
+    echo "${mib:-0}"
+}
+
+# Print MiB the chainstate may still grow by during initial sync: up to Bitcoin
+# Core's own estimate, which install-core records. Fail if it isn't recorded.
+chainstate_growth() {
+    local gb growth
+    gb=$(sed -n 's/^chain_state_gb=\([0-9][0-9]*\)$/\1/p' "$STATE_DIR/core-assumed-sizes" 2>/dev/null)
+    [ -n "$gb" ] || return 1
+    growth=$(( gb * 1000000000 / 1048576 - $(chainstate_mib) ))
+    echo $(( growth > 0 ? growth : 0 ))
+}
+
+# Print MiB the block files may use: the room above, less what the chainstate
+# may still need.
+block_room() { echo $(( $(disk_room) - $(chainstate_growth || echo 0) )); }
+
+# Print the template's prune target in MiB, 0 if unpruned.
+template_prune() {
+    local prune
+    prune=$(sed -n 's/^prune=\([0-9]*\)$/\1/p' "$TEMPLATE" 2>/dev/null | head -1)
+    echo "${prune:-0}"
+}
+
+# Set a key in the template's default section, replacing any earlier value
+# or commented example of it while preserving network-specific overrides.
+set_template() {
+    [ -f "$TEMPLATE" ] || return 0
+    sed -i "1,/^\[/ { /^#\?$1=/d; }" "$TEMPLATE"
+    sed -i "1i $1=$2" "$TEMPLATE"
+}
+
+# Keep the template's automatic prune target near 10 GiB of free space, the
+# margin Bitcoin Core's welcome dialog uses. Retarget, raising or lowering it,
+# only when it would leave more than 11 GiB or less than 1 GiB free, so it is
+# not rewritten at every start. Never below 1907 MiB, Core's 2 GB default.
+# prune=0 stays unpruned and prune=1 stays under manual RPC-controlled pruning.
+# The automatic target is persisted: a pruned blocks folder shows the stick's
+# size anyway.
+fit_prune() {
+    local prune room target
+    prune=$(template_prune)
+    ((prune > 1)) || return 0
+    room=$(block_room)
+    (( room - prune > 11264 || room - prune < 1024 )) || return 0
+    # Without Core's chainstate estimate, the free space may be the room the
+    # chainstate still needs, so only lower the target.
+    (( room - prune > 11264 )) && ! chainstate_growth >/dev/null && return 0
+    target=$(( room - 10240 > 1907 ? room - 10240 : 1907 ))
+    ((target == prune)) || set_template prune "$target"
+}
+
+# Print the prune target Core uses: the user's choice in Core's options, kept
+# in settings.json, or else the template's. 0 if unpruned.
+effective_prune() {
+    local prune
+    prune=$(settings_value prune)
+    [[ "$prune" =~ ^[0-9]+$ ]] && { echo "$prune"; return; }
+    template_prune
+}
+
+# Print the largest dbcache in MiB that Core does not warn about
+# (ShouldWarnOversizedDbCache): max(450 MiB, 75% of (total RAM - 2 GiB)), with
+# total RAM as Core reads it.
+warning_cap() {
+    local ram mib=$((1024 * 1024)) reserved cap
+    ram=$(( $(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) ))
+    ((ram > 0)) || { echo "core-dbcache: cannot read total RAM" >&2; return 1; }
+    reserved=$((2048 * mib))
+    # Divide before multiplying, exactly as Core does, so both round the same way.
+    # shellcheck disable=SC2017
+    cap=$(( ram > reserved ? (ram - reserved) / 4 * 3 : 0 ))
+    echo $(( cap > 450 * mib ? cap / mib : 450 ))
+}
+
+# Print the dbcache in MiB to start Core with, or nothing to let Core choose.
+wanted_dbcache() {
+    far_behind || return 0
+    warning_cap
+}
+
+# Keep the persistent template free of RAM-derived dbcache. Remove CipherStick's
+# old core-started startup hook if an earlier build of this branch wrote it;
+# otherwise leave startupnotify under the user's control.
+prepare_template() {
+    [ -f "$TEMPLATE" ] || return 0
+    local updated
+    updated=$(grep -v -x -e 'startupnotify=\(.*/\)\?core-started' -e 'dbcache=.*' "$TEMPLATE")
+    [ "$updated" = "$(cat "$TEMPLATE")" ] || printf '%s\n' "$updated" >"$TEMPLATE"
+}
+
+# Write this session's bitcoin.conf in RAM: the template, plus dbcache when $1
+# is set.
+write_session_conf() {
+    [ -f "$TEMPLATE" ] || return 0
+    local tmp
+    mkdir -p "${SESSION_CONF%/*}"
+    tmp=$(mktemp "${SESSION_CONF%/*}/.bitcoin.conf.XXXXXX") || return 1
+    {
+        [ -z "$1" ] || echo "dbcache=$1"
+        cat "$TEMPLATE"
+    } >"$tmp" && mv -f "$tmp" "$SESSION_CONF"
+}
+
+# Point the data directory's bitcoin.conf, which Bitcoin Core's window reads,
+# at the session copy. The link holds only a path, nothing about this computer.
+link_datadir_conf() {
+    local conf="$DATA_DIR/bitcoin.conf"
+    [ -d "$DATA_DIR" ] || return 0
+    [ "$(readlink "$conf")" = "$SESSION_CONF" ] && return
+    ln -sfn "$SESSION_CONF" "$conf"
+}
+
+# A real bitcoin.conf in the data directory is the user's own. Launchers used
+# to pass -datadir, so Core read only that file. Make it the template, so Core
+# keeps those settings and still gets this session's: keep a backup of the old
+# template, and add the datadir line launchers no longer pass.
+adopt_datadir_conf() {
+    local conf="$DATA_DIR/bitcoin.conf" tmp
+    [ -f "$conf" ] && [ ! -L "$conf" ] || return 0
+    mkdir -p "${TEMPLATE%/*}" || return 1
+    [ ! -f "$TEMPLATE" ] || cp -f "$TEMPLATE" "$TEMPLATE.before-datadir-conf" || return 1
+    tmp=$(mktemp "${TEMPLATE%/*}/.bitcoin.conf.XXXXXX") || return 1
+    {
+        grep -q '^datadir=' "$conf" || echo "datadir=$DATA_DIR"
+        cat "$conf"
+    } >"$tmp" && mv -f "$tmp" "$TEMPLATE" && rm -f "$conf" &&
+        echo "core-dbcache: moved $conf to $TEMPLATE; old template kept as $TEMPLATE.before-datadir-conf" >&2
+}
+
+# Print a value from Core's settings.json, if set.
+settings_value() {
+    python3 - "$DATA_DIR/settings.json" "$1" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as settings_file:
+        print(json.load(settings_file).get(sys.argv[2], ""))
+except FileNotFoundError:
+    pass
+PY
+}
+
+refresh() {
+    adopt_datadir_conf || return 1
+    prepare_template || return 1
+    fit_prune || return 1
+    write_session_conf "$(wanted_dbcache)" || return 1
+    link_datadir_conf
+}
+
+# Succeed if the template's automatic prune target, which Core started with,
+# would leave under 1 GiB free. A target in settings.json is the user's choice
+# in Core's options and wins over the template, so restarting would not change
+# it. prune=1 is manual pruning and is never retargeted.
+prune_too_big() {
+    local prune
+    [[ "$(settings_value prune)" =~ ^[0-9]+$ ]] && return 1
+    prune=$(template_prune)
+    ((prune > 1)) && ((prune > $(block_room) - 1024))
+}
+
+# Core's own autostart entry may start Core before this runs, without this
+# session's settings. Core's default dbcache is safe, so leave Core running,
+# unless its prune target could fill the USB stick, the template still has a
+# dbcache from an older CipherStick, sized for another computer, or the user's
+# own config in the data directory is not yet the template, which stops Core
+# with a config error. Then restart it at once, while its cache is small.
+# persistent-setup normally guarantees the data directory exists before login;
+# still fail safely if it is unexpectedly unavailable.
+login() {
+    local unsafe='' restart='' conflict='' missed=${1:-} conf="$DATA_DIR/bitcoin.conf"
+    [ -d "$DATA_DIR" ] || return 1
+    [ -f "$conf" ] && [ ! -L "$conf" ] && conflict=1
+    { prune_too_big || grep -q '^dbcache=' "$TEMPLATE" 2>/dev/null ||
+        [ -n "$conflict" ]; } && unsafe=1
+    if [ -n "$unsafe" ] && core_pid >/dev/null; then
+        restart=1
+        stop-btc
+    fi
+    refresh || return 1
+    # Core's autostart may have started it while refresh ran, before the
+    # template was fixed.
+    if [ -n "$unsafe" ] && [ -z "$restart" ] && core_pid >/dev/null; then
+        restart=1
+        stop-btc
+    fi
+    # Or it may already have stopped on that config error, unseen by either
+    # check. Give the autostart a moment, then start Core if it did not.
+    if [ -n "$conflict" ] && [ -z "$restart" ] && autostart_on; then
+        wait_core 10 || restart=1
+    fi
+    # If Persistent Folder was disabled at login, Core's desktop autostart may
+    # have failed before the user restored it. Re-run only that missed start.
+    if [ "$missed" = missed-autostart ] && [ -z "$restart" ] && autostart_on; then
+        wait_core 1 || restart=1
+    fi
+    [ -z "$restart" ] || setsid -f bitcoin-qt -min -chain=main >/dev/null 2>&1
+}
+
+# While Core runs, give the marker the time of Core's tip block, so the next
+# login knows how far behind the node is.
+watch() {
+    local time
+    while sleep 600; do
+        core_pid >/dev/null || continue
+        time=$(cli getblockheader "$(cli getbestblockhash)" 2>/dev/null |
+            python3 -c 'import json, sys; print(json.load(sys.stdin)["time"])') || continue
+        mkdir -p "$STATE_DIR" && touch -d "@$time" "$tip"
+    done
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    case ${1:-} in
+        login) login "${2:-}" ;;
+        refresh) refresh ;;
+        watch) watch ;;
+        far-behind) far_behind ;;
+        prune) effective_prune ;;
+        *) echo "usage: core-dbcache login | refresh | watch | far-behind | prune" >&2; exit 2 ;;
+    esac
+fi

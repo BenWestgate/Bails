@@ -1,8 +1,6 @@
 [Desktop Entry]
 Type=Application
 Name=Bitcoin
-Exec=wrapped bitcoin-qt -datadir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin -chain=main -startupnotify=chainstate-preload
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -min -chain=main
 Terminal=false
 Hidden=false
-StartupWMClass=Bitcoin-qt
-SingleMainWindow=true

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=CipherStick
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/cipherstick-login
+Terminal=false
+Hidden=false
+NoDisplay=true

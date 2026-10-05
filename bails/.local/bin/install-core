@@ -219,7 +219,15 @@ until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure CipherStick inst
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
-rsync -vhb --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
+# The persistent bitcoin.conf holds every setting the user or CipherStick
+# made, possibly the user's own config adopted by core-dbcache, so an update
+# keeps it and installs only the new README.md.
+if [ -f "$DOTFILES/.bitcoin/bitcoin.conf" ]; then
+    rm -f "$LOCAL_DIR/bitcoin.conf"
+    rsync -vhb --remove-source-files "$LOCAL_DIR/README.md" $DOTFILES/.bitcoin
+else
+    rsync -vhb --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
+fi
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
@@ -233,24 +241,25 @@ else
     ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
     assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
     assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    # core-dbcache keeps room for the chainstate to grow to Core's estimate.
+    printf 'chain_state_gb=%s\nblockchain_gb=%s\n' "$assumed_chain_state_size" "$assumed_blockchain_size" > $XDG_STATE_HOME/core-assumed-sizes
     # Move completed verified download to persistent storage
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
     ln --symbolic --force -b /media/"$USER" $DATA_DIR/wallets     # links media mount directory to wallets folder for easier loading of watch encrypted or external media wallets
     ln --symbolic --force -b {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
-    ln --symbolic --force -b $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
+    ln --symbolic --force -b $DOTFILES/.bitcoin/README.md $DATA_DIR # symlinks to dotfiles/.bitcoin
+    ln --symbolic --force -b "$HOME"/.bitcoin/bitcoin.conf $DATA_DIR # symlinks to the session copy in RAM
     # Calculate space available for block file storage
     space=$(($(df --output=avail $SOURCE | tail -1) * 1024 / 10 ** 9 - assumed_chain_state_size - 10))
     prune_GB=$((space > 2 ? space : 2 ))
     # Disable pruning if USB stick is large enough
     prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
-    echo '{
-        "dbcache": "450",
-        "onion": "127.0.0.1:9050",
-        "proxy": "127.0.0.1:9050",
-        "prune": "'$prune_MiB'",
-        "server": true
-    }' > $DATA_DIR/settings.json # Enable server, proxies for Tor and prune
+    # Enable the RPC server, Tor proxies and prune in the persistent
+    # bitcoin.conf, leaving settings.json to Core's options window.
+    for setting in server=1 proxy=127.0.0.1:9050 onion=127.0.0.1:9050 prune=$prune_MiB; do
+        sed -i "/^#\?${setting%%=*}=/d; 1i $setting" "$DOTFILES/.bitcoin/bitcoin.conf"
+    done
     
     if ((prune_MiB)); then
         storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."
@@ -268,5 +277,6 @@ This initial synchronisation is very demanding, and may expose hardware problems
     . "$HOME"/.profile
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
-wrapped bitcoin-qt -min -startupnotify=chainstate-preload
+core-dbcache refresh
+setsid -f bitcoin-qt -min >/dev/null 2>&1
 touch $XDG_STATE_HOME/installed
