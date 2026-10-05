@@ -20,72 +20,50 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# CipherStick's login steps, run by cipherstick.desktop. They are kept apart
-# from Bitcoin Core's own autostart entry, which its options can replace.
+# CipherStick's login steps, run by cipherstick.desktop.
 ###############################################################################
-BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
-BITCOIN_ADDRESS_SELFISH=	# TODO: add these
+BITCOIN_ADDRESS_BENEVOLENT=bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl
+BITCOIN_ADDRESS_SELFISH=bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl
 export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
-
-# CipherStick requires the Persistent Folder, GnuPG and Dotfiles. Remember if
-# Persistent Folder was disabled before persistent-setup, because Core's own
-# desktop autostart may already have failed against the missing data directory.
-persistent_folder_was_off=''
-/usr/local/lib/tpscli is-active PersistentDirectory || persistent_folder_was_off=1
-persistent-setup
-
-autostart_on() {
-    local entry="$HOME/.config/autostart/bitcoin.desktop"
-    [ -f "$entry" ] && ! grep -qx 'Hidden=true' "$entry"
-}
+persistent-setup # Checks needed persistent features are on.
 
 # Write this session's bitcoin.conf. Core's independent login autostart may race
-# this step; core-dbcache owns every restart. If Persistent Folder was off, ask
-# it to replay the one Core autostart that could have failed before setup.
-if [ -n "$persistent_folder_was_off" ]; then
-    core-dbcache login missed-autostart || exit 1
-else
-    core-dbcache login || exit 1
-fi
+# this step; core-dbcache owns every restart.
+core-dbcache login || exit 1
 core-dbcache watch &
-
-# At login only, run the sync helpers when Bitcoin Core is also starting.
-core_starting() { autostart_on || pgrep -x bitcoin-qt >/dev/null; }
 
 # Symlink at default datadir to our custom datadir
 ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
 
-if core_starting; then
-    # Refresh the session links and start the delayed no-peer/Tor reminder.
-    link-dotfiles --core-login
+# Refresh the session links and start the delayed no-peer/Tor reminder.
+link-dotfiles --core-login
 
-    # When far behind, read the chainstate into RAM while Core starts and finds
-    # peers. Manual Core starts later in the session never trigger a preload.
-    core-dbcache far-behind && chainstate-preload &
+# When far behind, read the chainstate into RAM while Core starts and finds
+# peers. Manual Core starts later in the session never trigger a preload.
+core-dbcache far-behind && chainstate-preload &
 
-    # Remind users without a login password to lock the screen while Core runs.
-    (
-        cd "$DATA_DIR" || exit 1
-        if ! grep 'progress=0.999' debug.log; then
-            sleep 30
-            if passwd -S "$USER" | grep NP; then
-                zenity --info --title='Remember to lock your screen' --text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...' --icon-name=system-lock-screen "$ICON" --timeout=10 &
-                tails-screen-locker
-            fi
-        else
-            sleep 200
-            if passwd -S "$USER" | grep NP; then
-                zenity --info --title='Remember to lock your screen' --text='Always lock your screen before stepping away from the PC.' --icon-name=system-lock-screen "$ICON" --timeout=5 &
-                tails-screen-locker
-            fi
+# Remind users without a login password to lock the screen while Core runs.
+(
+    cd "$DATA_DIR" || exit 1
+    if ! grep 'progress=0.999' debug.log; then
+        sleep 30
+        if passwd -S "$USER" | grep NP; then
+            zenity --info --title='Remember to lock your screen' --text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...' --icon-name=system-lock-screen "$ICON" --timeout=10 &
+            tails-screen-locker
         fi
-    ) &>/dev/null &
-fi
+    else
+        sleep 200
+        if passwd -S "$USER" | grep NP; then
+            zenity --info --title='Remember to lock your screen' --text='Always lock your screen before stepping away from the PC.' --icon-name=system-lock-screen "$ICON" --timeout=5 &
+            tails-screen-locker
+        fi
+    fi
+) &>/dev/null &
 
 # Put CipherStick, Bitcoin Core and codex32 first in the dock. Keep every other
 # favorite as Tails or the user set it, so renamed or replaced Tails apps need
