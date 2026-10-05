@@ -37,13 +37,13 @@ Bitcoin Core provides **exclusive privacy features**, making it challenging for 
 ## You need
 - **1 USB stick** or memory card, 32 GB minimum
     - If you need a USB stick, see our [recommended USB sticks](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#what-type-of-flash-drive-should-i-get) for top speed
-- **2 GB of RAM** computer made in the last 15 years
+- **3 GB of RAM** computer made in the last 15 years
     - If you need a computer, see our [recommended computers](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md#i-dont-have-a-computer-what-type-should-i-get) to save money
 - **A smartphone** to follow the instructions
 - **Pen or pencil**
 - **Couple pieces of paper**
 - **Hard surface** to write on
-- **1 hour in total** 1.4 GB to download, ½ hour to install Tails, ¼ hour to setup CipherStick
+- **1 hour in total** 1.8 GB to download, ½ hour to install Tails, ¼ hour to setup CipherStick
 
 ## Your steps
 
@@ -76,7 +76,6 @@ In the next steps, you will shut down the computer. To be able to follow the res
     ```bash
     git clone https://github.com/benwestgate/bails&&bails/b
     ```
-    ![image](https://github.com/BenWestgate/Bails/assets/73506583/0522b2fe-5f7e-4548-a74e-e78ce6c52c53)
 1. Follow the instructions on Screen.
 1. You're Done!
    - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make CipherStick even better!
