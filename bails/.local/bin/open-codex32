@@ -83,16 +83,10 @@ wait_for_core() {
 }
 
 core_process_running() {
-    local datadir_pattern
-
-    # The managed desktop entry starts "wrapped bitcoin-qt ...", so matching
-    # the full command line sees both that pre-bitcoin-qt launch interval and
-    # the eventual bitcoin-qt child. Bind the match to our persistent datadir
-    # so an unrelated Core process owned by the same user is ignored.
-    datadir_pattern="${BITCOIN_DATA_DIR//./[.]}"
-    pgrep -u "$(id -u)" -f -- \
-        "bitcoin-qt[[:space:]].*[[:space:]]-datadir=${datadir_pattern}([[:space:]]|$)" \
-        >/dev/null 2>&1
+    # Match the full command line, so a launch through the old "wrapped
+    # bitcoin-qt ..." wrapper counts as well as bitcoin-qt itself. Launchers no
+    # longer pass -datadir: Core finds the persistent datadir in its config.
+    pgrep -u "$(id -u)" -f -- '(^|[/[:space:]])bitcoin-qt([[:space:]]|$)' >/dev/null 2>&1
 }
 
 wait_for_running_core() {

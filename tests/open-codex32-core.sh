@@ -85,8 +85,8 @@ assert_status 1
 mock_status=1
 assert_status 2
 
-# Process detection must cover the managed wrapper interval as well as the
-# bitcoin-qt child, while binding the match to CipherStick's exact datadir.
+# Process detection must cover bitcoin-qt however it was launched, directly
+# or through the old wrapper, without depending on a -datadir argument.
 pgrep_args=()
 pgrep_status=0
 # Called indirectly by core_process_running from the sourced launcher.
@@ -103,14 +103,19 @@ core_process_running
     echo "unexpected managed-Core pgrep arguments: ${pgrep_args[*]}" >&2
     exit 1
 }
-[[ "${pgrep_args[4]}" == *'bitcoin-qt[[:space:]]'* ]] || {
-    echo "managed-Core process match does not include bitcoin-qt: ${pgrep_args[4]}" >&2
-    exit 1
-}
-[[ "${pgrep_args[4]}" == *'-datadir=/live/persistence/TailsData_unlocked/Persistent/[.]bitcoin'* ]] || {
-    echo "managed-Core process match is not bound to the persistent datadir: ${pgrep_args[4]}" >&2
-    exit 1
-}
+for cmdline in '/live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -min -chain=main' \
+    'bitcoin-qt %u' '/bin/bash /home/amnesia/.local/bin/wrapped bitcoin-qt -datadir=/x'; do
+    grep -Eq -- "${pgrep_args[4]}" <<<"$cmdline" || {
+        echo "managed-Core process match misses: $cmdline" >&2
+        exit 1
+    }
+done
+for cmdline in 'bitcoin-qt-helper' 'bitcoind -daemon'; do
+    if grep -Eq -- "${pgrep_args[4]}" <<<"$cmdline"; then
+        echo "managed-Core process match wrongly includes: $cmdline" >&2
+        exit 1
+    fi
+done
 pgrep_status=1
 if core_process_running; then
     echo 'expected managed-Core process detection to propagate no-match status' >&2
