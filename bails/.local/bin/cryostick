@@ -72,7 +72,6 @@ until network_found; do sleep 1; done
 # interface is unavailable or refuses the request, fail closed by powering off
 # immediately instead of leaving a marked CryoStick online.
 if ! command -v nmcli >/dev/null 2>&1 || ! nmcli networking off >/dev/null 2>&1; then
-    stop-btc
     systemctl poweroff
     exit 1
 fi
