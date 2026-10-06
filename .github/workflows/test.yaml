@@ -9,10 +9,13 @@ on:
       - 'test/functional/**'
       - '.github/workflows/test.yaml'
 
+permissions:
+  contents: read
+
 jobs:
   functional:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Run functional tests
         run: bash test/functional/run.sh
