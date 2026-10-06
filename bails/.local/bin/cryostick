@@ -31,7 +31,6 @@
 . ~/.profile
 DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 CRYOSTICK="$DOTFILES/.local/state/cryostick"
-CIPHERSTICK="$DOTFILES/.local/state/cipherstick"
 
 # True if Linux sees any network device besides loopback. Tails' Offline
 # Mode disables all networking, and the CryoStick guide also disables or
@@ -46,7 +45,7 @@ network_found() {
 }
 
 if [ ! -e "$CRYOSTICK" ]; then
-    [ -e "$CIPHERSTICK" ] || network_found && exit 0
+    network_found && exit 0
     question_status=0
     zenity --question --title='Make a CryoStick?' --width=480 \
         --icon-name=cryostick128 --ok-label='Make CryoStick' \
@@ -56,7 +55,7 @@ if [ ! -e "$CRYOSTICK" ]; then
 A CryoStick has a red desktop and shuts down if it starts with a network device.' || question_status=$?
     case $question_status in
         0) touch "$CRYOSTICK" ;;
-        1) touch "$CIPHERSTICK"; exit 0 ;;
+        1) exit 0 ;;
         *) exit "$question_status" ;;
     esac
 fi
