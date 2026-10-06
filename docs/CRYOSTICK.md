@@ -35,7 +35,9 @@ but it cannot spend.
    Offline Mode is saved for every start.
 8. CipherStick sees that the computer has no network and asks
    **Make a CryoStick?** Choose **Make CryoStick**. The desktop turns red
-   and the launcher shows the CryoStick icon.
+   and the launcher shows the CryoStick icon. **Keep CipherStick** only
+   dismisses the question for this login; an offline, unmarked stick asks
+   again next time.
 9. Open **codex32** and create your signing wallet.
 
 Tails Offline Mode and the disabled or removed network hardware are the
