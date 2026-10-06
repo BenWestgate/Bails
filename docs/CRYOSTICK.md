@@ -26,14 +26,16 @@ but it cannot spend.
    Storage. Do not set an Administration Password.
 6. In the Persistent Storage settings, turn on **Welcome Screen**, so
    Offline Mode is saved for every start.
-7. CipherStick sees that the computer has no network and asks
+7. CipherStick sees that Offline Mode was selected and asks
    **Make a CryoStick?** Choose **Make CryoStick**. The desktop turns red
    and the launcher shows the CryoStick icon.
 8. Open **codex32** and create your signing wallet.
 
 Keep Tails in **Offline Mode** and keep the computer's networking disabled
-or removed. If CryoStick finds a network device when it starts, it stops
-Bitcoin Core and Tor Connection Assistant and shuts Tails down.
+or removed. Tails creates internal virtual network interfaces even in Offline
+Mode; CryoStick ignores those. If Linux exposes a physical network interface,
+CryoStick warns you to shut down and disable or remove the hardware, while
+still allowing you to continue the current session if you choose.
 
 ## Move the watch-only wallet to your CipherStick
 
