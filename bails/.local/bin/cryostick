@@ -24,8 +24,8 @@
 # create the signing wallet and sign. Started at every login, this asks
 # once, when Tails was started in Offline Mode, whether this stick is a
 # CryoStick. On a CryoStick it shows a red desktop and the CryoStick launcher
-# so it can't be mistaken for a CipherStick, and warns if Linux exposes a
-# physical network interface.
+# so it can't be mistaken for a CipherStick, requires Offline Mode at every
+# login, and warns if Linux exposes a physical network interface.
 
 # shellcheck source=/dev/null
 . ~/.profile
@@ -50,6 +50,18 @@ physical_network_found() {
     return 1
 }
 
+shutdown_without_offline_mode() {
+    pkill -x tca >/dev/null 2>&1 || true
+    stop-btc >/dev/null 2>&1 &
+    zenity --error --title='CryoStick requires Offline Mode' --width=480 \
+        --timeout=5 --icon-name=cryostick128 --ok-label='Shut Down' \
+        --text='This CryoStick was started with networking enabled. Tails will shut down now.
+
+Start it again and turn on Offline Mode in the Welcome Screen.' >/dev/null 2>&1 || true
+    systemctl poweroff
+    exit 1
+}
+
 warn_physical_network() {
     local warning_status=0
     zenity --question --title='CryoStick found network hardware' --width=480 \
@@ -71,24 +83,24 @@ Choose Shut Down to fix this now, or Continue Anyway to use the current session.
 }
 
 make_cryostick=
-if [ ! -e "$CRYOSTICK" ]; then
+if [ -e "$CRYOSTICK" ]; then
+    tails_network_enabled && shutdown_without_offline_mode
+else
     # Use the same Welcome Screen state check as Tor Connection Assistant.
-    if ! tails_network_enabled; then
-        question_status=0
-        zenity --question --title='Make a CryoStick?' --width=480 \
-            --icon-name=cryostick128 --ok-label='Make CryoStick' \
-            --cancel-label='Keep CipherStick' --default-cancel \
-            --text='Tails was started in Offline Mode. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
+    tails_network_enabled && exit 0
+
+    question_status=0
+    zenity --question --title='Make a CryoStick?' --width=480 \
+        --icon-name=cryostick128 --ok-label='Make CryoStick' \
+        --cancel-label='Keep CipherStick' --default-cancel \
+        --text='Tails was started in Offline Mode. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
 
 A CryoStick has a red desktop and should only be used offline.' || question_status=$?
-        case $question_status in
-            0) make_cryostick=1 ;;
-            1) exit 0 ;;
-            *) exit "$question_status" ;;
-        esac
-    else
-        exit 0
-    fi
+    case $question_status in
+        0) make_cryostick=1 ;;
+        1) exit 0 ;;
+        *) exit "$question_status" ;;
+    esac
 fi
 
 physical_network_found && warn_physical_network

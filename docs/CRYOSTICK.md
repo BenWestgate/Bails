@@ -32,10 +32,15 @@ but it cannot spend.
 8. Open **codex32** and create your signing wallet.
 
 Keep Tails in **Offline Mode** and keep the computer's networking disabled
-or removed. Tails creates internal virtual network interfaces even in Offline
-Mode; CryoStick ignores those. If Linux exposes a physical network interface,
-CryoStick warns you to shut down and disable or remove the hardware, while
-still allowing you to continue the current session if you choose.
+or removed. Once a stick is marked as a CryoStick, it checks Offline Mode at
+every login. If networking is enabled, it stops Bitcoin Core and Tor Connection
+Assistant and shuts Tails down.
+
+Tails creates internal virtual network interfaces even in Offline Mode;
+CryoStick ignores those. If Linux exposes a physical network interface while
+Offline Mode is active, CryoStick warns you to shut down and disable or remove
+the hardware, while still allowing you to continue the current session if you
+choose.
 
 ## Move the watch-only wallet to your CipherStick
 
