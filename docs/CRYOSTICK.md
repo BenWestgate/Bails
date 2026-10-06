@@ -29,7 +29,8 @@ but it cannot spend.
    Wi-Fi card.
 6. Start Tails from the copy. In the Welcome Screen, choose **+**
    (Additional Settings) > **Offline Mode**, then unlock your Persistent
-   Storage.
+   Storage. Do not set an Administration Password; CryoStick does not
+   support admin sessions because they can re-enable networking.
 7. In the Persistent Storage settings, turn on **Welcome Screen**, so
    Offline Mode is saved for every start.
 8. CipherStick sees that the computer has no network and asks
@@ -37,8 +38,12 @@ but it cannot spend.
    and the launcher shows the CryoStick icon.
 9. Open **codex32** and create your signing wallet.
 
-From then on, if the CryoStick ever finds a network device, it disables
-NetworkManager before showing the warning and shuts Tails down.
+Tails Offline Mode and the disabled or removed network hardware are the
+primary air-gap controls. At each login, CryoStick also checks for any
+non-loopback network device. If one is present, it immediately stops Tor
+Connection Assistant and Bitcoin Core, shows a brief warning, and powers
+Tails off after a few seconds. It does not continuously reimplement
+NetworkManager policy during the session.
 
 ## Move the watch-only wallet to your CipherStick
 
