@@ -20,49 +20,70 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# wraps Bitcoin executables to sometimes ask for donations.
+# Login steps and Bitcoin Core start for CipherSticks and CryoSticks, run by
+# cipherstick.desktop, the only CipherStick autostart.
 ###############################################################################
-BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
-BITCOIN_ADDRESS_SELFISH=	# TODO: add these
+BITCOIN_ADDRESS_BENEVOLENT=bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl
+BITCOIN_ADDRESS_SELFISH=bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl
 export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
-persistent-setup # Checks needed persistent features are on.
+# A CryoStick stays offline, so skip the Tor and preload steps there.
+if cryostick; then
+    cryo=1
+elif (($? == 2)); then
+    exit 0 # Tails is shutting down; don't start Core.
+fi
+persistent-setup || exit 1 # Checks needed persistent features are on.
+
+# Prepare the session-only config before Core starts.
+core-dbcache refresh || exit 1
+setsid -f bitcoin-qt -min -chain=main -datadir="$DATA_DIR" >/dev/null 2>&1
+
 # Symlink at default datadir to our custom datadir
 ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
 
-# Update favorite apps list
-
-favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
-gsettings set org.gnome.shell favorite-apps "$favorites"
-
-space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
-  $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
-space=$(( space > 1907 ? space : 1907 ))
-old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-if ((space < old_prune)); then # Reduce prune as needed to not run out of space
-    sed -i 's/"prune": "'"$old_prune"'/"prune": "'$space/ "$DATA_DIR/settings.json"
-fi
-# Warn if prune is off and space is low
-if ((old_prune == 0)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
-    zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
+if [ -n "${cryo:-}" ]; then
+    link-dotfiles
+else
+    # Refresh the session links and start the delayed no-peer/Tor reminder.
+    link-dotfiles --core-login
+    # When far behind, read the chainstate into RAM once per session.
+    core-dbcache behind && chainstate-preload &
 fi
 
-old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
+# Remind users without a login password to lock the screen while Core runs.
+(
+    delay=30 timeout=10 text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...'
+    grep -q 'progress=0.999' "$DATA_DIR/debug.log" &&
+        delay=200 timeout=5 text='Always lock your screen before stepping away from the PC.'
+    sleep "$delay"
+    passwd -S "$USER" | grep -q NP || exit 0
+    zenity --info --title='Remember to lock your screen' --text="$text" --icon-name=system-lock-screen "$ICON" --timeout="$timeout" &
+    tails-screen-locker
+) &>/dev/null &
 
-if [ -z "$old_dbcache" ]; then
-    last_run=$(find $DATA_DIR/blocks -exec stat -c "%Y %n" {} + | grep blk | sort -nr | head -n1 | awk '{print $1}')
-    if ((last_run < $(date -d "2 weeks ago" +%s))); then # Add dbcache setting
-        sed -i '2a\    "dbcache": "450",' settings.json
-        old_dbcache=450
-    fi
+# Put CipherStick, Bitcoin Core and codex32 first in the dock. Keep every other
+# favorite as Tails or the user set it, so renamed or replaced Tails apps need
+# no change.
+if favorites=$(gsettings get org.gnome.shell favorite-apps | python3 -c '
+import ast
+import sys
+
+ours = ["bails.desktop", "bitcoin-qt.desktop", "io.github.benwestgate.codex32.desktop"]
+current = ast.literal_eval(sys.stdin.read().removeprefix("@as "))
+print([*ours, *(app for app in current if app not in ours)])
+'); then
+    gsettings set org.gnome.shell favorite-apps "$favorites"
 fi
-# If set, change dbcache to available memory minus 2 GiB
-new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
-sed -i 's/"dbcache": "'"$old_dbcache"'/"dbcache": "'$new_dbcache/ "$DATA_DIR/settings.json"
+
+# Warn if space is low and pruning is off or set too high
+if core-prune low-space; then
+    zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning or lowering its target in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
+fi
 
 if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         # 1 out of 20 start-ups show donation message
@@ -82,4 +103,3 @@ if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         exit 0
     fi
 fi
-"$@" &
