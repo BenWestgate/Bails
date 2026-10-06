@@ -46,17 +46,18 @@ network_found() {
 
 if [ ! -e "$CRYOSTICK" ]; then
     [ -e "$CIPHERSTICK" ] || network_found && exit 0
-    if zenity --question --title='Make a CryoStick?' --width=480 \
+    question_status=0
+    zenity --question --title='Make a CryoStick?' --width=480 \
         --icon-name=cryostick128 --ok-label='Make CryoStick' \
         --cancel-label='Keep CipherStick' --default-cancel \
         --text='This computer has no network. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
 
-A CryoStick has a red desktop, and shuts down if it ever finds a network.'; then
-        touch "$CRYOSTICK"
-    else
-        touch "$CIPHERSTICK"
-        exit 0
-    fi
+A CryoStick has a red desktop, and shuts down if it ever finds a network.' || question_status=$?
+    case $question_status in
+        0) touch "$CRYOSTICK" ;;
+        1) touch "$CIPHERSTICK"; exit 0 ;;
+        *) exit "$question_status" ;;
+    esac
 fi
 
 gsettings set org.gnome.desktop.background picture-options none
@@ -66,10 +67,18 @@ gsettings set org.gnome.desktop.background primary-color '#c01c28'
 sed --in-place 's/^Name=CipherStick$/Name=CryoStick/; s/^Icon=bails128$/Icon=cryostick128/' \
     "$DOTFILES/.local/share/applications/bails.desktop"
 
-until network_found; do sleep 5; done
+until network_found; do sleep 1; done
+# Cut NetworkManager off before showing a blocking warning. If that stable
+# interface is unavailable or refuses the request, fail closed by powering off
+# immediately instead of leaving a marked CryoStick online.
+if ! command -v nmcli >/dev/null 2>&1 || ! nmcli networking off >/dev/null 2>&1; then
+    stop-btc
+    systemctl poweroff
+    exit 1
+fi
 zenity --error --title='CryoStick found a network' --width=480 --timeout=30 \
     --icon-name=cryostick128 --ok-label='Shut Down' \
-    --text='This CryoStick must never go online, but this computer has a network device. Tails will shut down now.
+    --text='This CryoStick must never go online, but this computer has a network device. Networking has been disabled and Tails will shut down now.
 
 Start it again with networking disabled in the BIOS, and with Offline Mode turned on in the Welcome Screen.'
 stop-btc

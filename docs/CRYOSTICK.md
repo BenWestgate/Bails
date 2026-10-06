@@ -15,24 +15,29 @@ but it cannot spend.
 ## Make a CryoStick
 
 1. Set up a CipherStick as usual, but don't create a wallet yet.
-2. Open **CipherStick** > **Backup** and back it up to a second USB stick,
+2. While the CipherStick is still online, turn on **Additional Software**
+   in the Persistent Storage settings. Install the Debian packages
+   `python3-qrcode` and `zbar-tools`, and choose **Install Every Time**
+   when Tails asks. Verify that `python3-qr`, `zbarcam`, and `zbarimg`
+   are available before making the offline copy.
+3. Open **CipherStick** > **Backup** and back it up to a second USB stick,
    including the Persistent Storage.
-3. Mark the copy and the offline computer, for example with tape, so you
+4. Mark the copy and the offline computer, for example with tape, so you
    never mix them up.
-4. Disable networking on the offline computer in its BIOS, or remove the
+5. Disable networking on the offline computer in its BIOS, or remove the
    Wi-Fi card.
-5. Start Tails from the copy. In the Welcome Screen, choose **+**
+6. Start Tails from the copy. In the Welcome Screen, choose **+**
    (Additional Settings) > **Offline Mode**, then unlock your Persistent
    Storage.
-6. In the Persistent Storage settings, turn on **Welcome Screen**, so
+7. In the Persistent Storage settings, turn on **Welcome Screen**, so
    Offline Mode is saved for every start.
-7. CipherStick sees that the computer has no network and asks
+8. CipherStick sees that the computer has no network and asks
    **Make a CryoStick?** Choose **Make CryoStick**. The desktop turns red
    and the launcher shows the CryoStick icon.
-8. Open **codex32** and create your signing wallet.
+9. Open **codex32** and create your signing wallet.
 
-From then on, if the CryoStick ever finds a network device, it tells you
-and shuts Tails down.
+From then on, if the CryoStick ever finds a network device, it disables
+NetworkManager before showing the warning and shuts Tails down.
 
 ## Move the watch-only wallet to your CipherStick
 
@@ -43,7 +48,7 @@ On the CryoStick:
 2. Open **Console** and show it as a QR code:
 
    ```bash
-   gzip -9 < watch-only.dat | qr --error-correction=L > watch-only.png
+   gzip -9 < watch-only.dat | python3-qr --factory=png --error-correction=L > watch-only.png
    xdg-open watch-only.png
    ```
 
@@ -68,8 +73,8 @@ Every crossing uses the same two commands: show a file as a QR code on
 one stick, and scan it on the other.
 
 ```bash
-gzip -9 < FILE | qr --error-correction=L > FILE.png && xdg-open FILE.png   # show
-zbarcam --raw -Sbinary --oneshot | gunzip > FILE                           # scan
+gzip -9 < FILE | python3-qr --factory=png --error-correction=L > FILE.png && xdg-open FILE.png
+zbarcam --raw -Sbinary --oneshot | gunzip > FILE
 ```
 
 1. **CipherStick:** in the **Send** tab, fill in the payment and click

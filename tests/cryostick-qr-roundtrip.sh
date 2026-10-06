@@ -1,14 +1,14 @@
 #!/bin/bash
 # Crosses the CryoStick air gap on one machine, with both sticks as wallets
 # on one regtest node. Every crossing goes through a real QR image, made
-# with qr and read back with zbarimg, using the commands in
+# with python3-qr and read back with zbarimg, using the commands in
 # docs/CRYOSTICK.md (zbarimg stands in for zbarcam and a webcam).
 #
-# Needs bitcoind and bitcoin-cli (Core 32 or later), qr (python3-qrcode
-# with PNG support) and zbarimg (zbar-tools).
+# Needs bitcoind and bitcoin-cli (Core 32 or later), python3-qr
+# (python3-qrcode with PNG support) and zbarimg (zbar-tools).
 set -euo pipefail
 
-for tool in bitcoind bitcoin-cli qr zbarimg gzip python3; do
+for tool in bitcoind bitcoin-cli python3-qr zbarimg gzip python3; do
     command -v "$tool" >/dev/null || { echo "missing $tool" >&2; exit 1; }
 done
 
@@ -24,7 +24,7 @@ field() { python3 -c 'import json, sys; print(json.load(sys.stdin)[sys.argv[1]])
 
 # Shows stdin as a QR code on one stick and reads it on the other.
 cross() {
-    gzip -9 | qr --error-correction=L --factory=png >"$dir/qr.png"
+    gzip -9 | python3-qr --error-correction=L --factory=png >"$dir/qr.png"
     echo "QR: $(stat -c %s "$dir/qr.png") byte PNG" >&2
     zbarimg --raw -q -Sbinary "$dir/qr.png" 2>/dev/null | gunzip
 }
