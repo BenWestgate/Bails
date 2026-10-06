@@ -22,60 +22,133 @@
 
 # A CryoStick is a CipherStick that never goes online and is used to
 # create the signing wallet and sign. Started at every login, this asks
-# once, on a computer with no network, whether this stick is a CryoStick.
-# On a CryoStick it shows a red desktop and the CryoStick launcher so it
-# can't be mistaken for a CipherStick, and shuts Tails down as soon as any
-# network device appears.
+# once, when Tails was started in Offline Mode, whether this stick is a
+# CryoStick. On a CryoStick it shows a red desktop and the CryoStick launcher
+# so it can't be mistaken for a CipherStick, requires Offline Mode at every
+# login, requires Welcome Screen persistence, and warns if Linux exposes a
+# physical network interface.
 
 # shellcheck source=/dev/null
 . ~/.profile
+# shellcheck source=/dev/null
+. /usr/local/lib/tails-shell-library/tails-greeter.sh || exit 1
 DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 CRYOSTICK="$DOTFILES/.local/state/cryostick"
 
-# True if Linux sees any network device besides loopback. Tails' Offline
-# Mode disables all networking, and the CryoStick guide also disables or
-# removes networking in hardware, so on a supported CryoStick only "lo"
-# should exist.
-network_found() {
-    local dev
+# True if Linux exposes a physical network interface. Tails creates internal
+# virtual Ethernet interfaces even in Offline Mode, so ignore interfaces under
+# /sys/devices/virtual/net.
+physical_network_found() {
+    local dev path
     for dev in /sys/class/net/*; do
-        [ "${dev##*/}" = lo ] || return 0
+        [ "${dev##*/}" = lo ] && continue
+        path=$(readlink -f "$dev") || return 0
+        case "$path" in
+            /sys/devices/virtual/net/*) ;;
+            *) return 0 ;;
+        esac
     done
     return 1
 }
 
-if [ ! -e "$CRYOSTICK" ]; then
-    network_found && exit 0
+shutdown_without_offline_mode() {
+    pkill -x tca >/dev/null 2>&1 || true
+    stop-btc >/dev/null 2>&1 &
+    zenity --error --title='CryoStick requires Offline Mode' --width=480 \
+        --timeout=5 --icon-name=cryostick128 --ok-label='Shut Down' \
+        --text='This CryoStick was started with networking enabled. Tails will shut down now.
+
+Start it again and turn on Offline Mode in the Welcome Screen.' >/dev/null 2>&1 || true
+    systemctl poweroff
+    exit 1
+}
+
+# Match the Persistent Storage frontend however Tails names its interpreter.
+tps_frontend_running() {
+    pgrep -u "$(id -u)" -f '[t]ps-frontend' >/dev/null 2>&1
+}
+
+ensure_welcome_screen_persisted() {
+    while ! /usr/local/lib/tpscli is-active WelcomeScreen; do
+        if ! tps_frontend_running; then
+            tails-persistent-storage &
+            sleep 1
+        fi
+
+        zenity --info --title='Save Offline Mode' --width=480 \
+            --icon-name=preferences-system \
+            --ok-label='Enable Welcome Screen' \
+            --text='Turn on "Welcome Screen" in Persistent Storage so Tails remembers Offline Mode at every start.
+
+CryoStick will continue after Welcome Screen is turned on.' || true
+
+        while tps_frontend_running; do
+            /usr/local/lib/tpscli is-active WelcomeScreen && return 0
+            sleep 1
+        done
+    done
+}
+
+warn_physical_network() {
+    local warning_status=0 warning_text
+
+    if [ "$make_cryostick" = 1 ]; then
+        warning_text='This computer exposes a physical network interface.
+
+For a CryoStick, disable or remove the network hardware and start Tails with Offline Mode.
+
+Choose Shut Down to fix this now, or Continue Anyway to make this USB stick a CryoStick.'
+    else
+        warning_text='This computer exposes a physical network interface.
+
+For a CryoStick, disable or remove the network hardware and start Tails with Offline Mode.
+
+Choose Shut Down to fix this now, or Continue Anyway to use this CryoStick.'
+    fi
+
+    zenity --question --title='CryoStick found network hardware' --width=480 \
+        --icon-name=cryostick128 --ok-label='Continue Anyway' \
+        --cancel-label='Shut Down' --default-cancel \
+        --text="$warning_text" || warning_status=$?
+    case $warning_status in
+        0) return 0 ;;
+        1)
+            systemctl poweroff
+            exit 0
+            ;;
+        *) exit "$warning_status" ;;
+    esac
+}
+
+make_cryostick=
+if [ -e "$CRYOSTICK" ]; then
+    tails_network_enabled && shutdown_without_offline_mode
+else
+    # Use the same Welcome Screen state check as Tor Connection Assistant.
+    tails_network_enabled && exit 0
+
     question_status=0
     zenity --question --title='Make a CryoStick?' --width=480 \
         --icon-name=cryostick128 --ok-label='Make CryoStick' \
         --cancel-label='Keep CipherStick' --default-cancel \
-        --text='This computer has no network. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
+        --text='Tails was started in Offline Mode. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
 
-A CryoStick has a red desktop, and shuts down if it ever finds a network.' || question_status=$?
+A CryoStick has a red desktop and should only be used offline.' || question_status=$?
     case $question_status in
-        0) touch "$CRYOSTICK" ;;
+        0) make_cryostick=1 ;;
         1) exit 0 ;;
         *) exit "$question_status" ;;
     esac
 fi
 
-# Tails' Offline Mode is the primary network control. CryoStick does not
-# duplicate NetworkManager policy; it only fails closed at login if the
-# supported offline setup is not in effect. Stop network-sensitive processes
-# before showing a warning, then power off after a few seconds.
-if network_found; then
-    nmcli networking off >/dev/null 2>&1 || true
-    pkill -x tca >/dev/null 2>&1 || true
-    stop-btc >/dev/null 2>&1 &
-    zenity --error --title='CryoStick found a network' --width=480 --timeout=5 \
-        --icon-name=cryostick128 --ok-label='Shut Down' \
-        --text='This CryoStick must never go online, but this computer has a network device. Tails will shut down now.
+# Offline Mode must be saved so a CryoStick does not rely on selecting it
+# manually at every start. Check this on every CryoStick login and before the
+# marker is created for a new CryoStick.
+ensure_welcome_screen_persisted
 
-Start it again with networking disabled in the BIOS or removed, and with Offline Mode turned on in the Welcome Screen.' &
-    sleep 3
-    systemctl poweroff
-    exit 1
+physical_network_found && warn_physical_network
+if [ "$make_cryostick" = 1 ]; then
+    touch "$CRYOSTICK"
 fi
 
 gsettings set org.gnome.desktop.background picture-options none

@@ -24,16 +24,28 @@ but it cannot spend.
 5. Start Tails from the copy. In the Welcome Screen, choose **+**
    (Additional Settings) > **Offline Mode**, then unlock your Persistent
    Storage. Do not set an Administration Password.
-6. In the Persistent Storage settings, turn on **Welcome Screen**, so
-   Offline Mode is saved for every start.
-7. CipherStick sees that the computer has no network and asks
-   **Make a CryoStick?** Choose **Make CryoStick**. The desktop turns red
-   and the launcher shows the CryoStick icon.
-8. Open **codex32** and create your signing wallet.
+6. CipherStick sees that Offline Mode was selected and asks
+   **Make a CryoStick?** Choose **Make CryoStick**.
+7. If the **Welcome Screen** feature of the Persistent Storage is not
+   enabled, CryoStick opens Persistent Storage and waits for you to turn it on.
+8. If CryoStick finds physical network hardware, shut down and disable or
+   remove it. **Continue Anyway** makes the USB stick a CryoStick despite
+   the hardware warning.
+9. The desktop turns red and the launcher shows the CryoStick icon. Open
+   **codex32** and create your signing wallet.
 
 Keep Tails in **Offline Mode** and keep the computer's networking disabled
-or removed. If CryoStick finds a network device when it starts, it stops
-Bitcoin Core and Tor Connection Assistant and shuts Tails down.
+or removed. Once a stick is marked as a CryoStick, it checks Offline Mode at
+every login. If networking is enabled, it stops Bitcoin Core and Tor Connection
+Assistant and shuts Tails down.
+
+CryoStick also checks at every login that the **Welcome Screen** Persistent
+Storage feature is enabled. If it is not, CryoStick opens Persistent Storage
+and waits until you enable it, so Offline Mode is saved for future starts.
+
+If Linux exposes a physical network interface while Offline Mode is active,
+CryoStick warns you to shut down and disable or remove the hardware, while still
+allowing you to continue the current session if you choose.
 
 ## Move the watch-only wallet to your CipherStick
 
