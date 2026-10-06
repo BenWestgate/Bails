@@ -24,8 +24,8 @@
 # create the signing wallet and sign. Started at every login, this asks
 # once, on a computer with no network, whether this stick is a CryoStick.
 # On a CryoStick it shows a red desktop and the CryoStick launcher so it
-# can't be mistaken for a CipherStick, and shuts Tails down as soon as any
-# network device appears.
+# can't be mistaken for a CipherStick. A marked stick that starts with a
+# network device fails closed and shuts Tails down.
 
 # shellcheck source=/dev/null
 . ~/.profile
@@ -34,8 +34,9 @@ CRYOSTICK="$DOTFILES/.local/state/cryostick"
 CIPHERSTICK="$DOTFILES/.local/state/cipherstick"
 
 # True if Linux sees any network device besides loopback. Tails' Offline
-# Mode loads no network drivers, and the CryoStick guide also disables
-# networking in the BIOS, so on a CryoStick only "lo" should exist.
+# Mode disables all networking, and the CryoStick guide also disables or
+# removes networking in hardware, so on a supported CryoStick only "lo"
+# should exist.
 network_found() {
     local dev
     for dev in /sys/class/net/*; do
@@ -52,12 +53,29 @@ if [ ! -e "$CRYOSTICK" ]; then
         --cancel-label='Keep CipherStick' --default-cancel \
         --text='This computer has no network. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
 
-A CryoStick has a red desktop, and shuts down if it ever finds a network.' || question_status=$?
+A CryoStick has a red desktop and shuts down if it starts with a network device.' || question_status=$?
     case $question_status in
         0) touch "$CRYOSTICK" ;;
         1) touch "$CIPHERSTICK"; exit 0 ;;
         *) exit "$question_status" ;;
     esac
+fi
+
+# Tails' Offline Mode is the primary network control. CryoStick does not
+# duplicate NetworkManager policy; it only fails closed at login if the
+# supported offline setup is not in effect. Stop network-sensitive processes
+# before showing a warning, then power off after a few seconds.
+if network_found; then
+    pkill -x tca >/dev/null 2>&1 || true
+    stop-btc >/dev/null 2>&1 || true
+    zenity --error --title='CryoStick found a network' --width=480 --timeout=5 \
+        --icon-name=cryostick128 --ok-label='Shut Down' \
+        --text='This CryoStick started with a network device. Bitcoin Core and Tor Connection have been stopped, and Tails will shut down now.
+
+Start it again with networking disabled in the BIOS or removed, and with Offline Mode turned on in the Welcome Screen.' &
+    sleep 3
+    systemctl poweroff
+    exit 1
 fi
 
 gsettings set org.gnome.desktop.background picture-options none
@@ -66,19 +84,3 @@ gsettings set org.gnome.desktop.background primary-color '#c01c28'
 # Updates restore the CipherStick launcher, so reapply this at every login.
 sed --in-place 's/^Name=CipherStick$/Name=CryoStick/; s/^Icon=bails128$/Icon=cryostick128/' \
     "$DOTFILES/.local/share/applications/bails.desktop"
-
-until network_found; do sleep 1; done
-# Cut NetworkManager off before showing a blocking warning. If that stable
-# interface is unavailable or refuses the request, fail closed by powering off
-# immediately instead of leaving a marked CryoStick online.
-if ! command -v nmcli >/dev/null 2>&1 || ! nmcli networking off >/dev/null 2>&1; then
-    systemctl poweroff
-    exit 1
-fi
-zenity --error --title='CryoStick found a network' --width=480 --timeout=30 \
-    --icon-name=cryostick128 --ok-label='Shut Down' \
-    --text='This CryoStick must never go online, but this computer has a network device. Networking has been disabled and Tails will shut down now.
-
-Start it again with networking disabled in the BIOS, and with Offline Mode turned on in the Welcome Screen.'
-stop-btc
-systemctl poweroff
