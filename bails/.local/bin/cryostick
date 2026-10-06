@@ -71,7 +71,7 @@ ensure_welcome_screen_persisted() {
         fi
 
         zenity --info --title='Save Offline Mode' --width=480 \
-            --icon-name=tails-persistent-storage \
+            --icon-name=preferences-system \
             --ok-label='Enable Welcome Screen' \
             --text='Turn on "Welcome Screen" in Persistent Storage so Tails remembers Offline Mode at every start.
 
