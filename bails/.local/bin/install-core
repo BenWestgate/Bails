@@ -40,7 +40,6 @@ export LOCAL_DIR="$DOTFILES/.local"
 export XDG_STATE_HOME="$LOCAL_DIR/state"
 readonly XDG_DATA_HOME="$LOCAL_DIR/share"
 readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
-readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp"
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
 
 
@@ -160,11 +159,6 @@ else # Import a trusted set on first-run.
             echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
-    # Download the current master estimates. Master is fresher, but is only
-    # accepted within conservative bounds derived from the authenticated
-    # release source downloaded above.
-    master_chainparams="$DOWNLOAD_DIR/chainparams-master.cpp"
-    wget --continue -O "$master_chainparams" "$BITCOIN_CHAINPARAMS_URL" & get_size=$!
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
@@ -241,30 +235,22 @@ done
 if [ "$action" = installation ]; then
     # Authenticate pruning metadata before installing bitcoind. A failed
     # metadata check must leave the next attempt on the first-install path.
-    ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
     release_chainparams="$DOWNLOAD_DIR/chainparams-release.cpp"
     tar -xOf "$source_tar" "$source_root/src/kernel/chainparams.cpp" >"$release_chainparams" || exit 1
 
     release_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$release_chainparams" | sed 's/[^0-9]*//g')
     release_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$release_chainparams" | sed 's/[^0-9]*//g')
-    master_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$master_chainparams" 2>/dev/null | sed 's/[^0-9]*//g')
-    master_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$master_chainparams" 2>/dev/null | sed 's/[^0-9]*//g')
     if [[ ! "$release_chain_state_size" =~ ^[0-9]+$ || ! "$release_blockchain_size" =~ ^[0-9]+$ ]] || \
-        ((release_chain_state_size <= 0 || release_blockchain_size <= release_chain_state_size)); then
+        ((release_chain_state_size <= 0 || release_chain_state_size > 128 || \
+          release_blockchain_size <= release_chain_state_size || release_blockchain_size > 4096)); then
         zenity --error --title="Invalid Bitcoin Core storage metadata" \
             --text="Bitcoin Core $VER contains invalid authenticated pruning size metadata." "$ICON"
         exit 1
     fi
+    # Storage policy uses only the authenticated release baseline. Never mix
+    # mutable branch metadata into a decision that can disable pruning.
     assumed_chain_state_size=$release_chain_state_size
     assumed_blockchain_size=$release_blockchain_size
-    if [[ "$master_chain_state_size" =~ ^[0-9]+$ ]] && \
-        ((master_chain_state_size >= release_chain_state_size && master_chain_state_size <= release_chain_state_size * 2)); then
-        assumed_chain_state_size=$master_chain_state_size
-    fi
-    if [[ "$master_blockchain_size" =~ ^[0-9]+$ ]] && \
-        ((master_blockchain_size >= release_blockchain_size && master_blockchain_size <= release_blockchain_size * 2)); then
-        assumed_blockchain_size=$master_blockchain_size
-    fi
 fi
 rm -f "$source_tar"
 
