@@ -72,9 +72,8 @@ In the next steps, you will shut down the computer. To be able to follow the res
 1. [Connect to Tor](https://tails.net/doc/anonymous_internet/tor/index.en.html) when the _Tor Connection_ window appears.
    - If you cloned CipherStick, skip to step 7.
 1. Open a terminal. Choose **Applications** ▸ **Utilities** ▸ **Terminal**.
-1. Until the first signed release exists, bootstrap from GitHub with `git clone https://github.com/BenWestgate/Bails.git && Bails/b`.
-   - This mutable checkout is **not authenticated installation media**. Independently obtain and check the release-key fingerprint `89E6 BEF5 A4F5 1B71 CA8F AA35 A9AC CFC9 F87C B111` before relying on that key for future signed updates; see the [release authentication procedure](docs/RELEASES.md).
-   - Once a signed release exists, use authenticated release media instead of the mutable bootstrap.
+1. Obtain the CipherStick release-key fingerprint and exact release tag through an **independent trusted channel**, not this GitHub repository or this page.
+1. Follow the [authenticated initial-install procedure](docs/RELEASES.md#initial-installation). It verifies that exact immutable signed release before executing any downloaded CipherStick code.
 1. Follow the CipherStick installer instructions on screen.
 1. You're Done!
    - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make CipherStick even better!
