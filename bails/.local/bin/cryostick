@@ -25,7 +25,8 @@
 # once, when Tails was started in Offline Mode, whether this stick is a
 # CryoStick. On a CryoStick it shows a red desktop and the CryoStick launcher
 # so it can't be mistaken for a CipherStick, requires Offline Mode at every
-# login, and warns if Linux exposes a physical network interface.
+# login, requires Welcome Screen persistence, and warns if Linux exposes a
+# physical network interface.
 
 # shellcheck source=/dev/null
 . ~/.profile
@@ -62,16 +63,48 @@ Start it again and turn on Offline Mode in the Welcome Screen.' >/dev/null 2>&1 
     exit 1
 }
 
+ensure_welcome_screen_persisted() {
+    while ! /usr/local/lib/tpscli is-active WelcomeScreen; do
+        if ! pgrep -f 'python3 /usr/local/lib/tps-frontend' >/dev/null; then
+            tails-persistent-storage &
+            sleep 1
+        fi
+
+        zenity --info --title='Save Offline Mode' --width=480 \
+            --icon-name=tails-persistent-storage \
+            --ok-label='Enable Welcome Screen' \
+            --text='Turn on "Welcome Screen" in Persistent Storage so Tails remembers Offline Mode at every start.
+
+CryoStick will continue after Welcome Screen is turned on.' || true
+
+        while pgrep -f 'python3 /usr/local/lib/tps-frontend' >/dev/null; do
+            /usr/local/lib/tpscli is-active WelcomeScreen && return 0
+            sleep 1
+        done
+    done
+}
+
 warn_physical_network() {
-    local warning_status=0
-    zenity --question --title='CryoStick found network hardware' --width=480 \
-        --icon-name=cryostick128 --ok-label='Continue Anyway' \
-        --cancel-label='Shut Down' --default-cancel \
-        --text='This computer exposes a physical network interface.
+    local warning_status=0 warning_text
+
+    if [ "$make_cryostick" = 1 ]; then
+        warning_text='This computer exposes a physical network interface.
 
 For a CryoStick, disable or remove the network hardware and start Tails with Offline Mode.
 
-Choose Shut Down to fix this now, or Continue Anyway to use the current session.' || warning_status=$?
+Choose Shut Down to fix this now, or Continue Anyway to make this USB stick a CryoStick.'
+    else
+        warning_text='This computer exposes a physical network interface.
+
+For a CryoStick, disable or remove the network hardware and start Tails with Offline Mode.
+
+Choose Shut Down to fix this now, or Continue Anyway to use this CryoStick.'
+    fi
+
+    zenity --question --title='CryoStick found network hardware' --width=480 \
+        --icon-name=cryostick128 --ok-label='Continue Anyway' \
+        --cancel-label='Shut Down' --default-cancel \
+        --text="$warning_text" || warning_status=$?
     case $warning_status in
         0) return 0 ;;
         1)
@@ -102,6 +135,11 @@ A CryoStick has a red desktop and should only be used offline.' || question_stat
         *) exit "$question_status" ;;
     esac
 fi
+
+# Offline Mode must be saved so a CryoStick does not rely on selecting it
+# manually at every start. Check this on every CryoStick login and before the
+# marker is created for a new CryoStick.
+ensure_welcome_screen_persisted
 
 physical_network_found && warn_physical_network
 if [ "$make_cryostick" = 1 ]; then
