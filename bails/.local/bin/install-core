@@ -234,7 +234,7 @@ tar -xOf "$source_tar" "$source_root/share/pixmaps/bitcoin128.png" >"$LOCAL_DIR/
 tar -xOf "$source_tar" "$source_root/share/examples/bitcoin.conf" >"$core_doc_dir/bitcoin.conf.example" || exit 1
 tar -xOf "$source_tar" "$source_root/doc/bitcoin-conf.md" >"$core_doc_dir/bitcoin-conf.md" || exit 1
 tar -xOf "$source_tar" "$source_root/doc/tor.md" >"$core_doc_dir/tor.md" || exit 1
-for completion in bitcoin bitcoin-cli bitcoin-tx bitcoind; do
+for completion in bitcoin-cli bitcoin-tx bitcoind; do
     tar -xOf "$source_tar" "$source_root/contrib/completions/bash/$completion.bash" >"$completion_dir/$completion" || exit 1
 done
 
