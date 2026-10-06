@@ -16,10 +16,11 @@ but it cannot spend.
 
 1. Set up a CipherStick as usual, but don't create a wallet yet.
 2. While the CipherStick is still online, turn on **Additional Software**
-   in the Persistent Storage settings. Install the Debian packages
-   `python3-qrcode` and `zbar-tools`, and choose **Install Every Time**
-   when Tails asks. Verify that `python3-qr`, `zbarcam`, and `zbarimg`
-   are available before making the offline copy.
+   in the Persistent Storage settings. Install the Debian package
+   `python3-qrcode`, and choose **Install Every Time** when Tails asks.
+   Tails already includes `zbarcam` and `zbarimg`; verify that
+   `python3-qr`, `zbarcam`, and `zbarimg` are available before making
+   the offline copy.
 3. Open **CipherStick** > **Backup** and back it up to a second USB stick,
    including the Persistent Storage.
 4. Mark the copy and the offline computer, for example with tape, so you
