@@ -65,6 +65,7 @@ fi
 # supported offline setup is not in effect. Stop network-sensitive processes
 # before showing a warning, then power off after a few seconds.
 if network_found; then
+    nmcli networking off >/dev/null 2>&1 || true
     pkill -x tca >/dev/null 2>&1 || true
     stop-btc >/dev/null 2>&1 &
     zenity --error --title='CryoStick found a network' --width=480 --timeout=5 \
