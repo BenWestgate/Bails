@@ -56,7 +56,7 @@ On the CryoStick:
 2. Open **Console** and show it as a QR code:
 
    ```bash
-   gzip -9 < watch-only.dat | python3-qr --factory=png --error-correction=L > watch-only.png
+   gzip -9 < watch-only.dat | python3-qr --factory=pil --error-correction=L > watch-only.png
    xdg-open watch-only.png
    ```
 
@@ -81,7 +81,7 @@ Every crossing uses the same two commands: show a file as a QR code on
 one stick, and scan it on the other.
 
 ```bash
-gzip -9 < FILE | python3-qr --factory=png --error-correction=L > FILE.png && xdg-open FILE.png
+gzip -9 < FILE | python3-qr --factory=pil --error-correction=L > FILE.png && xdg-open FILE.png
 zbarcam --raw -Sbinary --oneshot | gunzip > FILE
 ```
 

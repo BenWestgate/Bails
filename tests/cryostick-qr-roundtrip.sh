@@ -5,7 +5,7 @@
 # docs/CRYOSTICK.md (zbarimg stands in for zbarcam and a webcam).
 #
 # Needs bitcoind and bitcoin-cli (Core 32 or later), python3-qr
-# (python3-qrcode with PNG support) and zbarimg (zbar-tools).
+# (python3-qrcode with Pillow support) and zbarimg (zbar-tools).
 set -euo pipefail
 
 for tool in bitcoind bitcoin-cli python3-qr zbarimg gzip python3; do
@@ -24,7 +24,7 @@ field() { python3 -c 'import json, sys; print(json.load(sys.stdin)[sys.argv[1]])
 
 # Shows stdin as a QR code on one stick and reads it on the other.
 cross() {
-    gzip -9 | python3-qr --error-correction=L --factory=png >"$dir/qr.png"
+    gzip -9 | python3-qr --error-correction=L --factory=pil >"$dir/qr.png"
     echo "QR: $(stat -c %s "$dir/qr.png") byte PNG" >&2
     zbarimg --raw -q -Sbinary "$dir/qr.png" 2>/dev/null | gunzip
 }
