@@ -63,9 +63,14 @@ Start it again and turn on Offline Mode in the Welcome Screen.' >/dev/null 2>&1 
     exit 1
 }
 
+# Match the Persistent Storage frontend however Tails names its interpreter.
+tps_frontend_running() {
+    pgrep -u "$(id -u)" -f '[t]ps-frontend' >/dev/null 2>&1
+}
+
 ensure_welcome_screen_persisted() {
     while ! /usr/local/lib/tpscli is-active WelcomeScreen; do
-        if ! pgrep -f 'python3 /usr/local/lib/tps-frontend' >/dev/null; then
+        if ! tps_frontend_running; then
             tails-persistent-storage &
             sleep 1
         fi
@@ -77,7 +82,7 @@ ensure_welcome_screen_persisted() {
 
 CryoStick will continue after Welcome Screen is turned on.' || true
 
-        while pgrep -f 'python3 /usr/local/lib/tps-frontend' >/dev/null; do
+        while tps_frontend_running; do
             /usr/local/lib/tpscli is-active WelcomeScreen && return 0
             sleep 1
         done

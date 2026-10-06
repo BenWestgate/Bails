@@ -26,9 +26,8 @@ but it cannot spend.
    Storage. Do not set an Administration Password.
 6. CipherStick sees that Offline Mode was selected and asks
    **Make a CryoStick?** Choose **Make CryoStick**.
-7. If **Welcome Screen** is not enabled in Persistent Storage, CryoStick
-   opens Persistent Storage and waits for you to turn it on. If you close
-   Persistent Storage first, it opens it again and repeats the prompt.
+7. If the **Welcome Screen** feature of the Persistent Storage is not
+   enabled, CryoStick opens Persistent Storage and waits for you to turn it on.
 8. If CryoStick finds physical network hardware, shut down and disable or
    remove it. **Continue Anyway** makes the USB stick a CryoStick despite
    the hardware warning.
@@ -44,11 +43,9 @@ CryoStick also checks at every login that the **Welcome Screen** Persistent
 Storage feature is enabled. If it is not, CryoStick opens Persistent Storage
 and waits until you enable it, so Offline Mode is saved for future starts.
 
-Tails creates internal virtual network interfaces even in Offline Mode;
-CryoStick ignores those. If Linux exposes a physical network interface while
-Offline Mode is active, CryoStick warns you to shut down and disable or remove
-the hardware, while still allowing you to continue the current session if you
-choose.
+If Linux exposes a physical network interface while Offline Mode is active,
+CryoStick warns you to shut down and disable or remove the hardware, while still
+allowing you to continue the current session if you choose.
 
 ## Move the watch-only wallet to your CipherStick
 
