@@ -21,12 +21,12 @@
 # THE SOFTWARE.
 
 # A CryoStick is a CipherStick that never goes online and is used to
-# create the signing wallet and sign. Started at every login, this asks
-# once, when Tails was started in Offline Mode, whether this stick is a
+# create the signing wallet and sign. Run by cipherstick at every login, this
+# asks once, when Tails was started in Offline Mode, whether this stick is a
 # CryoStick. On a CryoStick it shows a red desktop and the CryoStick launcher
 # so it can't be mistaken for a CipherStick, requires Offline Mode at every
 # login, requires Welcome Screen persistence, and warns if Linux exposes a
-# physical network interface.
+# physical network interface. Exits 0 only on a CryoStick.
 
 # shellcheck source=/dev/null
 . ~/.profile
@@ -125,7 +125,7 @@ if [ -e "$CRYOSTICK" ]; then
     tails_network_enabled && shutdown_without_offline_mode
 else
     # Use the same Welcome Screen state check as Tor Connection Assistant.
-    tails_network_enabled && exit 0
+    tails_network_enabled && exit 1
 
     question_status=0
     zenity --question --title='Make a CryoStick?' --width=480 \
@@ -136,7 +136,7 @@ else
 A CryoStick has a red desktop and should only be used offline.' || question_status=$?
     case $question_status in
         0) make_cryostick=1 ;;
-        1) exit 0 ;;
+        1) exit 1 ;;
         *) exit "$question_status" ;;
     esac
 fi
@@ -157,3 +157,4 @@ gsettings set org.gnome.desktop.background primary-color '#c01c28'
 # Updates restore the CipherStick launcher, so reapply this at every login.
 sed --in-place 's/^Name=CipherStick$/Name=CryoStick/; s/^Icon=bails128$/Icon=cryostick128/' \
     "$DOTFILES/.local/share/applications/bails.desktop"
+exit 0

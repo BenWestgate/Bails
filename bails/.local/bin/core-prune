@@ -1,0 +1,59 @@
+#!/bin/bash
+
+DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
+STATE_DIR=${STATE_DIR:-/live/persistence/TailsData_unlocked/dotfiles/.local/state}
+TEMPLATE=${TEMPLATE:-/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf}
+
+disk_room() {
+    local free blocks
+    free=$(df --output=avail "$DATA_DIR" | tail -1)
+    blocks=$(du --summarize "$DATA_DIR/blocks" 2>/dev/null | cut -f1)
+    echo $(( (free + ${blocks:-0}) / 1024 ))
+}
+
+chainstate_mib() {
+    local mib
+    mib=$(du --summarize --block-size=1M "$DATA_DIR/chainstate" 2>/dev/null | cut -f1)
+    echo "${mib:-0}"
+}
+
+chainstate_growth() {
+    local gb growth
+    gb=$(sed -n 's/^chain_state_gb=\([0-9][0-9]*\)$/\1/p' "$STATE_DIR/core-assumed-sizes" 2>/dev/null)
+    [ -n "$gb" ] || return 1
+    growth=$(( gb * 1000000000 / 1048576 - $(chainstate_mib) ))
+    echo $(( growth > 0 ? growth : 0 ))
+}
+
+block_room() { echo $(( $(disk_room) - $(chainstate_growth || echo 0) )); }
+
+template_prune() {
+    local prune
+    prune=$(sed -n '/^\[/q; s/^prune=\([0-9]*\)$/\1/p' "$TEMPLATE" 2>/dev/null | head -1)
+    echo "${prune:-0}"
+}
+
+set_template() {
+    [ -f "$TEMPLATE" ] || return 0
+    sed -i "0,/^\[/ { /^#\?$1=/d; }" "$TEMPLATE"
+    sed -i "1i $1=$2" "$TEMPLATE"
+}
+
+fit_prune() {
+    local prune room target
+    prune=$(template_prune)
+    ((prune > 1)) || return 0
+    room=$(block_room)
+    (( room - prune > 11264 || room - prune < 1024 )) || return 0
+    (( room - prune > 11264 )) && ! chainstate_growth >/dev/null && return 0
+    target=$(( room - 10240 > 1907 ? room - 10240 : 1907 ))
+    ((target == prune)) || set_template prune "$target"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    case ${1:-} in
+        fit) fit_prune ;;
+        value) template_prune ;;
+        *) echo "usage: core-prune fit | value" >&2; exit 2 ;;
+    esac
+fi

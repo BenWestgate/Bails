@@ -1,0 +1,81 @@
+#!/bin/bash
+# Copyright (c) 2026 Ben Westgate
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Keep RAM-derived dbcache settings out of Persistent Storage. The persistent
+# bitcoin.conf is a template; each session gets a RAM copy with dbcache only
+# while the node is more than 14 days behind.
+DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
+STATE_DIR=${STATE_DIR:-/live/persistence/TailsData_unlocked/dotfiles/.local/state}
+tip="$STATE_DIR/bitcoin-core-tip"
+
+cli() { bitcoin-cli -datadir="$DATA_DIR" "$@"; }
+far_behind() { [ -z "$(find "$tip" -mtime -14 2>/dev/null)" ]; }
+
+warning_cap() {
+    local ram mib=$((1024 * 1024)) reserved cap
+    ram=$(( $(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) ))
+    ((ram > 0)) || { echo "core-dbcache: cannot read total RAM" >&2; return 1; }
+    reserved=$((2048 * mib))
+    # Divide before multiplying, exactly as Core does.
+    # shellcheck disable=SC2017
+    cap=$(( ram > reserved ? (ram - reserved) / 4 * 3 : 0 ))
+    echo $(( cap > 450 * mib ? cap / mib : 450 ))
+}
+
+wanted_dbcache() {
+    far_behind || return 0
+    warning_cap
+}
+
+refresh() {
+    [ -d "$DATA_DIR" ] || return 1
+    core-config refresh "$(wanted_dbcache)"
+}
+
+record_tip() {
+    local hash time
+    hash=$(cli getbestblockhash 2>/dev/null) || return 1
+    time=$(cli getblockheader "$hash" 2>/dev/null |
+        python3 -c 'import json, sys; print(json.load(sys.stdin)["time"])') || return 1
+    mkdir -p "$STATE_DIR" && touch -d "@$time" "$tip"
+}
+
+# Run for the whole session, so Core started again by hand is tracked too.
+watch() {
+    while :; do
+        if record_tip; then sleep 600; else sleep 60; fi
+    done
+}
+
+start_watch() {
+    pgrep -u "$(id -u)" -f '[c]ore-dbcache watch' >/dev/null && return 0
+    setsid -f "${BASH_SOURCE[0]}" watch >/dev/null 2>&1
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    case ${1:-} in
+        refresh) refresh ;;
+        far-behind) far_behind ;;
+        start) start_watch ;;
+        watch) watch ;;
+        *) echo "usage: core-dbcache refresh | far-behind | start | watch" >&2; exit 2 ;;
+    esac
+fi

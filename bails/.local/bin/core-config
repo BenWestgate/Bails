@@ -1,0 +1,56 @@
+#!/bin/bash
+
+DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
+TEMPLATE=${TEMPLATE:-/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf}
+SESSION_CONF=${SESSION_CONF:-$HOME/.bitcoin/bitcoin.conf}
+
+prepare_template() {
+    local updated
+    updated=$(grep -v -x -e 'startupnotify=\(.*/\)\?core-started' -e 'dbcache=.*' "$TEMPLATE")
+    [ "$updated" = "$(cat "$TEMPLATE")" ] || printf '%s\n' "$updated" >"$TEMPLATE"
+}
+
+write_session_conf() {
+    local tmp
+    mkdir -p "${SESSION_CONF%/*}"
+    tmp=$(mktemp "${SESSION_CONF%/*}/.bitcoin.conf.XXXXXX") || return 1
+    {
+        [ -z "$1" ] || echo "dbcache=$1"
+        cat "$TEMPLATE"
+    } >"$tmp" && mv -f "$tmp" "$SESSION_CONF"
+}
+
+link_datadir_conf() {
+    local conf="$DATA_DIR/bitcoin.conf"
+    [ -d "$DATA_DIR" ] || return 0
+    [ "$(readlink "$conf")" = "$SESSION_CONF" ] && return
+    ln -sfn "$SESSION_CONF" "$conf"
+}
+
+adopt_datadir_conf() {
+    local conf="$DATA_DIR/bitcoin.conf" tmp
+    [ -f "$conf" ] && [ ! -L "$conf" ] || return 0
+    mkdir -p "${TEMPLATE%/*}" || return 1
+    [ ! -f "$TEMPLATE" ] || cp -f "$TEMPLATE" "$TEMPLATE.before-datadir-conf" || return 1
+    tmp=$(mktemp "${TEMPLATE%/*}/.bitcoin.conf.XXXXXX") || return 1
+    {
+        grep -q '^datadir=' "$conf" || echo "datadir=$DATA_DIR"
+        cat "$conf"
+    } >"$tmp" && mv -f "$tmp" "$TEMPLATE" && rm -f "$conf" &&
+        echo "core-config: moved $conf to $TEMPLATE; old template kept as $TEMPLATE.before-datadir-conf" >&2
+}
+
+refresh() {
+    adopt_datadir_conf || return 1
+    # Without the template, Core would start a new node in ~/.bitcoin.
+    [ -f "$TEMPLATE" ] || return 1
+    prepare_template || return 1
+    core-prune fit || return 1
+    write_session_conf "$1" || return 1
+    link_datadir_conf
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    [ "${1:-}" = refresh ] || { echo "usage: core-config refresh [dbcache]" >&2; exit 2; }
+    refresh "${2:-}"
+fi

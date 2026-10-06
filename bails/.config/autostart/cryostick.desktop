@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=CryoStick
-Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/cryostick
-Icon=cryostick128
-Terminal=false
-NoDisplay=true
