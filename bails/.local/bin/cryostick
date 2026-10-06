@@ -24,8 +24,8 @@
 # create the signing wallet and sign. Started at every login, this asks
 # once, on a computer with no network, whether this stick is a CryoStick.
 # On a CryoStick it shows a red desktop and the CryoStick launcher so it
-# can't be mistaken for a CipherStick. A marked stick that starts with a
-# network device fails closed and shuts Tails down.
+# can't be mistaken for a CipherStick, and shuts Tails down as soon as any
+# network device appears.
 
 # shellcheck source=/dev/null
 . ~/.profile
@@ -52,7 +52,7 @@ if [ ! -e "$CRYOSTICK" ]; then
         --cancel-label='Keep CipherStick' --default-cancel \
         --text='This computer has no network. Do you want this stick to be a CryoStick, an offline stick for creating your wallet and signing?
 
-A CryoStick has a red desktop and shuts down if it starts with a network device.' || question_status=$?
+A CryoStick has a red desktop, and shuts down if it ever finds a network.' || question_status=$?
     case $question_status in
         0) touch "$CRYOSTICK" ;;
         1) exit 0 ;;
@@ -66,10 +66,10 @@ fi
 # before showing a warning, then power off after a few seconds.
 if network_found; then
     pkill -x tca >/dev/null 2>&1 || true
-    stop-btc >/dev/null 2>&1 || true
+    stop-btc >/dev/null 2>&1 &
     zenity --error --title='CryoStick found a network' --width=480 --timeout=5 \
         --icon-name=cryostick128 --ok-label='Shut Down' \
-        --text='This CryoStick started with a network device. Bitcoin Core and Tor Connection have been stopped, and Tails will shut down now.
+        --text='This CryoStick must never go online, but this computer has a network device. Tails will shut down now.
 
 Start it again with networking disabled in the BIOS or removed, and with Offline Mode turned on in the Welcome Screen.' &
     sleep 3

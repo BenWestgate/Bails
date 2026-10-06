@@ -15,37 +15,25 @@ but it cannot spend.
 ## Make a CryoStick
 
 1. Set up a CipherStick as usual, but don't create a wallet yet.
-2. While the CipherStick is still online, turn on **Additional Software**
-   in the Persistent Storage settings. Install the Debian package
-   `python3-qrcode`, and choose **Install Every Time** when Tails asks.
-   Tails already includes `zbarcam` and `zbarimg`; verify that
-   `python3-qr`, `zbarcam`, and `zbarimg` are available before making
-   the offline copy.
-3. Open **CipherStick** > **Backup** and back it up to a second USB stick,
+2. Open **CipherStick** > **Backup** and back it up to a second USB stick,
    including the Persistent Storage.
-4. Mark the copy and the offline computer, for example with tape, so you
+3. Mark the copy and the offline computer, for example with tape, so you
    never mix them up.
-5. Disable networking on the offline computer in its BIOS, or remove the
+4. Disable networking on the offline computer in its BIOS, or remove the
    Wi-Fi card.
-6. Start Tails from the copy. In the Welcome Screen, choose **+**
+5. Start Tails from the copy. In the Welcome Screen, choose **+**
    (Additional Settings) > **Offline Mode**, then unlock your Persistent
-   Storage. Do not set an Administration Password; CryoStick does not
-   support admin sessions because they can re-enable networking.
-7. In the Persistent Storage settings, turn on **Welcome Screen**, so
+   Storage. Do not set an Administration Password.
+6. In the Persistent Storage settings, turn on **Welcome Screen**, so
    Offline Mode is saved for every start.
-8. CipherStick sees that the computer has no network and asks
+7. CipherStick sees that the computer has no network and asks
    **Make a CryoStick?** Choose **Make CryoStick**. The desktop turns red
-   and the launcher shows the CryoStick icon. **Keep CipherStick** only
-   dismisses the question for this login; an offline, unmarked stick asks
-   again next time.
-9. Open **codex32** and create your signing wallet.
+   and the launcher shows the CryoStick icon.
+8. Open **codex32** and create your signing wallet.
 
-Tails Offline Mode and the disabled or removed network hardware are the
-primary air-gap controls. At each login, CryoStick also checks for any
-non-loopback network device. If one is present, it immediately stops Tor
-Connection Assistant and Bitcoin Core, shows a brief warning, and powers
-Tails off after a few seconds. It does not continuously reimplement
-NetworkManager policy during the session.
+Keep Tails in **Offline Mode** and keep the computer's networking disabled
+or removed. If CryoStick finds a network device when it starts, it stops
+Bitcoin Core and Tor Connection Assistant and shuts Tails down.
 
 ## Move the watch-only wallet to your CipherStick
 
