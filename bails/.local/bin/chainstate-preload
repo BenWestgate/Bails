@@ -60,7 +60,7 @@ until sync_complete; do
         if ! sync_complete; then
             zenity --info --title='Your computer is low on memory' \
                 --text='Additional RAM might significantly improve sync performance.\n\nBitcoin Core will continue syncing normally.' \
-                "$ICON" --timeout=6 &
+                "$ICON" --icon-name=computer --timeout=6 &
         fi
         exit 1
     fi
