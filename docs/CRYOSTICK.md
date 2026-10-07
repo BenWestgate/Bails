@@ -12,6 +12,14 @@ but it cannot spend.
 | Launcher icon | Orange and purple | Ice blue and navy |
 | Wallet | Watch-only | Signing wallet, created with codex32 |
 
+## Current interface
+
+CryoStick can create signing wallets and sign PSBTs today. There is not yet
+a Bails-specific GUI for sending PSBTs across the air gap. Bitcoin Core's
+existing wallet and PSBT controls provide the create, sign, and broadcast
+operations; the Bails-specific crossings between the online CipherStick and
+offline CryoStick currently use the terminal QR commands documented below.
+
 ## Make a CryoStick
 
 1. Set up a CipherStick as usual, but don't create a wallet yet.
@@ -77,8 +85,9 @@ screens steady and close together when scanning.
 
 ## Send bitcoin
 
-Every crossing uses the same two commands: show a file as a QR code on
-one stick, and scan it on the other.
+There is no bespoke Bails PSBT transfer GUI yet. Every crossing uses the
+same two terminal commands: show a file as a QR code on one stick, and scan
+it on the other.
 
 ```bash
 gzip -9 < FILE | python3-qr --factory=png --error-correction=L > FILE.png && xdg-open FILE.png
@@ -86,10 +95,12 @@ zbarcam --raw -Sbinary --oneshot | gunzip > FILE
 ```
 
 1. **CipherStick:** in the **Send** tab, fill in the payment and click
-   **Create Unsigned**. Save it as `unsigned.psbt` and show it.
-2. **CryoStick:** scan it into `unsigned.psbt`. Choose **File** >
-   **Load PSBT from file**, check the amount and address, click
-   **Sign Tx**, save it as `signed.psbt` and show it.
+   **Create Unsigned**. Save it as `unsigned.psbt` and show it with the
+   terminal command above.
+2. **CryoStick:** scan it into `unsigned.psbt` with the terminal command.
+   Choose **File** > **Load PSBT from file**, check the amount and address,
+   click **Sign Tx**, save it as `signed.psbt`, and show it with the
+   terminal command.
 3. **CipherStick:** scan it into `signed.psbt`. Choose **File** >
    **Load PSBT from file** and click **Broadcast Tx**.
 
@@ -104,5 +115,6 @@ camera itself needs two real computers.
 
 ## Still to do
 
-Tracked in #312: the receive-address check, and scripting the
-crossings so users don't type commands.
+Tracked in #312: the receive-address check, and replacing the manual terminal
+QR crossings with a Bails-specific scripted or graphical flow so users do not
+need to type the commands.
