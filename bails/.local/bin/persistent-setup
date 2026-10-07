@@ -46,6 +46,12 @@ close_persistent_storage() {
     pkill -u "$USER" -f '[t]ps-frontend' 2>/dev/null || :
 }
 
+required_features_active() {
+    /usr/local/lib/tpscli is-active PersistentDirectory &&
+        /usr/local/lib/tpscli is-active GnuPG &&
+        /usr/local/lib/tpscli is-active Dotfiles
+}
+
 prompt_passphrase() {
     local passphrase response
 
@@ -168,45 +174,30 @@ if ((passwd_unset)) && ! [ -f "$SET_UP" ]; then
             --ok-label='I Will Destroy It Once Memorized' "$ICON"
 fi
 
-# Check features of the Persistent Storage
-if /usr/local/lib/tpscli is-active PersistentDirectory && \
-    /usr/local/lib/tpscli is-active GnuPG && \
-    /usr/local/lib/tpscli is-active Dotfiles; then
-        :
-else
-    open_persistent_storage
+# Check required Persistent Storage features.
+if ! required_features_active; then
+    # Fresh storage creation has already presented the Tails frontend. Avoid a
+    # second launch/refocus here; if it was closed, the guidance below tells the
+    # user to reopen it from Apps instead.
+    if [ "$persistent_storage_opened_by_setup" = false ]; then
+        open_persistent_storage
+    fi
 
-    zenity --info --title='Features of the Persistent Storage' \
-        --text='In the Persistent Storage application below, scroll\nand click the toggle to turn on necessary features.' \
-        --icon-name=tails-persistent-storage "$ICON" --no-wrap &
-    sleep 4
+    zenity --info --title='Required Persistent Storage features' \
+        --text='Turn on these required Persistent Storage features:\n\n• Persistent Folder (PersistentDirectory)\n• GnuPG\n• Dotfiles\n\nNetwork Connections is optional.\n\nSetup will continue automatically when the required features are enabled. If you close Persistent Storage first, reopen it from Apps.' \
+        --icon-name=tails-persistent-storage "$ICON" &
+    feature_guidance_pid=$!
+
+    until required_features_active; do
+        sleep 1
+    done
+
+    kill "$feature_guidance_pid" 2>/dev/null || :
+    wait "$feature_guidance_pid" 2>/dev/null || :
 fi
-until /usr/local/lib/tpscli is-active PersistentDirectory && \
-    /usr/local/lib/tpscli is-active GnuPG && \
-    /usr/local/lib/tpscli is-active Dotfiles; do
-    grep --count 'python3 /usr/local/lib/tps-frontend' <<< "$(ps -ef)" - >/dev/null ||
-        { open_persistent_storage; notify-send --icon=tails-persistent-storage 'You must turn on needed features of the Persistent Storage.'; }
-    {
-        /usr/local/lib/tpscli is-active PersistentDirectory ||
-            { zenity --notification --text='Persistent Folder must be toggled on.' --window-icon=folder --timeout=6; false; }
-    } &&
-        {
-            /usr/local/lib/tpscli is-active NetworkConnections ||
-                { ((i++ < 5)) && zenity --notification --text='Toggle on "Network Connections".\nThis will remember your Wi-Fi.' --window-icon=gnome-dev-ethernet --timeout=6; true; }
-        } &&
-        {
-            /usr/local/lib/tpscli is-active GnuPG ||
-                { zenity --notification --text='"GnuPG" must be toggled on.' --window-icon=gcr-key --timeout=6; false; }
-        } &&
-        {
-            /usr/local/lib/tpscli is-active Dotfiles ||
-                { zenity --notification --text='"Dotfiles" must be toggled on.' --window-icon=gnome-settings --timeout=6; false; }
-        }
-done
 
 if [ "$persistent_storage_opened_by_setup" = true ]; then
     close_persistent_storage
 fi
-pkill -f 'zenity --notification' &>/dev/null
 mkdir -vp $XDG_STATE_HOME
 touch $SET_UP
