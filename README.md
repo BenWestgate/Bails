@@ -92,6 +92,8 @@ For a discussion on the pros and cons of using CipherStick, refer to the [detail
 
 On this branch, CipherStick installs and configures Bitcoin Core, guides Persistent Storage setup, provides passphrase practice, and installs the pinned `python-codex32` application for codex32 backup and recovery. Clone/Backup actions and the removed legacy `bails-wallet` implementation are not supported recovery interfaces.
 
+See the [CipherStick threat model](docs/THREAT_MODEL.md) for the installer-specific trust boundaries and non-goals.
+
 ## Source Code Headers
 
 Every file containing source code must include copyright and license
