@@ -94,6 +94,9 @@ else
   remove_legacy_wallet_files "$HOME"
   # shellcheck disable=SC1091
   . "$HOME/.profile"
+  # The background setup deletes BAILS_DIR after persisting it. Leave the
+  # source checkout first so later commands never inherit a deleted cwd.
+  cd "$HOME" || exit 1
   (
     persistent-setup &
     until /usr/local/lib/tpscli is-unlocked && \
