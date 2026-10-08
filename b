@@ -95,6 +95,7 @@ else
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   (
+    set -e
     persistent-setup &
     until /usr/local/lib/tpscli is-unlocked && \
       /usr/local/lib/tpscli is-active Dotfiles && \
@@ -114,6 +115,9 @@ else
     link-dotfiles
   ) & # Run persistent setup in background
   setup_pid=$!
+  if [ "$1" == "--update" ]; then
+    wait "$setup_pid" || exit 1
+  fi
   if [ -z "$1" ]; then # Install/Update core if ran without a parameter
     codex32_handoff_pending="$DOTFILES/.local/state/codex32-handoff-pending"
     # shellcheck disable=SC1091
