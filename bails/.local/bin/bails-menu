@@ -27,16 +27,24 @@
 #################################################
 
 # Set environment variables
-export WAYLAND_DISPLAY=""
 export DOTFILES="/live/persistence/TailsData_unlocked/dotfiles"
 export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
 XDG_DATA_HOME="$DOTFILES/.local/share"
 
+open_url() {
+    local url="$1"
+
+    if ! xdg-open "$url"; then
+        zenity --error --title='Unable to open link' \
+            --text="Open this URL manually:\n\n$url"
+        return 1
+    fi
+}
 
 onlynet_onion() {
     zenity --question --title='Network Privacy' --text='CipherStick offers two settings for connecting to the Bitcoin network. By default, Bitcoin Core connects to both clearnet and Tor (onion) peers, providing a balance between usability and privacy.
 
-Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity, speed and can be less stable if you have limited Tor peers.' --icon-name=tor-connection --default-cancel
+Would you like to enhance privacy by connecting exclusively to Tor (onion) peers with reduced clearnet exposure? This may limit your network diversity, speed and can be less stable if you have limited Tor peers.' --icon=tor-connection --default-cancel
 
     zenity_exit_status=$?
     
@@ -45,20 +53,20 @@ Would you like to enhance privacy by connecting exclusively to Tor (onion) peers
         sed --in-place 's/#onlynet=<net>/onlynet=onion/' $DOTFILES/.bitcoin/bitcoin.conf
         zenity --info --title='Network settings updated' --text='You have chosen to connect exclusively to Tor (onion) peers.
 
-Your network settings have been updated.' --icon-name=tor-connected-symbolic
+Your network settings have been updated.' --icon=tor-connected-symbolic
 
     else
         # User chose default network settings
         sed --in-place 's/onlynet=onion/#onlynet=<net>/' $DOTFILES/.bitcoin/bitcoin.conf
         zenity --info --title='Default network settings' --text='You have chosen to keep the default network settings.
-Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' --icon-name=tor-disconnected-symbolic
+Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' --icon=tor-disconnected-symbolic
 
     fi
 }
 
 # Display menu and get user response
-response=$(zenity --question --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
-    --icon-name="bails128" --title="CipherStick menu" \
+response=$(zenity --question --icon=bails128 --title="CipherStick menu" \
+    --width=520 \
     --text="Clone - Create a synchronized CipherStick node for a friend.
 
 Backup - Duplicate your CipherStick node to protect data.
@@ -71,28 +79,28 @@ Settings - Updates and configuration." \
 case "$response" in
 "Clone") bails-cloner ;;
 "Backup") bails-backup ;;
-"Settings") response2=$(zenity --window-icon="$XDG_DATA_HOME/icons/bails128.png" --question \
-        --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
+"Settings") response2=$(zenity --question --icon=org.gnome.Settings \
+        --title=Settings --width=520 \
+        --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
         --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="Network Privacy" \
         --switch) ;;
-"Help") response2=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
-        --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
+"Help") response2=$(zenity --question --icon=help-faq-symbolic \
+        --title="Help Menu" --width=520 --text="" \
         --extra-button="Online Help" --extra-button="Donate" --extra-button="Report a Bug" \
         --extra-button="About" --switch) ;;
 "") exit ;;
 esac
 
 case "$response2" in
-    "Donate") xdg-open bitcoin: ;; # FIXME: change address
-    "Report a Bug") tor-browser https://github.com/BenWestgate/Bails/issues ;;
-    "About") zenity --info --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
-        --title="About CipherStick" --icon-name=bails128 --text="$($XDG_DATA_HOME/bails/b --version)\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find CipherStick useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; bails-menu ;;
-    "Online Help") xdg-open https://bitcoin-core-on-tails.slack.com/ && \
-        xdg-open https://t.me/bails_support ;;
+    "Donate") open_url 'bitcoin:'; exec "$0" ;;
+    "Report a Bug") open_url 'https://github.com/BenWestgate/Bails/issues'; exec "$0" ;;
+    "About") zenity --info --icon=bails128 --title="About CipherStick" \
+        --text="$($XDG_DATA_HOME/bails/b --version)\n\nCopyright © 2023–2026 Ben Westgate\n\nPlease contribute if you find CipherStick useful. Visit <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a> for further information about the software.\nThe source code is included with CipherStick.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; exec "$0" ;;
+    "Online Help") open_url 'https://t.me/Bails_support'; exec "$0" ;;
     "Update Bitcoin Core") kgx --title="Updating Bitcoin Core..." \
         -- install-core ;;
     "Update CipherStick") kgx --title="Updating CipherStick..." \
         -- /bin/bash -c "git clone https://github.com/benwestgate/bails --depth=1 && bails/b --update" ;;
-    "Network Privacy") onlynet_onion; bails-menu ;;
-    "") bails-menu
+    "Network Privacy") onlynet_onion; exec "$0" ;;
+    "") exec "$0"
 esac
