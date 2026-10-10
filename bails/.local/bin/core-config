@@ -1,0 +1,77 @@
+#!/bin/bash
+
+DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
+TEMPLATE=${TEMPLATE:-/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf}
+SESSION_CONF=${SESSION_CONF:-$HOME/.bitcoin/bitcoin.conf}
+CORE_DOWNLOADS=${CORE_DOWNLOADS:-/live/persistence/TailsData_unlocked/dotfiles/.local/share/bitcoin}
+
+prepare_template() {
+    local updated
+    updated=$(grep -v -x 'startupnotify=\(.*/\)\?core-started' "$TEMPLATE")
+    [ "$updated" = "$(cat "$TEMPLATE")" ] || printf '%s\n' "$updated" >"$TEMPLATE"
+}
+
+# Settings given as arguments go first, unless the template sets them itself.
+write_session_conf() {
+    local tmp setting
+    mkdir -p "${SESSION_CONF%/*}"
+    tmp=$(mktemp "${SESSION_CONF%/*}/.bitcoin.conf.XXXXXX") || return 1
+    {
+        for setting; do
+            grep -q "^${setting%%=*}=" "$TEMPLATE" || echo "$setting"
+        done
+        cat "$TEMPLATE"
+    } >"$tmp" && mv -f "$tmp" "$SESSION_CONF"
+}
+
+link_datadir_conf() {
+    local conf="$DATA_DIR/bitcoin.conf"
+    [ -d "$DATA_DIR" ] || return 0
+    [ "$(readlink "$conf")" = "$SESSION_CONF" ] && return
+    ln -sfn "$SESSION_CONF" "$conf"
+}
+
+adopt_datadir_conf() {
+    local conf="$DATA_DIR/bitcoin.conf" tmp
+    [ -f "$conf" ] && [ ! -L "$conf" ] || return 0
+    mkdir -p "${TEMPLATE%/*}" || return 1
+    [ ! -f "$TEMPLATE" ] || cp -f "$TEMPLATE" "$TEMPLATE.before-datadir-conf" || return 1
+    tmp=$(mktemp "${TEMPLATE%/*}/.bitcoin.conf.XXXXXX") || return 1
+    {
+        grep -q '^datadir=' "$conf" || echo "datadir=$DATA_DIR"
+        cat "$conf"
+    } >"$tmp" && mv -f "$tmp" "$TEMPLATE" && rm -f "$conf" &&
+        echo "core-config: moved $conf to $TEMPLATE; old template kept as $TEMPLATE.before-datadir-conf" >&2
+}
+
+# Rebuild a missing template from the newest verified Core download, with
+# the settings install-core adds. core-prune turns pruning on as install-core
+# does and then fits the target to the stick.
+restore_template() {
+    local tarball prune
+    tarball=$(ls -t "$CORE_DOWNLOADS"/bitcoin-core-*/bitcoin-*-x86_64-linux-gnu.tar.gz 2>/dev/null | head -1)
+    [ -n "$tarball" ] || { echo "core-config: no Core download to rebuild $TEMPLATE from" >&2; return 1; }
+    prune=$(core-prune new) || return 1
+    mkdir -p "${TEMPLATE%/*}" || return 1
+    {
+        printf '%s\n' server=1 proxy=127.0.0.1:9050 onion=127.0.0.1:9050 "prune=$prune" \
+            rpcport=17600 "datadir=$DATA_DIR" "debuglogfile=$HOME/.bitcoin/debug.log"
+        tar -xzOf "$tarball" --wildcards '*/bitcoin.conf'
+    } >"$TEMPLATE.tmp" && mv -f "$TEMPLATE.tmp" "$TEMPLATE" &&
+        echo "core-config: rebuilt $TEMPLATE from $tarball" >&2
+}
+
+refresh() {
+    adopt_datadir_conf || return 1
+    [ -f "$TEMPLATE" ] || restore_template || return 1
+    prepare_template || return 1
+    core-prune fit || return 1
+    write_session_conf "$@" || return 1
+    link_datadir_conf
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    [ "${1:-}" = refresh ] || { echo "usage: core-config refresh [setting=value]..." >&2; exit 2; }
+    shift
+    refresh "$@"
+fi
