@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
+readonly REVISION="b045908d2ab16220899022624875c08be986e076"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 readonly BITCOIN_DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
@@ -81,6 +81,15 @@ wait_for_core() {
     return 2
 }
 
+prepare_forms() {
+    local forms_dir="$HOME/Tor Browser/codex32-forms"
+    [ ! -L "$forms_dir" ] || return 1
+    mkdir -p -- "$forms_dir" &&
+        cp --remove-destination -- "$SOURCE_DIR/src/codex32_gui/forms/recovery-card.html" \
+            "$SOURCE_DIR/src/codex32_gui/forms/wallet-verification-record.html" "$forms_dir/" || return 1
+    export CODEX32_FORMS_DIR="$forms_dir"
+}
+
 main() {
     local core_status install_if_needed=false
 
@@ -133,6 +142,12 @@ main() {
         fi
         exit 1
     fi
+
+    prepare_forms || {
+        zenity --error --title='codex32 forms unavailable' \
+            --text='The blank recovery forms could not be copied into the Tor Browser folder. Check that the Tor Browser folder is writable and remove unexpected links in its codex32-forms folder, then try again.'
+        return 1
+    }
 
     exec env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$SOURCE_DIR/src" python3 -P -m codex32_gui
 }

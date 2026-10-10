@@ -18,8 +18,8 @@ derivation paths and individual secrets, and MuSig2 participant-xpub extraction.
 
 These pins matter because the upstream draft and proof-of-concept implementation can change independently. Findings about implementation behavior, especially descriptor activation, apply to the reviewed Core snapshot unless explicitly revalidated against a later head.
 
-For the Bails codex32 recovery integration, the pinned `python-codex32`
-revision was revalidated on 2026-09-25 at
+For the Bails codex32 recovery integration, the historical `python-codex32`
+pin was revalidated on 2026-09-25 at
 `1938b604182b5553f4e724fd2aea814496a24cd4`. Relative to the previously
 reviewed `64e6b96d197f46f998c2a40dc96b58242278dd16`, restore now repeats identity
 verification immediately before unlocking or creating a destination wallet,
@@ -31,3 +31,26 @@ before wallet mutation, while the no-record path shows the recovered
 fingerprint and requires explicit confirmation. The complete upstream test
 suite passes at this revision both normally and under `python -O` (987 tests in
 each mode), with Ruff and mypy also clean.
+
+## Dated recovery integration (2026-10-10)
+
+Bails #332 updates the pin to `b045908d2ab16220899022624875c08be986e076`
+from python-codex32 #113, including the maintainer-reviewed #139. This focused
+review covers the pre-seed blank forms, recorded creation-date rescan, retained
+block/AssumeUTXO checks, preserved restore identity gate, and native Core
+`load_on_startup=true`. Core creation warnings are displayed to the operator;
+there is no separate Bails wallet-loading or quarantine policy.
+
+Python 3.13 Core/CLI tests pass normally and optimized (321 each); host GTK
+GUI/Core tests pass normally and optimized (206 each, 2 skipped). Ruff, mypy,
+and both existing size budgets pass. In an isolated Core 32.0rc2 regtest,
+genesis was physically pruned at `pruneheight=510`, dated restore recovered a
+confirmed synthetic 1.25 BTC payment, timestamp zero was refused before wallet
+mutation, and Core reloaded the restored wallet from `settings.json` after
+restart without a hook. Bails form copy/refresh/failure and symlink regressions
+and the combined #311 startup/config tests also pass.
+
+This is scoped correctness and integration evidence prepared with AI assistance
+for human review, not a new independent BIP138 or whole-library security audit.
+Supported-Tails form opening and recovery remain untested here. The historical
+2026-09-25 results above apply to their original revision.
