@@ -147,6 +147,16 @@ refresh 2>/dev/null
 cp "$work/template-saved" "$TEMPLATE"
 refresh
 
+# Terminal launches must find the persistent datadir through Core's default
+# ~/.bitcoin/bitcoin.conf, including on an upgrade from a missing setting.
+printf '%s\n' '#datadir=<dir>' 'server=1' '[main]' >"$TEMPLATE"
+refresh
+[ "$(head -n1 "$TEMPLATE")" = "datadir=$DATA_DIR" ] || fail 'default config does not point at Persistent Storage'
+grep -qx "datadir=$DATA_DIR" "$SESSION_CONF" || fail 'session config lacks persistent datadir'
+grep -qx 'server=1' "$TEMPLATE" || fail 'existing template settings lost'
+cp "$work/template-saved" "$TEMPLATE"
+refresh
+
 # Each start retargets the persisted prune target to leave 10 GiB free when
 # it would leave more than 11 GiB or less than 1 GiB free, never below
 # 1907 MiB. Unpruned stays unpruned.

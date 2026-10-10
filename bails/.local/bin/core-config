@@ -9,6 +9,9 @@ prepare_template() {
     local updated
     updated=$(grep -v -x 'startupnotify=\(.*/\)\?core-started' "$TEMPLATE")
     [ "$updated" = "$(cat "$TEMPLATE")" ] || printf '%s\n' "$updated" >"$TEMPLATE"
+    # Core reads this from ~/.bitcoin/bitcoin.conf even for terminal starts.
+    grep -qE '^[[:space:]]*datadir[[:space:]]*=' "$TEMPLATE" ||
+        sed -i "1i datadir=$DATA_DIR" "$TEMPLATE"
 }
 
 # Settings given as arguments go first, unless the template sets them itself.

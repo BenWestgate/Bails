@@ -41,7 +41,7 @@ persistent-setup || exit 1 # Checks needed persistent features are on.
 
 # Prepare the session-only config before Core starts.
 core-dbcache refresh || exit 1
-setsid -f bitcoin-qt -min -chain=main -datadir="$DATA_DIR" >/dev/null 2>&1
+setsid -f bitcoin-qt -min -chain=main >/dev/null 2>&1
 
 # Symlink at default datadir to our custom datadir
 ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~

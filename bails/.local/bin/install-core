@@ -280,5 +280,5 @@ This initial synchronisation is very demanding, and may expose hardware problems
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
 core-dbcache refresh || exit 1
-setsid -f bitcoin-qt -min -datadir="$DATA_DIR" >/dev/null 2>&1
+setsid -f bitcoin-qt -min >/dev/null 2>&1
 touch $XDG_STATE_HOME/installed
