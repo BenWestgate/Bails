@@ -73,7 +73,7 @@ case "$response" in
 "Backup") bails-backup ;;
 "Settings") response2=$(zenity --window-icon="$XDG_DATA_HOME/icons/bails128.png" --question \
         --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
-        --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="Network Privacy" \
+        --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="Load AssumeUTXO Snapshot" --extra-button="Network Privacy" \
         --switch) ;;
 "Help") response2=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
         --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
@@ -93,6 +93,8 @@ case "$response2" in
         -- install-core ;;
     "Update CipherStick") kgx --title="Updating CipherStick..." \
         -- /bin/bash -c "git clone https://github.com/benwestgate/bails --depth=1 && bails/b --update" ;;
+    "Load AssumeUTXO Snapshot") gnome-terminal --title="Load AssumeUTXO Snapshot" --hide-menubar \
+        -- "load-assumeutxo" ;;
     "Network Privacy") onlynet_onion; bails-menu ;;
     "") bails-menu
 esac
