@@ -230,6 +230,39 @@ In general, all pull requests must:
     demonstrating the bug and also proving the fix. This helps prevent regression.
   - Change relevant comments and documentation when behaviour of code changes.
 
+### Merge policy
+
+Our merge policy takes inspiration from [Tails' merge policy](https://www2.tails.net/contribute/merge_policy/),
+adapted to this project's small maintainer and reviewer base. A green check or an
+`ACK` helps establish confidence; neither automatically makes a change ready to
+merge. The merge maintainer makes the final decision after considering the
+technical evidence and reviewer feedback.
+
+Before merging:
+
+  - Keep the pull request focused and explain why the change belongs in Bails
+    instead of an upstream project.
+
+  - Address outstanding review comments with changes or a reasoned explanation.
+    Resolve substantive disagreements before merging; an unanswered `NACK` is
+    not evidence of consensus.
+
+  - Seek review by someone other than the author for changes to private-key
+    handling, Tor routing, Persistent Storage, or other security boundaries.
+    Documentation-only and similarly low-risk changes can receive a lighter
+    review at the merge maintainer's discretion.
+
+  - Confirm that applicable automated checks pass. For changes that depend on
+    Tails or the desktop, include manual test steps and results from the
+    supported Tails release. Explain any test that cannot be run.
+
+  - Treat an `ACK` as applying to the commit reviewed. After substantive changes,
+    request another review and make the differences easy to inspect (for
+    example, with `git range-diff`).
+
+Favor a clear, reviewable history. Do not merge to satisfy a schedule at the
+expense of unresolved security or correctness concerns.
+
 ### Peer Review
 
 Anyone may participate in peer review which is expressed by comments in the pull

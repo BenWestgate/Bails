@@ -1,146 +1,116 @@
 # Developer notes
 
-These notes describe the repository conventions that matter when changing
-CipherStick. Keep changes small enough to review and test directly on current
-stable Tails.
+This guide covers the practical choices to make when changing Bails. Start with
+[CONTRIBUTING.md](../CONTRIBUTING.md) for the contribution and review process.
+Keep each change small enough to understand and test on the supported Tails
+release.
 
 ## Scope
 
-CipherStick is primarily shell code that installs and configures Bitcoin Core on
-Tails. Avoid adding another implementation or dependency when the operating
-system, Bitcoin Core, or a separately reviewed project already provides the
-needed behavior.
+Bails (CipherStick) installs and configures Bitcoin Core on Tails. It should
+remain a thin layer over the operating system and other maintained projects.
+Avoid adding another implementation when Bitcoin Core, Tails, Debian, GNOME,
+python-codex32, JoinMarket, or another upstream already provides the behavior.
 
-Keep private-key and recovery logic out of the installer when possible. Changes
-that cross a security boundary should make that boundary explicit in code,
-documentation, and tests.
+Keep private-key and recovery logic out of the installer where possible. Make
+security boundaries clear in the code, documentation, and tests.
 
 ## Maintainability and design policy
 
-CipherStick is intended to remain sustainable for a small maintainer base while
-tracking fast-moving upstream projects. Maintenance cost is therefore a design
-constraint, not an afterthought.
+We have a small maintainer base, and our dependencies change independently.
+Every local workaround becomes something we must update and test. These two
+Tails documents explain the design principles behind this policy:
 
-Two Tails documents are required background for changes that affect the system
-design or dependency integration:
+- [Improve Tails source code](https://tails.net/contribute/how/code/), especially
+  its guidance on low-effort maintainability.
 
-- [Tails: Improve Tails source code](https://tails.net/contribute/how/code/),
-  especially **Focus on low-effort maintainability**.
-- [Tails: Design: specification and implementation](https://tails.net/contribute/design/),
-  especially the **Privacy Enhancing Live Distribution (PELD)** specification.
+- [Design: specification and implementation](https://tails.net/contribute/design/),
+  including the Privacy Enhancing Live Distribution (PELD) specification.
 
-CipherStick is not a replacement for Tails. Its design is PELD-inspired and
-should preserve the privacy, amnesia, portability, usability, transparency, and
-maintainability properties provided by Tails rather than reimplementing them.
+### Use upstream behavior
 
-### Low-effort maintainability
+Prefer stable interfaces and capability checks over details of a specific
+release. For example, a path containing `python3.11` can break when Debian
+updates Python. Ask Python for the module location instead of assuming where
+it is installed. Apply the same principle to terminal applications, executable
+paths, GTK versions, dialog sizes, and desktop integration.
 
-Prefer the smallest practical delta from upstream software and the base Tails /
-Debian system. CipherStick should mostly compose and configure well-maintained
-components. When functionality belongs naturally in Bitcoin Core, Tails,
-Debian, GNOME, python-codex32, JoinMarket, or another upstream, prefer fixing or
-using it there instead of maintaining a CipherStick-specific replacement.
+- Let Tails and other upstreams enforce their own validation and policy. Local
+  copies can drift or disagree.
 
-Changes should depend on stable interfaces and capabilities rather than details
-of one currently installed version. In particular:
+- Put necessary compatibility handling in one adapter or feature check, not in
+  every caller. If a version check or dependency bound is unavoidable, explain
+  the constraint and the supported versions.
 
-- Do not hard-code Python minor-version paths such as `python3.11`.
-- Do not assume a particular terminal application, GTK generation, dialog size,
-  executable location, package version, or desktop implementation when a stable
-  interface or runtime capability check is available.
-- Avoid duplicating validation or policy already enforced by Tails or another
-  upstream component. Duplicate checks drift and become contradictory.
-- Centralize unavoidable compatibility logic so an upstream change is fixed in
-  one place instead of in every caller.
-- Prefer feature/capability detection to version checks. When a version check is
-  unavoidable, document the contract it protects and make unsupported states
-  fail with an actionable error.
-- Keep custom UI and glue code small. Remove obsolete compatibility code once
-  the supported upstreams no longer need it.
+- Report missing capabilities and dependency failures clearly. Do not discard
+  errors from commands that users need for installation or recovery.
 
-Before adding a workaround, search existing issues, pull requests, upstream bug
-trackers, and documentation. A workaround should have a clear removal condition
-or a reason it is expected to remain stable.
+- Before adding a workaround, check existing issues, upstream fixes, and
+  documentation. Describe when the workaround can be removed.
 
-### PELD-inspired design policy
+Keep custom UI and integration code small. Prefer removing obsolete code to
+carrying compatibility logic for releases we no longer support.
 
-Changes must preserve the security and privacy model inherited from Tails:
+### Preserve Tails' privacy model
 
-- Persistence is explicit and opt-in. Do not write sensitive state outside the
-  intended encrypted Persistent Storage locations.
-- Network access must continue to use the isolation and Tor-routing guarantees
-  provided by Tails. Any exception needs a documented security rationale and a
-  user-visible indication where appropriate.
-- Safe behavior should require little or no advanced configuration. Avoid flows
-  where an average user can silently disable a privacy or security property.
-- Prefer Free Software and reproducible, reviewable inputs. Pin external source
-  when review requires an exact revision, and make the pin easy to update and
-  verify.
-- Security-relevant design decisions and exceptions belong in public project
-  documentation or issue history so another reviewer can reconstruct why they
-  exist.
-- Updating CipherStick for a new upstream release should be routine. Build,
-  install, migration, and compatibility steps should be scripted where
-  practical instead of relying on maintainer memory.
+Tails provides the amnesia, Tor routing, and safe defaults on which Bails
+depends. Its PELD principles also include portability, usability, transparency,
+and maintainability. Preserve these properties instead of rebuilding Tails.
 
-### Dependency updates and compatibility
+- Store sensitive data only in memory unless the user explicitly chooses to
+  save it in Tails **Persistent Storage**. Do not silently enable persistence.
 
-Treat Bitcoin Core, Tails, GNOME, Debian, Python, python-codex32, and JoinMarket
-as independently evolving upstreams. A change involving one of them should
-consider what happens when that component advances without coordinated changes
-to CipherStick.
+- Use Tails' network isolation and Tor routing. Any exception needs a clear
+  security rationale and, where relevant, a visible explanation for the user.
 
-For dependency-sensitive changes:
+- Keep safe behavior the default. A routine action should not silently weaken
+  privacy or security.
 
-1. Test the affected flow on the currently supported Tails release, not only on
-   the maintainer's development host.
-2. Exercise the user-visible path end to end when practical. Import success or
-   shell syntax alone is not enough for GUI and integration changes.
-3. Verify failure paths are visible. Do not discard stderr from a dependency
-   boundary unless the failure is intentionally handled and surfaced elsewhere.
-4. Record any newly introduced upper/lower version bound and why it exists.
-5. Prefer a small compatibility adapter or capability probe over scattered
-   conditionals throughout the codebase.
+- Prefer Free Software and verifiable inputs. When a specific upstream revision
+  must be pinned, make the pin easy to inspect and update.
 
-When a release exposes several regressions with the same root cause, fix the
-shared abstraction or dependency boundary rather than patching each symptom.
+Record security exceptions and design decisions in the repository or issue
+history so later contributors can understand them.
 
-### Review expectations
+### Prepare for dependency changes
 
-Keep commits focused and explain the reason for the change. Review should ask:
+Treat Tails, Debian, GNOME, Python, Bitcoin Core, python-codex32, and JoinMarket
+as independent upstreams. When an integration changes, consider what happens
+when just one of them updates.
 
-- Does this increase the long-term maintenance burden?
-- Does it duplicate something an upstream already provides?
-- Is it coupled to an incidental detail of today's Tails, Debian, GNOME,
-  Python, Bitcoin Core, python-codex32, or JoinMarket release?
-- Does it preserve Tails' privacy and amnesia guarantees?
-- Can the next upstream release be accommodated by changing one well-defined
-  integration point?
-
-Prefer deleting brittle custom code over extending it when a maintained
-upstream component can own the behavior.
+If a release causes several failures, look for their shared dependency boundary
+before patching each symptom. Script repeatable installation, migration, and
+compatibility steps where practical.
 
 ## Shell code
 
-- Use Bash for existing shell entry points and match the surrounding style.
-- Quote path and user-controlled expansions unless word splitting is deliberate.
-- Prefer existing Tails and GNU utilities over new dependencies.
-- Preserve failure status instead of hiding errors that affect installation,
-  verification, persistence, or recovery.
-- Keep persistent state under Tails Persistent Storage; temporary secrets and
-  logs should remain in memory-backed locations where practical.
+- Keep existing shell entry points in Bash and follow the nearby style.
+
+- Quote paths and user-controlled values unless splitting is intentional.
+
+- Prefer tools already present in Tails or Debian over new dependencies.
+
+- Preserve failure status for installation, verification, persistence, and
+  recovery; show errors where users can act on them.
+
+- Keep temporary secrets and logs in memory-backed locations where possible.
+  Only explicitly selected data belongs in Persistent Storage.
 
 ## Repository layout
 
-- `b` is the main bootstrap/install entry point.
+- `b` is the main installer and bootstrap entry point.
+
 - `bails/.local/bin/` contains installed helper commands.
+
 - `bails/.local/share/` contains desktop integration and application data.
+
 - `docs/` contains design, user, and contributor documentation.
+
 - `.github/workflows/` contains automated checks.
 
-## Testing
+## Testing changes
 
-Run the checks that cover the files you changed. At minimum for shell changes:
+Run checks relevant to what you changed. For a shell script, start with:
 
 ```sh
 git diff --check
@@ -148,13 +118,30 @@ bash -n path/to/changed-script
 shellcheck path/to/changed-script
 ```
 
-For behavior that depends on Tails, Persistent Storage, Tor, Bitcoin Core, or
-desktop integration, also test the affected path on current stable Tails and
-describe the manual steps in the pull request.
+For changes involving Tails, Tor, Persistent Storage, Bitcoin Core, or the
+desktop, test the user-visible path on the supported Tails release. Exercise
+failure behavior too: a successful shell syntax check or import is not a test
+of a graphical workflow. Record the steps and results in the pull request.
 
-## Review
+## Writing documentation
 
-Prefer one focused change per pull request. Do not mix formatting or unrelated
-cleanup with behavioral changes. Update documentation in the same pull request
-when user-visible behavior changes, and explain any security or persistence
-trade-offs that a reviewer cannot infer directly from the diff.
+Follow [Tails' documentation style guide](https://tails.net/contribute/how/documentation/style_guide/)
+so instructions feel familiar to Tails users. In particular:
+
+- Use short, direct sentences, US spelling, and sentence-case headings.
+
+- Name Tails features consistently, such as **Persistent Storage**. Write
+  interface labels in **bold**, command names in `code`, and file names in
+  *italics* when writing for Tails users.
+
+- Give actions in the order readers perform them. Use descriptive link text and
+  leave a blank line between list items.
+
+Keep explanations close to the task they help with. For changes to behavior,
+update the relevant user documentation in the same pull request.
+
+## Before requesting review
+
+Keep changes focused. Explain why the change is needed, whether an upstream
+could own it, what you tested, and any privacy or persistence trade-offs. See
+the [merge policy](../CONTRIBUTING.md#merge-policy) for review expectations.

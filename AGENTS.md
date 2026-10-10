@@ -1,15 +1,16 @@
 # Agent guidance
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md), the [AI policy](docs/AI_POLICY.md)
-and the [maintainability and design
-policy](docs/developer-notes.md#maintainability-and-design-policy) before
-changing this repository. The project treats low-effort maintainability and
-PELD-inspired design as core requirements.
+Read [CONTRIBUTING.md](CONTRIBUTING.md), the [AI policy](docs/AI_POLICY.md),
+and the [developer notes](docs/developer-notes.md) before changing this
+repository. Follow the [merge policy](CONTRIBUTING.md#merge-policy) when
+preparing changes for review. Low-effort maintainability and PELD-inspired
+design are core requirements.
 
 Required background:
 
 - [Tails: Improve Tails source code](https://tails.net/contribute/how/code/)
 - [Tails: Design: specification and implementation](https://tails.net/contribute/design/)
+- For documentation changes: [Tails' documentation style guide](https://tails.net/contribute/how/documentation/style_guide/)
 
 Keep CipherStick a thin integration layer over Tails, Debian, GNOME, Bitcoin
 Core, Python, python-codex32, JoinMarket, and other upstreams. Prefer upstream
