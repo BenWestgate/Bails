@@ -34,19 +34,6 @@ link_datadir_conf() {
     ln -sfn "$SESSION_CONF" "$conf"
 }
 
-adopt_datadir_conf() {
-    local conf="$DATA_DIR/bitcoin.conf" tmp
-    [ -f "$conf" ] && [ ! -L "$conf" ] || return 0
-    mkdir -p "${TEMPLATE%/*}" || return 1
-    [ ! -f "$TEMPLATE" ] || cp -f "$TEMPLATE" "$TEMPLATE.before-datadir-conf" || return 1
-    tmp=$(mktemp "${TEMPLATE%/*}/.bitcoin.conf.XXXXXX") || return 1
-    {
-        grep -q '^datadir=' "$conf" || echo "datadir=$DATA_DIR"
-        cat "$conf"
-    } >"$tmp" && mv -f "$tmp" "$TEMPLATE" && rm -f "$conf" &&
-        echo "core-config: moved $conf to $TEMPLATE; old template kept as $TEMPLATE.before-datadir-conf" >&2
-}
-
 # Rebuild a missing template from the newest verified Core download, with
 # the settings install-core adds. core-prune turns pruning on as install-core
 # does and then fits the target to the stick.
@@ -65,7 +52,6 @@ restore_template() {
 }
 
 refresh() {
-    adopt_datadir_conf || return 1
     [ -f "$TEMPLATE" ] || restore_template || return 1
     prepare_template || return 1
     core-prune fit || return 1

@@ -29,7 +29,6 @@ function core-prune {
 }
 function core-config { [ "$1" = refresh ] && shift && refresh_config "$@"; }
 refresh_config() {
-    adopt_datadir_conf || return 1
     prepare_template || return 1
     core-prune fit || return 1
     write_session_conf "$@" || return 1
@@ -64,19 +63,5 @@ printf '%s\n' 'prune=1' >"$TEMPLATE"
 block_room() { echo 500; }
 fit_prune
 grep -qx 'prune=1' "$TEMPLATE" || fail 'manual prune mode was converted to automatic pruning'
-
-# If the persistent template cannot be written, adopting a real data-directory
-# config must fail before link_datadir_conf can replace the user's only copy.
-rm -f "$DATA_DIR/bitcoin.conf" "$SESSION_CONF"
-printf '%s\n' 'user-setting=keep-me' >"$DATA_DIR/bitcoin.conf"
-not_a_dir="$work/not-a-directory"
-: >"$not_a_dir"
-TEMPLATE="$not_a_dir/bitcoin.conf"
-refresh 2>/dev/null && fail 'refresh succeeded although custom-config adoption failed'
-{ [ -f "$DATA_DIR/bitcoin.conf" ] && [ ! -L "$DATA_DIR/bitcoin.conf" ]; } ||
-    fail "user's data-directory config was replaced after adoption failure"
-grep -qx 'user-setting=keep-me' "$DATA_DIR/bitcoin.conf" ||
-    fail "user's data-directory config changed after adoption failure"
-[ ! -e "$SESSION_CONF" ] || fail 'session config was written after adoption failure'
 
 printf '%s\n' 'core-dbcache review regressions: PASS'

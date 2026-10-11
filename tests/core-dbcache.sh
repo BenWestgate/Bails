@@ -34,7 +34,6 @@ function core-prune {
 function core-config { [ "$1" = refresh ] && shift && refresh_config "$@"; }
 
 refresh_config() {
-    adopt_datadir_conf || return 1
     [ -f "$TEMPLATE" ] || restore_template || return 1
     prepare_template || return 1
     core-prune fit || return 1
@@ -124,28 +123,8 @@ refresh
 [ ! -L "$SESSION_CONF" ] || fail 'link to the template not replaced'
 cmp -s "$TEMPLATE" "$work/template-before" || fail 'writing the session copy changed the template'
 
-# A real bitcoin.conf in the data directory is the user's own: it becomes the
-# template, with the datadir line launchers no longer pass, and the old
-# template is kept.
+# Keep the original template for later checks after testing a missing datadir.
 cp "$TEMPLATE" "$work/template-saved"
-rm -f "$DATA_DIR/bitcoin.conf"
-printf '%s\n' 'startupnotify=/user/hook' 'user=1' '[main]' >"$DATA_DIR/bitcoin.conf"
-refresh 2>/dev/null
-grep -qx 'user=1' "$TEMPLATE" || fail "user's own config not made the template"
-[ "$(grep -n '^datadir=' "$TEMPLATE" | cut -d: -f1)" -lt "$(grep -n '^\[main\]' "$TEMPLATE" | cut -d: -f1)" ] ||
-    fail 'datadir not added before network sections'
-grep -qx "datadir=$DATA_DIR" "$TEMPLATE" || fail 'datadir missing from adopted config'
-cmp -s "$TEMPLATE.before-datadir-conf" "$work/template-saved" || fail 'old template not kept'
-[ "$(readlink "$DATA_DIR/bitcoin.conf")" = "$SESSION_CONF" ] || fail "data directory config not linked after adopting the user's"
-grep -qx 'user=1' "$SESSION_CONF" || fail "session copy lacks the user's settings"
-grep -qx 'startupnotify=/user/hook' "$SESSION_CONF" || fail "session copy changed the user's startupnotify"
-printf 'datadir=%s\nuser=2\n' /elsewhere >"$work/conf"
-rm -f "$DATA_DIR/bitcoin.conf"
-cp "$work/conf" "$DATA_DIR/bitcoin.conf"
-refresh 2>/dev/null
-[ "$(grep -c '^datadir=' "$TEMPLATE")" = 1 ] || fail "datadir added although the user's config sets one"
-cp "$work/template-saved" "$TEMPLATE"
-refresh
 
 # Terminal launches must find the persistent datadir through Core's default
 # ~/.bitcoin/bitcoin.conf, including on an upgrade from a missing setting.
