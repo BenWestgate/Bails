@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=CipherStick Passphrase Practice
+Exec=spaced-repetition --resume
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true

@@ -73,7 +73,7 @@ case "$response" in
 "Backup") bails-backup ;;
 "Settings") response2=$(zenity --window-icon="$XDG_DATA_HOME/icons/bails128.png" --question \
         --icon-name=org.gnome.Settings --title=Settings --text="Configure Bitcoin Core on Tails\n\nWarning: Only install or update software retaining a good reputation." \
-        --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="Network Privacy" \
+        --extra-button="Update Bitcoin Core" --extra-button="Update CipherStick" --extra-button="Practice Passphrase" --extra-button="Network Privacy" \
         --switch) ;;
 "Help") response2=$(zenity --window-icon="$LOCAL/share/icons/bails128.png" --question \
         --icon-name="help-faq-symbolic" --title="Help Menu" --text="" \
@@ -93,6 +93,14 @@ case "$response2" in
         -- install-core ;;
     "Update CipherStick") kgx --title="Updating CipherStick..." \
         -- /bin/bash -c "git clone https://github.com/benwestgate/bails --depth=1 && bails/b --update" ;;
+    "Practice Passphrase")
+        trainer_pid="$(cat "$XDG_RUNTIME_DIR/spaced-repetition.pid" 2>/dev/null || true)"
+        if [[ "$trainer_pid" =~ ^[0-9]+$ ]] && kill -0 "$trainer_pid" 2>/dev/null; then
+            kill -USR1 "$trainer_pid"
+        else
+            spaced-repetition --now >/dev/null 2>&1 &
+        fi
+        ;;
     "Network Privacy") onlynet_onion; bails-menu ;;
     "") bails-menu
 esac
