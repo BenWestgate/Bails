@@ -14,9 +14,9 @@ jobs:
     name: Check shell code
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Lint with shellcheck
-        uses: ludeeus/action-shellcheck@2.0.0
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
         env:
           SHELLCHECK_OPTS: -e 2012 -e SC2046
         with:
@@ -27,7 +27,7 @@ jobs:
   #   name: Check Python code
   #   runs-on: ubuntu-latest
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
   #     - name: Set up Python
   #       uses: actions/setup-python@v2
   #       with:
