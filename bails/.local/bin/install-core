@@ -40,7 +40,13 @@ export LOCAL_DIR="$DOTFILES/.local"
 export XDG_STATE_HOME="$LOCAL_DIR/state"
 readonly XDG_DATA_HOME="$LOCAL_DIR/share"
 readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
-readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp"
+# Pinned Bitcoin Core release. python-codex32 requires Bitcoin Core 32 or newer
+# and 32.0 is not final yet, so this is the authenticated 32.0rc2 candidate.
+# Bump both together when a new release is adopted.
+readonly VER=32.0rc2
+readonly RELEASE_PATH="bitcoin-core-32.0/test.rc2"
+# Storage estimates come from the pinned release's tag, not master.
+readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/v$VER/src/kernel/chainparams.cpp"
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
 
 
@@ -93,12 +99,39 @@ search_key() {
 }
 
 
+# Run a command up to 5 times, then give up and return its failure status
 retry_on_fail() {
+    local attempt status
     echo "Running $*"
-    until "$@"; do
-        sleep $((retry++))
+    for attempt in 1 2 3 4 5; do
+        "$@" && return 0
+        status=$?
+        ((attempt < 5)) || break
+        sleep "$attempt"
         echo "Retrying $*"
     done
+    echo "Giving up after $attempt attempts: $*" >&2
+    return "$status"
+}
+
+
+# Bring a background job to the foreground to show progress, return its status
+# Parameter 1 = PID of the background job
+await_job() {
+    if ps -p "$1" &>/dev/null; then
+        fg %"$(jobs -l | grep "$1" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+    else
+        wait "$1"
+    fi
+}
+
+
+# Show why the download stopped and exit without installing anything
+# Parameter 1 = What failed
+download_failed() {
+    printf 'Bitcoin Core download failed: %s\n' "$1" >&2
+    zenity --error --title='Bitcoin Core download stopped' --text="$1\n\nBitcoin Core $VER was not installed. Check your Tor connection, then choose Update Bitcoin Core in the CipherStick menu to try again." --ellipsize "$ICON"
+    exit 1
 }
 
 
@@ -106,28 +139,14 @@ retry_on_fail() {
 # Begin execution here
 ###############################################################################
 
-printf '\033]2;Checking for latest Bitcoin Core version\a'
+printf '\033]2;Downloading Bitcoin Core %s\a' "$VER"
 pkill tca &>/dev/null # Close tor connection assistant to clean up the screen
 set -m # Enable job control to bring background downloads to the foreground
 
 # Download to Persistent Storage if setup, otherwise amnesia
 cd "$XDG_DATA_HOME/bitcoin" 2>/dev/null || cd "$HOME/.local/share/bitcoin" || exit 1
 DOWNLOAD_DIR=$PWD
-retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
-VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
-case "$VER" in
-    ''|*[!0-9.]*) echo "Unexpected Bitcoin Core version: $VER" >&2; exit 1 ;;
-esac
-release_path="bitcoin-core-$VER"
-
-# python-codex32 requires Bitcoin Core 32 or newer. Until 32.0 is stable,
-# use the authenticated 32.0rc2 release candidate instead of stable 31.x.
-if [ "${VER%%.*}" -lt 32 ]; then
-    VER=32.0rc2
-    release_path="bitcoin-core-32.0/test.rc2"
-fi
-
-release_url="$BITCOIN_CORE_DOMAIN/bin/$release_path"
+release_url="$BITCOIN_CORE_DOMAIN/bin/$RELEASE_PATH"
 mkdir -p "bitcoin-core-$VER"
 # Download Bitcoin core checksums and signatures in background
 retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
@@ -136,13 +155,17 @@ retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
 retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
     "$release_url/bitcoin-$VER-x86_64-linux-gnu.tar.gz" & get_core=$!
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
-if cd guix.sigs 2>/dev/null; then
-    retry_on_fail git pull -v # Update guix.sigs
+if [ -d guix.sigs/.git ]; then
+    retry_on_fail git -C guix.sigs pull -v || # Update guix.sigs
+        download_failed 'Could not update the Bitcoin Core builder signatures.'
 else
-    retry_on_fail git clone $GUIX_SIGS_REPO_URL --depth=1
-fi 
+    rm -rf guix.sigs
+    retry_on_fail git clone $GUIX_SIGS_REPO_URL --depth=1 ||
+        download_failed 'Could not download the Bitcoin Core builder signatures.'
+fi
 
 for dir in guix.sigs/*/; do [ "${dir#*/}" == "$VER/" ] && break; rm -rf "$dir"; done
+[ -d guix.sigs/"$VER" ] || download_failed "No builder signatures were found for Bitcoin Core $VER."
 for name in guix.sigs/"$VER"/*; do gpg --show-keys "${name/"$VER"/builder-keys}.gpg"; done > builder-keys
 if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
     action=update
@@ -157,8 +180,10 @@ else # Import a trusted set on first-run.
             echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
-    # Download chain parameters in background to set prune
-    retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
+fi
+if [ ! -e "$XDG_STATE_HOME/installed" ] || [ -z "$OLD_VER" ]; then
+    # Download chain parameters in background to set prune on first setup
+    retry_on_fail wget -O chainparams.cpp "$BITCOIN_CHAINPARAMS_URL" & get_size=$!
 fi
 
 printf '\033]2;Setup Persistent Storage...\a'
@@ -172,12 +197,10 @@ core_was_installed=false
 [ -e "$XDG_STATE_HOME/installed" ] && core_was_installed=true
 
 printf '\033]2;Getting Bitcoin Core signatures...\a'
-ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+await_job "$sig_dl" || download_failed 'Could not download the Bitcoin Core checksums and signatures.'
 cd bitcoin-core-"$VER" || exit 1 # Switch into latest bitcoin-core directory
-if [ ! -f SHA256SUMS ]; then
-    zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
-    install-core	# Launch this script again
-    exit 1
+if [ ! -s SHA256SUMS ] || [ ! -s SHA256SUMS.asc ]; then
+    download_failed 'The Bitcoin Core checksum or signature file is missing.'
 fi
 
 export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
@@ -202,16 +225,24 @@ done
 
 printf '\033]2;Downloading Bitcoin Core...\a'
 # Bring Bitcoin Core download to foreground to display progress and wait for it
-ps -p $get_core &>/dev/null && fg %"$(jobs -l | grep $get_core | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+await_job "$get_core" || download_failed 'Could not download Bitcoin Core.'
 # Verify download integrity
 if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
-    stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
-    zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
-    install-core	# Launch this script again
-    exit 1
+    # Delete the bad download so the next attempt starts over instead of resuming it
+    rm -f "bitcoin-$VER-x86_64-linux-gnu.tar.gz"
+    download_failed 'The Bitcoin Core download does not match its signed checksum, so it was deleted.'
 fi
+if [ -n "$get_size" ]; then
+    # Bring chainparams.cpp download to foreground, read assumed chainstate & blockchain size
+    await_job "$get_size" || download_failed 'Could not download the Bitcoin Core storage estimates.'
+    assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    [[ "$assumed_chain_state_size" =~ ^[0-9]+$ && "$assumed_blockchain_size" =~ ^[0-9]+$ ]] ||
+        download_failed 'Could not read the Bitcoin Core storage estimates.'
+fi
+stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 rm -Rvf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
@@ -229,10 +260,6 @@ printf "\033]2;Bitcoin Core %s complete!\a" $action
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
-    # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
-    ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-    assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-    assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
     # Move completed verified download to persistent storage
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
