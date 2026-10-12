@@ -127,8 +127,16 @@ If you shutdown Tails without exiting Bitcoin Core safely, or by yanking the USB
 ## How do I update CipherStick?
 Click **Applications > Favorites > CipherStick > Settings > Update CipherStick**. Make sure you still Trust this repository and it has retained a good reputation before doing so.
 
+## Can I use AssumeUTXO to start Bitcoin Core sooner?
+
+Yes. On first install CipherStick offers to load a compatible Bitcoin Core UTXO snapshot, and the same action is available later from **CipherStick > Settings > Load AssumeUTXO Snapshot**. Bitcoin Core verifies the snapshot against a hash compiled into the installed release, then continues full historical validation in the background.
+
+Bitcoin Core does not publish a canonical snapshot download source. CipherStick therefore does not automatically download or trust one; obtain the snapshot separately from a node or handoff you choose. An incompatible or modified snapshot is rejected by Bitcoin Core and normal synchronization continues.
+
 ## How can I copy the block chain from a Bitcoin node I already have?
-By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do NOT do this, wait for CipherStick to synchronize.
+Prefer an AssumeUTXO snapshot (see above) if you only want to start sooner: Bitcoin Core checks it against a hash built into the release, so you do not have to trust where it came from.
+
+Otherwise, copy the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do NOT do this, wait for CipherStick to synchronize.
 
 **External drive**: Plug it in while Tails is running. Use the _Files_ browser to copy the _chainstate_ and _blocks_ folders to _~/Persistent/.bitcoin_.
 

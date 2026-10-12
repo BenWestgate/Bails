@@ -157,9 +157,10 @@ else # Import a trusted set on first-run.
             echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
-    # Download chain parameters in background to set prune
-    retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 fi
+# Download chain parameters in background for prune and AssumeUTXO sizing.
+# No --continue: an older copy from a previous install may still be here.
+retry_on_fail wget -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 
 printf '\033]2;Setup Persistent Storage...\a'
 until [[ -f $XDG_STATE_HOME/tps_is_set_up ]]; do sleep 1; done # Waits on tps
@@ -226,13 +227,18 @@ sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILE
 link-dotfiles
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
+# Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size
+ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+# load-assumeutxo sizes its free-space check with these, so refresh them on
+# updates too.
+printf 'chain_state_gb=%s\nblockchain_gb=%s\n' "$assumed_chain_state_size" "$assumed_blockchain_size" > $XDG_STATE_HOME/core-assumed-sizes
+
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
-    # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
-    ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-    assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-    assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+    offer_assumeutxo=1
     # Move completed verified download to persistent storage
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
@@ -269,4 +275,5 @@ This initial synchronisation is very demanding, and may expose hardware problems
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
 wrapped bitcoin-qt -min -startupnotify=chainstate-preload
+[ -n "${offer_assumeutxo:-}" ] && load-assumeutxo --offer
 touch $XDG_STATE_HOME/installed
