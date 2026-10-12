@@ -3,10 +3,6 @@ on:
   pull_request:
   push:
     branches: [ master ]
-    paths:
-      - 'b'
-      - 'bails/.local/bin/*'
-      - '**.py'
 permissions:
   contents: read
 jobs:
@@ -17,12 +13,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Lint with shellcheck
         uses: ludeeus/action-shellcheck@2.0.0
-        env:
-          SHELLCHECK_OPTS: -e 2012 -e SC2046
-        with:
-          ignore_paths: |
-            ./bails/.local/bin/ibd-progress
-            ./bails/.local/bin/backupd
   # python-lint:
   #   name: Check Python code
   #   runs-on: ubuntu-latest
