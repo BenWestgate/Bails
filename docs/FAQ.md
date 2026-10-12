@@ -30,7 +30,7 @@ CipherStick uses [pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning
 
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
-**No!** CipherStick will create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails&&bails/b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
+**No!** CipherStick will create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before starting the verified local CipherStick installer. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
 
 ## I don't have a USB stick, what one should I get?
 
@@ -125,7 +125,7 @@ If you shutdown Bitcoin Core safely, waiting for it to exit before shutting down
 If you shutdown Tails without exiting Bitcoin Core safely, or by yanking the USB stick out, it is possible to corrupt the blockchain database and lose your progress. Only remove the USB to shutdown Tails in an emergency.
 
 ## How do I update CipherStick?
-Click **Applications > Favorites > CipherStick > Settings > Update CipherStick**. Make sure you still Trust this repository and it has retained a good reputation before doing so.
+Choose **Applications > Favorites > CipherStick > Settings > Update CipherStick**. The updater fetches versioned tags, verifies the selected tag with the release key pinned in the installed CipherStick, and executes only the authenticated tag contents. If no correctly signed newer release is available, the update fails closed. See [Authenticated CipherStick Releases](RELEASES.md).
 
 ## How can I copy the block chain from a Bitcoin node I already have?
 By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do NOT do this, wait for CipherStick to synchronize.
