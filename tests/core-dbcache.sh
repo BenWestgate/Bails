@@ -214,15 +214,22 @@ refresh && fail 'refresh succeeded without the data directory'
 cmp -s "$TEMPLATE" "$work/template-before" || fail 'template changed without the data directory'
 mv "$work/data-away" "$DATA_DIR"
 
-# A missing template is rebuilt from the newest Core download with
-# CipherStick's settings, so Core never falls back to ~/.bitcoin. Without a
-# download, refresh fails instead.
+# A user's own file in the data directory is kept as bitcoin.conf~.
+rm -f "$DATA_DIR/bitcoin.conf"
+echo 'user=1' >"$DATA_DIR/bitcoin.conf"
+refresh
+grep -qx 'user=1' "$DATA_DIR/bitcoin.conf~" || fail "user's data-directory config deleted"
+[ "$(readlink "$DATA_DIR/bitcoin.conf")" = "$SESSION_CONF" ] || fail 'data directory config not linked over a real file'
+rm -f "$DATA_DIR/bitcoin.conf~"
+
+# A missing template is rebuilt from Core's verified example config with
+# CipherStick's settings, so Core never falls back to ~/.bitcoin. Without the
+# example, refresh fails instead.
 mv "$TEMPLATE" "$work/template-away"
 rm -f "$DATA_DIR/bitcoin.conf"
 refresh 2>/dev/null && fail 'refresh succeeded without the template or a Core download'
-mkdir -p "$work/tar/bitcoin-29.0" "$CORE_DOWNLOADS/bitcoin-core-29.0"
-printf '%s\n' '# Example' '#prune=<n>' >"$work/tar/bitcoin-29.0/bitcoin.conf"
-tar -czf "$CORE_DOWNLOADS/bitcoin-core-29.0/bitcoin-29.0-x86_64-linux-gnu.tar.gz" -C "$work/tar" bitcoin-29.0
+mkdir -p "$CORE_DOWNLOADS"
+printf '%s\n' '# Example' '#prune=<n>' >"$CORE_DOWNLOADS/bitcoin.conf.example"
 refresh 2>/dev/null || fail 'missing template not rebuilt'
 grep -qx "datadir=$DATA_DIR" "$TEMPLATE" || fail 'rebuilt template lacks the datadir'
 grep -qx 'proxy=127.0.0.1:9050' "$TEMPLATE" || fail 'rebuilt template lacks the Tor proxy'

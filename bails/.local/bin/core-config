@@ -31,24 +31,25 @@ link_datadir_conf() {
     local conf="$DATA_DIR/bitcoin.conf"
     [ -d "$DATA_DIR" ] || return 0
     [ "$(readlink "$conf")" = "$SESSION_CONF" ] && return
-    ln -sfn "$SESSION_CONF" "$conf"
+    # Keep a user's own file there as bitcoin.conf~ rather than deleting it.
+    ln -sfnb "$SESSION_CONF" "$conf"
 }
 
-# Rebuild a missing template from the newest verified Core download, with
-# the settings install-core adds. core-prune turns pruning on as install-core
-# does and then fits the target to the stick.
+# Rebuild a missing template from Core's example config, which install-core
+# saves only after verifying the download, with the settings install-core
+# adds. core-prune turns pruning on as install-core does and then fits the
+# target to the stick.
 restore_template() {
-    local tarball prune
-    tarball=$(ls -t "$CORE_DOWNLOADS"/bitcoin-core-*/bitcoin-*-x86_64-linux-gnu.tar.gz 2>/dev/null | head -1)
-    [ -n "$tarball" ] || { echo "core-config: no Core download to rebuild $TEMPLATE from" >&2; return 1; }
+    local example="$CORE_DOWNLOADS/bitcoin.conf.example" prune
+    [ -f "$example" ] || { echo "core-config: no $example to rebuild $TEMPLATE from" >&2; return 1; }
     prune=$(core-prune new) || return 1
     mkdir -p "${TEMPLATE%/*}" || return 1
     {
         printf '%s\n' server=1 proxy=127.0.0.1:9050 onion=127.0.0.1:9050 "prune=$prune" \
             rpcport=17600 "datadir=$DATA_DIR" "debuglogfile=$HOME/.bitcoin/debug.log"
-        tar -xzOf "$tarball" --wildcards '*/bitcoin.conf'
+        cat "$example"
     } >"$TEMPLATE.tmp" && mv -f "$TEMPLATE.tmp" "$TEMPLATE" &&
-        echo "core-config: rebuilt $TEMPLATE from $tarball" >&2
+        echo "core-config: rebuilt $TEMPLATE from $example" >&2
 }
 
 refresh() {

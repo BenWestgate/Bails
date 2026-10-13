@@ -219,10 +219,12 @@ until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure CipherStick inst
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
+# Keep the verified example config, so core-config can rebuild a missing
+# template from it.
+mkdir -p "$XDG_DATA_HOME/bitcoin" && cp -f "$LOCAL_DIR/bitcoin.conf" "$XDG_DATA_HOME/bitcoin/bitcoin.conf.example"
 # The persistent bitcoin.conf holds every setting the user or CipherStick
-# made, possibly the user's own config adopted by core-dbcache, so an update
-# keeps it and installs only the new README.md. If an update finds it missing,
-# core-config rebuilds it with CipherStick's settings.
+# made, so an update keeps it and installs only the new README.md. If an
+# update finds it missing, core-config rebuilds it with CipherStick's settings.
 if [ -f "$DOTFILES/.bitcoin/bitcoin.conf" ] || [ -e "$XDG_STATE_HOME/installed" ]; then
     rm -f "$LOCAL_DIR/bitcoin.conf"
     rsync -vhb --remove-source-files "$LOCAL_DIR/README.md" $DOTFILES/.bitcoin
