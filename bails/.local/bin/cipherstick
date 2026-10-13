@@ -55,16 +55,7 @@ else
     core-dbcache behind && chainstate-preload &
 fi
 
-# Remind users without a login password to lock the screen while Core runs.
-(
-    delay=30 timeout=10 text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...'
-    grep -q 'progress=0.999' "$DATA_DIR/debug.log" &&
-        delay=200 timeout=5 text='Always lock your screen before stepping away from the PC.'
-    sleep "$delay"
-    passwd -S "$USER" | grep -q NP || exit 0
-    zenity --info --title='Remember to lock your screen' --text="$text" --icon-name=system-lock-screen "$ICON" --timeout="$timeout" &
-    tails-screen-locker
-) &>/dev/null &
+lock-reminder &>/dev/null &
 
 # Put CipherStick, Bitcoin Core and codex32 first in the dock. Keep every other
 # favorite as Tails or the user set it, so renamed or replaced Tails apps need

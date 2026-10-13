@@ -283,4 +283,5 @@ This initial synchronisation is very demanding, and may expose hardware problems
 fi
 core-dbcache refresh || exit 1
 setsid -f bitcoin-qt -min >/dev/null 2>&1
+lock-reminder &>/dev/null &
 touch $XDG_STATE_HOME/installed
