@@ -31,10 +31,20 @@ total_mem=$(awk 'NR==1 {print $2}' /proc/meminfo)
 # every normal Bitcoin Core start, not only the installation launch.
 link-dotfiles --core-startup
 
-cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
+DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
+cd "$DATA_DIR" || exit 1
+
+# Ask Core whether it has nearly caught up, instead of searching debug.log,
+# which lives in RAM and grows for the whole session (#333). An unreachable
+# RPC counts as not synced, as a missing log line did before.
+synced() {
+    bitcoin-cli -datadir="$DATA_DIR" -rpcclienttimeout=10 getblockchaininfo 2>/dev/null |
+        awk -F': *' '/"verificationprogress"/ { found = 1; ok = ($2 + 0 >= 0.999) } END { exit !(found && ok) }'
+}
+
 # On first run the chainstate is empty or tiny, so "preloading" it says nothing useful.
 chainstate_mib=$(du -sm chainstate 2>/dev/null | cut -f1)
-if ! grep 'progress=0.999' debug.log; then
+if ! synced; then
     sleep 30
     if passwd -S "$USER" | grep NP; then
         zenity --info --title='Remember to lock your screen' --text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...' --icon-name=system-lock-screen "$ICON" --timeout=10 &
@@ -48,7 +58,7 @@ else
     fi
 fi &>/dev/null &
 
-until grep 'progress=0.999' debug.log; do
+until synced; do
     cat chainstate/* &> /dev/null & full_speed=$!
     # exit when free memory <10% total memory
     if (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )); then
