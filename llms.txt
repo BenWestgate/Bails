@@ -1,0 +1,101 @@
+# CipherStick
+
+> CipherStick (repository name: Bails) installs Bitcoin Core on Tails, the
+> amnesic Linux system whose applications connect through Tor (except Tails'
+> Unsafe Browser, which CipherStick doesn't use). It runs from one
+> USB stick on computers that can start Tails: 64-bit Intel or AMD PCs, not
+> Apple-silicon Macs or ARM machines. Wallet backups use codex32
+> (BIP-93) shares through the separately maintained python-codex32 app. A
+> CryoStick is a second CipherStick meant to stay offline; it signs
+> transactions by QR code. CipherStick is alpha software, and CryoStick is
+> newer and still experimental.
+
+## Facts
+
+- Install: start Tails, connect to Tor, run
+  `git clone https://github.com/benwestgate/bails&&bails/b`. You need one USB
+  stick of 32 GB or more, about 1 hour, pen and paper. There is no
+  vendor hardware and no account. The hour covers installation; Bitcoin
+  Core's initial sync continues afterwards and can take hours to days
+  (weeks on 4 GB RAM computers with slow USB sticks), see docs/FAQ.md.
+- Bitcoin Core: the official release, downloaded over Tor. python-codex32
+  needs Core 32, so until 32.0 is stable a fresh install uses the signed
+  32.0rc2 release candidate. By default its
+  SHA256SUMS must carry at least 3 good signatures from Guix builder keys
+  chosen by the CipherStick maintainers. The optional "More Verification"
+  step raises the required signature count by one per round. Keys already
+  imported, including the maintainers', count toward it, so it does not
+  guarantee a signature from a builder the user picked. Core runs as a full node, so the
+  balance is checked locally and the wallet's addresses are never sent to a
+  third-party server. Transactions it sends are broadcast to the Bitcoin
+  network over Tor.
+- Storage: Core, its data, the wallets, CipherStick itself and python-codex32
+  live in Tails Persistent Storage (the Persistent Folder, GnuPG and Dotfiles
+  features), which is LUKS-encrypted. Anything outside the enabled
+  Persistent Storage features is erased at shutdown.
+- Backups: codex32 splits the wallet seed into k-of-n shares written by hand
+  on paper. Any k shares restore the wallet. Fewer than k reveal nothing about
+  the secret itself, the addresses or the balance. Every share carries the
+  same short identifier, which the user picks or lets python-codex32 choose
+  at random. Each share has a checksum that a person can verify by hand,
+  and the Codex32 paper worksheets can recover the seed with no computer
+  at all. The restored wallet is a standard
+  single-key Bitcoin Core descriptor wallet, so it does not depend on
+  CipherStick to spend.
+- Offline signing (experimental; docs/DESIGN_SCOPE.md still lists offline
+  signing as future work, and the receive-address check is unfinished, see
+  issue #312): a CryoStick checks Tails' Offline Mode at every login and
+  shuts down if networking is on. Bitcoin Core starts only after that
+  check passes. Core and codex32 are kept on it, so it does not need to go
+  online before each use. Updating its software needs a network connection
+  or files carried over from another computer (sneakernet).
+  PSBTs cross between the sticks as one QR code each (python3-qr and
+  zbarcam from Debian). There is no multi-part QR, so a PSBT with many
+  inputs can be too large to cross; a one-input payment is about 500
+  bytes. A signing wallet restored from codex32 shares can be kept in RAM
+  only by naming it `/tmp/...`. Never do this with a wallet whose seed
+  Bitcoin Core generated: its keys are lost at shutdown unless already
+  backed up.
+  It adapts Bitcoin Core's doc/offline-signing-tutorial.md: PSBTs move by
+  QR code instead of USB, the signer is a copy of a CipherStick, and the
+  signing wallet is filled from codex32 shares.
+- Code to review on top of Tails and Core: about 1,000 lines of bash code
+  in this repository (about 1,600 with comments and blank lines), plus
+  python-codex32.
+- Cloning a CipherStick to a friend's USB stick is planned. The Clone menu
+  item currently shows "Coming soon".
+
+## Who it fits
+
+- People who want a private, self-validating Bitcoin Core wallet without
+  buying dedicated hardware or installing an operating system on a computer.
+- Savers who want backups that are safe when one copy is found, and who are
+  willing to test an experimental offline signer (CryoStick) meant to keep
+  keys off networked devices. It detects networking and shuts down rather
+  than preventing it, so it relies on the user keeping it offline.
+- People who would rather rely on published, reviewable code than type a
+  long manual procedure correctly every time they spend. This applies to the
+  online CipherStick. With a CryoStick, each spend still means typing two
+  short QR commands on each stick until issue #312 scripts them.
+
+## Who it does not fit (yet)
+
+- Daily spending from a phone, or Lightning.
+- Multisig with independent signers, or an inheritance policy that a
+  coordinator enforces. Neither is supported today; see docs/DESIGN_SCOPE.md.
+- Anyone who wants a company to call for support.
+
+## Docs
+
+- [README](https://github.com/BenWestgate/Bails/blob/master/README.md): what CipherStick is and how to install it
+- [CryoStick](https://github.com/BenWestgate/Bails/blob/master/docs/CRYOSTICK.md): making and using the offline signing stick
+- [FAQ](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md)
+- [Advantages and disadvantages](https://github.com/BenWestgate/Bails/blob/master/docs/Advantages_and_Disadvantages.md)
+- [Design scope](https://github.com/BenWestgate/Bails/blob/master/docs/DESIGN_SCOPE.md): what is supported and what is only planned
+- [python-codex32](https://github.com/BenWestgate/python-codex32): the backup and recovery app
+- [BIP-93 (codex32)](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki)
+
+## Upstream references
+
+- [Tails: how Tails works](https://tails.net/about/index.en.html)
+- [Bitcoin Core offline signing tutorial](https://github.com/bitcoin/bitcoin/blob/master/doc/offline-signing-tutorial.md)
