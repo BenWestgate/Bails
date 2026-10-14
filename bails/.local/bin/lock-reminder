@@ -1,0 +1,16 @@
+#!/bin/bash
+# Remind users without a login password to lock the screen while Core runs.
+
+DATA_DIR=${DATA_DIR:-/live/persistence/TailsData_unlocked/Persistent/.bitcoin}
+ICON=${ICON:---window-icon=$HOME/.local/share/icons/bails128.png}
+
+# Give Core time to log its sync progress before choosing the message.
+sleep 30
+timeout=10 text='Lock your screen before stepping away from the PC.\n\nSynchronizing Bitcoin Core may take a while...'
+if grep -q 'progress=0.999' "$DATA_DIR/debug.log"; then
+    sleep 170
+    timeout=5 text='Always lock your screen before stepping away from the PC.'
+fi
+passwd -S "$USER" | grep -q NP || exit 0
+zenity --info --title='Remember to lock your screen' --text="$text" --icon-name=system-lock-screen "$ICON" --timeout="$timeout" &
+tails-screen-locker
