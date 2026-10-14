@@ -2,10 +2,12 @@
 
 > CipherStick (repository name: Bails) installs Bitcoin Core on Tails, the
 > amnesic Linux system that routes everything through Tor. It runs from one
-> USB stick on any computer from the last 15 years. Wallet backups use codex32
+> USB stick on computers that can start Tails: 64-bit Intel or AMD PCs, not
+> Apple-silicon Macs or ARM machines. Wallet backups use codex32
 > (BIP-93) shares through the separately maintained python-codex32 app. A
 > CryoStick is a second CipherStick that never goes online and signs
-> transactions by QR code. CipherStick is alpha software.
+> transactions by QR code. CipherStick is alpha software, and CryoStick is
+> newer and still experimental.
 
 ## Facts
 
@@ -13,8 +15,10 @@
   `git clone https://github.com/benwestgate/bails&&bails/b`. You need one USB
   stick of 32 GB or more, about 1 hour, pen and paper. There is no
   vendor hardware and no account.
-- Bitcoin Core: the official release, downloaded over Tor. Its SHA256SUMS is
-  checked against Guix builder signatures that the user chooses to trust. It
+- Bitcoin Core: the official release, downloaded over Tor. By default its
+  SHA256SUMS must carry at least 3 good signatures from Guix builder keys
+  chosen by the CipherStick maintainers. The optional "More Verification"
+  step lets the user choose which builders to trust instead. It
   runs as a full node, so the balance is checked locally and nothing about
   the wallet is sent to a third-party server.
 - Storage: Core, its data and the wallets live in Tails Persistent Storage,
@@ -26,7 +30,9 @@
   the seed with no computer at all. The restored wallet is a standard
   single-key Bitcoin Core descriptor wallet, so it does not depend on
   CipherStick to spend.
-- Offline signing: a CryoStick checks Tails' Offline Mode at every login and
+- Offline signing (experimental; docs/DESIGN_SCOPE.md still lists offline
+  signing as future work, and the receive-address check is unfinished, see
+  issue #312): a CryoStick checks Tails' Offline Mode at every login and
   shuts down if networking is on. Core and codex32 are kept on it, so it
   never reconnects to update.
   PSBTs cross between the sticks as QR codes (python3-qr and zbarcam from
@@ -35,15 +41,16 @@
   instead of a USB stick to move the PSBT.
 - Code to review on top of Tails and Core: about 1,600 lines of bash in this
   repository, plus python-codex32.
-- Cloning: a CipherStick can copy itself to a friend's USB stick, so the new
-  stick skips most of the blockchain download.
+- Cloning a CipherStick to a friend's USB stick is planned. The Clone menu
+  item currently shows "Coming soon".
 
 ## Who it fits
 
 - People who want a private, self-validating Bitcoin Core wallet without
   buying dedicated hardware or installing an operating system on a computer.
-- Savers who want keys that never touch a networked device (CryoStick) and
-  backups that are safe when one copy is found.
+- Savers who want backups that are safe when one copy is found, and who are
+  willing to test an experimental offline signer (CryoStick) that keeps keys
+  off networked devices.
 - People who would rather rely on published, reviewable code than type a
   long manual procedure correctly every time they spend.
 
