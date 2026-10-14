@@ -7,7 +7,8 @@ TEMPLATE=${TEMPLATE:-/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitc
 disk_room() {
     local free blocks
     free=$(df --output=avail "$DATA_DIR" | tail -1)
-    blocks=$(du --summarize "$DATA_DIR/blocks" 2>/dev/null | cut -f1)
+    # Only block and undo files count toward the prune target; the index stays.
+    blocks=$(du --total "$DATA_DIR"/blocks/{blk,rev}*.dat 2>/dev/null | tail -1 | cut -f1)
     echo $(( (free + ${blocks:-0}) / 1024 ))
 }
 
