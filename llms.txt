@@ -6,7 +6,7 @@
 > USB stick on computers that can start Tails: 64-bit Intel or AMD PCs, not
 > Apple-silicon Macs or ARM machines. Wallet backups use codex32
 > (BIP-93) shares through the separately maintained python-codex32 app. A
-> CryoStick is a second CipherStick that never goes online and signs
+> CryoStick is a second CipherStick meant to stay offline; it signs
 > transactions by QR code. CipherStick is alpha software, and CryoStick is
 > newer and still experimental.
 
@@ -15,7 +15,9 @@
 - Install: start Tails, connect to Tor, run
   `git clone https://github.com/benwestgate/bails&&bails/b`. You need one USB
   stick of 32 GB or more, about 1 hour, pen and paper. There is no
-  vendor hardware and no account.
+  vendor hardware and no account. The hour covers installation; Bitcoin
+  Core's initial sync continues afterwards and can take hours to days
+  (weeks on 4 GB RAM computers with slow USB sticks), see docs/FAQ.md.
 - Bitcoin Core: the official release, downloaded over Tor. python-codex32
   needs Core 32, so until 32.0 is stable a fresh install uses the signed
   32.0rc2 release candidate. By default its
@@ -33,7 +35,10 @@
   Persistent Storage features is erased at shutdown.
 - Backups: codex32 splits the wallet seed into k-of-n shares written by hand
   on paper. Any k shares restore the wallet. Fewer than k reveal nothing about
-  the seed, the addresses or the balance. Each share has a checksum that a
+  the secret itself, the addresses or the balance. Every share carries the
+  same short identifier, which python-codex32 derives by default from the
+  wallet's master fingerprint, so a found share can be matched to a wallet
+  whose fingerprint is already known. Each share has a checksum that a
   person can verify by hand, and the Codex32 paper worksheets can recover
   the seed with no computer at all. The restored wallet is a standard
   single-key Bitcoin Core descriptor wallet, so it does not depend on
@@ -41,10 +46,13 @@
 - Offline signing (experimental; docs/DESIGN_SCOPE.md still lists offline
   signing as future work, and the receive-address check is unfinished, see
   issue #312): a CryoStick checks Tails' Offline Mode at every login and
-  shuts down if networking is on. Core and codex32 are kept on it, so it
-  never reconnects to update.
-  PSBTs cross between the sticks as QR codes (python3-qr and zbarcam from
-  Debian). The signing wallet can be kept in RAM only by naming it `/tmp/...`.
+  shuts down if networking is on. Bitcoin Core starts from a separate
+  autostart, so it may briefly run before that check stops it. Core and
+  codex32 are kept on it, so it does not need to reconnect to update.
+  PSBTs cross between the sticks as one QR code each (python3-qr and
+  zbarcam from Debian). There is no multi-part QR, so a PSBT with many
+  inputs can be too large to cross; a one-input payment is about 500
+  bytes. The signing wallet can be kept in RAM only by naming it `/tmp/...`.
   It adapts Bitcoin Core's doc/offline-signing-tutorial.md: PSBTs move by
   QR code instead of USB, the signer is a copy of a CipherStick, and the
   signing wallet is filled from codex32 shares.
