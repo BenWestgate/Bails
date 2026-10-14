@@ -201,6 +201,9 @@ printf '{"prune": 25000}\n' >"$settings"
 low_space || fail 'no warning with a prune target too high for the stick'
 printf '{"prune": 19000}\n' >"$settings"
 low_space && fail 'warned with a prune target that keeps 10 GiB free'
+printf 'chain_state_gb=2\nblockchain_gb=0\n' >"$STATE_DIR/core-assumed-sizes"
+low_space || fail 'no warning when chainstate growth leaves under 10 GiB free'
+printf 'chain_state_gb=0\nblockchain_gb=0\n' >"$STATE_DIR/core-assumed-sizes"
 rm "$settings"
 sed -i '/^prune=/d' "$TEMPLATE"
 low_space || fail 'no warning with pruning off in the template'

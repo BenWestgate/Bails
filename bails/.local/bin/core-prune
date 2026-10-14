@@ -54,7 +54,7 @@ low_space() {
     local prune
     (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )) || return 1
     prune=$(effective_prune)
-    (( prune <= 1 || prune > $(disk_room) - 10240 ))
+    (( prune <= 1 || prune > $(block_room) - 10240 ))
 }
 
 set_template() {
