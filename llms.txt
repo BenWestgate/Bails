@@ -48,7 +48,8 @@
   issue #312): a CryoStick checks Tails' Offline Mode at every login and
   shuts down if networking is on. Bitcoin Core starts from a separate
   autostart, so it may briefly run before that check stops it. Core and
-  codex32 are kept on it, so it does not need to reconnect to update.
+  codex32 are kept on it, so it does not need to go online before each use.
+  Updating its software still needs a network connection.
   PSBTs cross between the sticks as one QR code each (python3-qr and
   zbarcam from Debian). There is no multi-part QR, so a PSBT with many
   inputs can be too large to cross; a one-input payment is about 500
@@ -66,8 +67,9 @@
 - People who want a private, self-validating Bitcoin Core wallet without
   buying dedicated hardware or installing an operating system on a computer.
 - Savers who want backups that are safe when one copy is found, and who are
-  willing to test an experimental offline signer (CryoStick) that keeps keys
-  off networked devices.
+  willing to test an experimental offline signer (CryoStick) meant to keep
+  keys off networked devices. It detects networking and shuts down rather
+  than preventing it, so it relies on the user keeping it offline.
 - People who would rather rely on published, reviewable code than type a
   long manual procedure correctly every time they spend. This applies to the
   online CipherStick. With a CryoStick, each spend still means typing two
