@@ -36,29 +36,32 @@
 - Backups: codex32 splits the wallet seed into k-of-n shares written by hand
   on paper. Any k shares restore the wallet. Fewer than k reveal nothing about
   the secret itself, the addresses or the balance. Every share carries the
-  same short identifier, which python-codex32 derives by default from the
-  wallet's master fingerprint, so a found share can be matched to a wallet
-  whose fingerprint is already known. Each share has a checksum that a
-  person can verify by hand, and the Codex32 paper worksheets can recover
-  the seed with no computer at all. The restored wallet is a standard
+  same short identifier, which the user picks or lets python-codex32 choose
+  at random. Each share has a checksum that a person can verify by hand,
+  and the Codex32 paper worksheets can recover the seed with no computer
+  at all. The restored wallet is a standard
   single-key Bitcoin Core descriptor wallet, so it does not depend on
   CipherStick to spend.
 - Offline signing (experimental; docs/DESIGN_SCOPE.md still lists offline
   signing as future work, and the receive-address check is unfinished, see
   issue #312): a CryoStick checks Tails' Offline Mode at every login and
-  shuts down if networking is on. Bitcoin Core starts from a separate
-  autostart, so it may briefly run before that check stops it. Core and
-  codex32 are kept on it, so it does not need to go online before each use.
-  Updating its software still needs a network connection.
+  shuts down if networking is on. Bitcoin Core starts only after that
+  check passes. Core and codex32 are kept on it, so it does not need to go
+  online before each use. Updating its software needs a network connection
+  or files carried over from another computer (sneakernet).
   PSBTs cross between the sticks as one QR code each (python3-qr and
   zbarcam from Debian). There is no multi-part QR, so a PSBT with many
   inputs can be too large to cross; a one-input payment is about 500
-  bytes. The signing wallet can be kept in RAM only by naming it `/tmp/...`.
+  bytes. A signing wallet restored from codex32 shares can be kept in RAM
+  only by naming it `/tmp/...`. Never do this with a wallet whose seed
+  Bitcoin Core generated: its keys are lost at shutdown unless already
+  backed up.
   It adapts Bitcoin Core's doc/offline-signing-tutorial.md: PSBTs move by
   QR code instead of USB, the signer is a copy of a CipherStick, and the
   signing wallet is filled from codex32 shares.
-- Code to review on top of Tails and Core: about 1,600 lines of bash in this
-  repository, plus python-codex32.
+- Code to review on top of Tails and Core: about 1,000 lines of bash code
+  in this repository (about 1,600 with comments and blank lines), plus
+  python-codex32.
 - Cloning a CipherStick to a friend's USB stick is planned. The Clone menu
   item currently shows "Coming soon".
 
