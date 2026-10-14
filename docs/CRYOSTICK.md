@@ -5,10 +5,11 @@ create your wallet on it and sign with it. Your CipherStick keeps a
 watch-only copy of the wallet, so it can show your balance and receive,
 but it cannot spend.
 
-This follows Bitcoin Core's [offline signing
+This adapts Bitcoin Core's [offline signing
 tutorial](https://github.com/bitcoin/bitcoin/blob/master/doc/offline-signing-tutorial.md).
-The difference is that files cross between the computers as QR codes
-instead of on a USB stick.
+Files cross between the computers as QR codes instead of on a USB stick,
+the offline computer runs a copy of your CipherStick, and the signing
+wallet is filled from your codex32 backup.
 
 | | CipherStick | CryoStick |
 |---|---|---|

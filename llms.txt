@@ -15,14 +15,20 @@
   `git clone https://github.com/benwestgate/bails&&bails/b`. You need one USB
   stick of 32 GB or more, about 1 hour, pen and paper. There is no
   vendor hardware and no account.
-- Bitcoin Core: the official release, downloaded over Tor. By default its
+- Bitcoin Core: the official release, downloaded over Tor. python-codex32
+  needs Core 32, so until 32.0 is stable a fresh install uses the signed
+  32.0rc2 release candidate. By default its
   SHA256SUMS must carry at least 3 good signatures from Guix builder keys
   chosen by the CipherStick maintainers. The optional "More Verification"
-  step lets the user choose which builders to trust instead. It
-  runs as a full node, so the balance is checked locally and nothing about
-  the wallet is sent to a third-party server.
-- Storage: Core, its data and the wallets live in Tails Persistent Storage,
-  which is LUKS-encrypted. Everything else is erased at shutdown.
+  step adds builders the user picks: each round raises the required count
+  by one, on top of the maintainers' keys. Core runs as a full node, so the
+  balance is checked locally and the wallet's addresses are never sent to a
+  third-party server. Transactions it sends are broadcast to the Bitcoin
+  network over Tor.
+- Storage: Core, its data, the wallets, CipherStick itself and python-codex32
+  live in Tails Persistent Storage (the Persistent Folder, GnuPG and Dotfiles
+  features), which is LUKS-encrypted. Anything outside the enabled
+  Persistent Storage features is erased at shutdown.
 - Backups: codex32 splits the wallet seed into k-of-n shares written by hand
   on paper. Any k shares restore the wallet. Fewer than k reveal nothing about
   the seed, the addresses or the balance. Each share has a checksum that a
@@ -37,8 +43,9 @@
   never reconnects to update.
   PSBTs cross between the sticks as QR codes (python3-qr and zbarcam from
   Debian). The signing wallet can be kept in RAM only by naming it `/tmp/...`.
-  This follows Bitcoin Core's doc/offline-signing-tutorial.md, using QR codes
-  instead of a USB stick to move the PSBT.
+  It adapts Bitcoin Core's doc/offline-signing-tutorial.md: PSBTs move by
+  QR code instead of USB, the signer is a copy of a CipherStick, and the
+  signing wallet is filled from codex32 shares.
 - Code to review on top of Tails and Core: about 1,600 lines of bash in this
   repository, plus python-codex32.
 - Cloning a CipherStick to a friend's USB stick is planned. The Clone menu
