@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# clones will: tar everything private: .bitcoin/wallets, .electrum, gpg
+# clones will: tar everything private: .bitcoin/wallets, gpg
 # priv keys, everything in ~/Persistent CipherStick didn't put there. After
 # tar, it will assymmetrically encrypt with a random key with the
 # public key dervived from the user's passphrase+share, this must be
