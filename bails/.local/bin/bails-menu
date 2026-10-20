@@ -83,7 +83,7 @@ case "$response" in
 esac
 
 case "$response2" in
-    "Donate") xdg-open bitcoin: ;; # FIXME: change address
+    "Donate") "$HOME/.local/bin/donation-launch" --donate ;;
     "Report a Bug") tor-browser https://github.com/BenWestgate/Bails/issues ;;
     "About") zenity --info --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
         --title="About CipherStick" --icon-name=bails128 --text="$($XDG_DATA_HOME/bails/b --version)\n\nCopyright © 2024 Ben Westgate\n\nPlease contribute if you find CipherStick useful. Visit <a href='https://twitter.com/BenWestgate_'>https://twitter.com/BenWestgate_</a> for further information about the software.\nThe source code is available from <a href='https://github.com/BenWestgate/Bails'>https://github.com/BenWestgate/Bails</a>.\n\nThis is experimental software.\nDistributed under the MIT software license, see the accompanying file COPYING or <a href='https://opensource.org/licenses/MIT'>https://opensource.org/licenses/MIT</a>"; bails-menu ;;

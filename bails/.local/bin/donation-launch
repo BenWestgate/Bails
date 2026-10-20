@@ -1,0 +1,46 @@
+#!/bin/bash
+# Occasional per-launch donation question for Bitcoin Core and codex32.
+# No Persistent Storage setup, Core configuration, or prompt-history state.
+export PATH="$HOME/.local/bin:$PATH"
+readonly BITCOIN_ADDRESS_BENEVOLENT='bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl'
+readonly BITCOIN_ADDRESS_SELFISH='bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl'
+
+if [ "${1:-}" = --donate ]; then
+    xdg-open "bitcoin:$BITCOIN_ADDRESS_BENEVOLENT"
+    exit $?
+fi
+
+case "${1:-}" in
+    bitcoin-qt|open-codex32) ;;
+    *) printf 'Unsupported donation launcher: %s\n' "${1:-}" >&2; exit 2 ;;
+esac
+
+# Don't hold Bitcoin Core or codex32 behind an optional donation prompt.
+"$@" &
+
+# A user-initiated payment URI should not trigger a second invitation.
+for arg in "$@"; do
+    case "$arg" in bitcoin:*) exit 0 ;; esac
+done
+[ -z "${DONT_ASK_DONATIONS:-}" ] || exit 0
+(( RANDOM % 20 == 0 )) || exit 0
+
+if (( RANDOM % 2 )); then
+    text='CipherStick needs donations to keep everybody free and safe to use Bitcoin.
+
+Every bit helps in our fight against surveillance, censorship and confiscation!'
+    address=$BITCOIN_ADDRESS_BENEVOLENT
+else
+    text='CipherStick protects your wallet.
+
+Help us keep your bitcoins safe!'
+    address=$BITCOIN_ADDRESS_SELFISH
+fi
+export WAYLAND_DISPLAY=""
+if zenity --question --title='Make CipherStick stronger' \
+    --text="$text" --ok-label='Donate Now' --cancel-label='Later' \
+    --icon=bails128; then
+    bitcoin-qt -conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf \
+        -datadir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin \
+        "bitcoin:$address" &
+fi
