@@ -29,16 +29,6 @@ cd "$DOTFILES" || { persistent-setup; link-dotfiles "$@"; exit 1; } # Run persis
 find . -type d | while read -r dir; do mkdir --parents "$HOME${dir:1}"; done
 find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$HOME${file:1}"; done
 
-open_tor_connection() {
-    local desktop=/usr/share/applications/tca.desktop
-
-    if command -v gtk-abspath-launch >/dev/null 2>&1 && [ -f "$desktop" ]; then
-        gtk-abspath-launch --no-dbus-ping "$desktop"
-    else
-        gio launch "$desktop"
-    fi
-}
-
 # Bitcoin Core invokes link-dotfiles through -startupnotify once startup has
 # completed. If Tails still has not bootstrapped Tor after 30 seconds, remind
 # the user to connect. Other calls only refresh dotfile links and must not start
@@ -51,7 +41,7 @@ if [ "${1:-}" = "--core-startup" ]; then
             --icon-name=tor-disconnected-symbolic \
             --text='Tails is not connected to Tor yet. Open Tor Connection now?' \
             --ok-label='Open Tor Connection' --cancel-label='Not Now'; then
-            open_tor_connection
+            "$HOME/.local/bin/tails-desktop-launch" /usr/share/applications/tca.desktop
         fi
     ) &
 fi

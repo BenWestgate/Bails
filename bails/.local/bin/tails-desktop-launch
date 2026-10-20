@@ -1,0 +1,12 @@
+#!/bin/bash
+# Open a Tails desktop entry with its supported launcher on this release.
+# An optional fallback command handles entries missing on older Tails.
+desktop=${1:?desktop entry required}
+shift
+if command -v gtk-abspath-launch >/dev/null 2>&1 && [ -f "$desktop" ]; then
+    gtk-abspath-launch --no-dbus-ping "$desktop"
+elif (( $# )); then
+    "$@" &
+else
+    gio launch "$desktop"
+fi
