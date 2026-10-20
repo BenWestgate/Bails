@@ -51,18 +51,22 @@ if ((old_prune == 0)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )
     zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
 fi
 
-old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-
-if [ -z "$old_dbcache" ]; then
-    last_run=$(find $DATA_DIR/blocks -exec stat -c "%Y %n" {} + | grep blk | sort -nr | head -n1 | awk '{print $1}')
-    if ((last_run < $(date -d "2 weeks ago" +%s))); then # Add dbcache setting
-        sed -i '2a\    "dbcache": "450",' settings.json
-        old_dbcache=450
+# Core runs blocknotify only once it has caught up, so the stamp it touches
+# records when the node was last in sync. If that was over 2 weeks ago, or
+# never, start Core with a large dbcache sized for this computer. Options go
+# before a bitcoin: URI, which must come last.
+synced=/live/persistence/TailsData_unlocked/dotfiles/.local/state/bitcoin-core-synced
+if [ "$1" = bitcoin-qt ]; then
+    shift
+    set -- bitcoin-qt "-blocknotify=touch $synced" "$@"
+    if [ -z "$(find "$synced" -mtime -14 2>/dev/null)" ]; then
+        # Stay under Core's warning limit, 75% of (total RAM - 2 GiB); dividing
+        # first rounds down.
+        # shellcheck disable=SC2017
+        dbcache=$(( ($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / 1048576 - 2048) / 4 * 3 ))
+        set -- "$1" "-dbcache=$(( dbcache > 450 ? dbcache : 450 ))" "${@:2}"
     fi
 fi
-# If set, change dbcache to available memory minus 2 GiB
-new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
-sed -i 's/"dbcache": "'"$old_dbcache"'/"dbcache": "'$new_dbcache/ "$DATA_DIR/settings.json"
 
 if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         # 1 out of 20 start-ups show donation message
