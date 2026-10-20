@@ -5,6 +5,12 @@ create your wallet on it and sign with it. Your CipherStick keeps a
 watch-only copy of the wallet, so it can show your balance and receive,
 but it cannot spend.
 
+This adapts Bitcoin Core's [offline signing
+tutorial](https://github.com/bitcoin/bitcoin/blob/master/doc/offline-signing-tutorial.md).
+Files cross between the computers as QR codes instead of on a USB stick,
+the offline computer runs a copy of your CipherStick, and the signing
+wallet is filled from your codex32 backup.
+
 | | CipherStick | CryoStick |
 |---|---|---|
 | Network | Online, over Tor | Never online |
@@ -133,3 +139,102 @@ camera itself needs two real computers.
 
 Tracked in #312: the receive-address check, and scripting the
 crossings so users don't type commands.
+
+## Advanced: update a CryoStick without going online
+
+Only update a CryoStick for a security fix, or for a new feature you need
+on an offline signer. Every update puts new code on the computer that
+holds your keys.
+
+Don't use **Update Bitcoin Core** or **Update CipherStick** on the
+CryoStick: they need a network connection. Update your CipherStick
+first, then carry its updates across, as Bitcoin Core's tutorial does
+for PSBTs. You need a spare USB stick named `TRANSFER`.
+
+### Tails
+
+1. Start your up-to-date CipherStick on the offline computer.
+2. Plug in the CryoStick and choose **Apps** > **Tails** > **Tails Cloner**.
+3. Leave **Clone the current Persistent Storage** unselected, so the
+   CryoStick keeps its own, and click **Upgrade**.
+
+Tails explains each step in [Upgrading manually by cloning from another
+Tails](https://tails.net/doc/upgrade/clone/).
+
+### CipherStick, codex32 and Bitcoin Core
+
+On the CipherStick:
+
+1. Use **Update CipherStick** and **Update Bitcoin Core**, then open
+   **codex32** once so it fetches the version the update pins.
+2. Plug in the transfer stick, open **Console** and pack the updates into
+   one file. A tar file keeps the scripts executable on any stick. It
+   takes the Bitcoin Core download you just installed, and the builder
+   keys that signed it, which **Update Bitcoin Core** refreshed:
+
+   ```bash
+   T=/media/amnesia/TRANSFER
+   cd /live/persistence/TailsData_unlocked/dotfiles/.local/share
+   CORE=$(ls -td bitcoin/bitcoin-core-*/ | head -n 1)
+   gpg --export $(gpg --status-fd 1 --verify "$CORE/SHA256SUMS.asc" \
+       "$CORE/SHA256SUMS" 2>/dev/null | awk '$2 == "VALIDSIG" {print $NF}') \
+       > ~/builder-keys.gpg
+   git clone --quiet bails ~/bails
+   tar -cf "$T/update.tar" -C ~ bails builder-keys.gpg \
+       -C "$PWD" python-codex32 "$CORE"
+   sha256sum < "$T/update.tar"
+   ```
+
+   Keep this checksum on screen, or write it down.
+
+On the CryoStick, plug in the transfer stick and open **Console**:
+
+1. Copy the updates and check them. Nothing on the transfer stick is
+   trusted until the whole file matches the CipherStick's checksum.
+
+   ```bash
+   T=/media/amnesia/TRANSFER
+   D=/live/persistence/TailsData_unlocked/dotfiles
+   cp "$T/update.tar" ~
+   sha256sum < ~/update.tar
+   ```
+
+   Continue only if every character matches the CipherStick's checksum.
+   Then Bitcoin Core is checked again on the CryoStick, counting only
+   signers whose keys are not expired or revoked:
+
+   ```bash
+   tar -xf ~/update.tar -C ~
+   gpg --import ~/builder-keys.gpg
+   cd ~/bitcoin/bitcoin-core-*/ && VER=${PWD##*bitcoin-core-}
+   gpg --status-fd 1 --verify SHA256SUMS.asc SHA256SUMS 2>/dev/null |
+       awk '$2 ~ /SIG$/ && $2 != "VALIDSIG" {good = $2 == "GOODSIG"}
+           $2 == "VALIDSIG" && good {print $NF}' | sort -u | wc -l
+   sha256sum --ignore-missing --check SHA256SUMS
+   ```
+
+   Continue only if the count of different signers is 3 or more and the
+   tarball shows `OK`.
+
+2. In the same Console, install Bitcoin Core, codex32 and CipherStick,
+   then check that CipherStick saved its update:
+
+   ```bash
+   stop-btc
+   tar -xf "bitcoin-$VER-x86_64-linux-gnu.tar.gz" --strip-components=1 \
+       --directory="$D/.local" "bitcoin-$VER"/{bin,libexec,share}
+   rsync -a --delete ~/python-codex32/ "$D/.local/share/python-codex32/"
+   REV=$(git -C ~/bails rev-parse HEAD)
+   cp -rT ~/bails/bails ~/payload
+   ~/bails/b --update
+   while [ -d ~/bails ]; do sleep 1; done
+   cd ~/payload
+   [ "$(git -C "$D/.local/share/bails" rev-parse HEAD)" = "$REV" ] &&
+       [ -z "$(find . -type f ! -exec cmp -s {} "$D/{}" \; -print)" ] &&
+       echo 'CipherStick update saved'
+   ```
+
+   If it doesn't print `CipherStick update saved`, don't restart. Free
+   space in Persistent Storage, then start again from step 1.
+
+3. Restart Tails.
