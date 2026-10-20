@@ -28,6 +28,24 @@ CipherStick uses [pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning
 
 [Andrew Polestra: What is Shamir Secret Sharing and how does it compare to Multisig?](https://youtu.be/jDjEEX0ASxY?si=vooa8JA858EmRME6&t=1209)
 
+## Why not just buy a hardware wallet?
+
+A hardware wallet you cannot open is not automatically safer. Gregory Maxwell [made this point](https://www.reddit.com/r/Bitcoin/comments/1x34e38/comment/pfb1g4c/) about a tampered hardware wallet:
+
+> OTOH, this attack was detected because people could open it up …
+
+A sealed device hides implants from its owner as well as from attackers. Its safety then rests on nobody being able to build a convincing fake, and manufacturers often outsource production. Buying Bitcoin-specific hardware can also leave a record that links you to owning bitcoin.
+
+In [an earlier thread](https://old.reddit.com/r/Bitcoin/comments/jp2fp3/opinion_regarding_security/) he called hardware wallets "opaque, largely unauditable", and said altcoin support pushes them onto weaker cryptographic code that is harder to review. On the supply chain he wrote:
+
+> The badness of the supply chain vulnerability is so severe that I just cannot recommend a hardware wallet except for casual low/moderate value use
+
+He recommends an old laptop that never goes online instead.
+
+CipherStick runs Bitcoin Core on an ordinary laptop you already have. For offline signing, a [CryoStick](CRYOSTICK.md) turns an old laptop into a signer that never connects to a network. CryoStick is still experimental: it cannot yet check receive addresses, so see its [still to do](CRYOSTICK.md#still-to-do) list before trusting it with savings.
+
+For large savings, Maxwell suggests a 2-of-2 multisig wallet. One key is on a tamper-evident hardware wallet, and the other is on an independent open-source signer, such as Bitcoin Core signing PSBTs on an old Linux laptop. Then a compromised device or supply chain cannot spend on its own. CipherStick does not set up this multisig for you yet; see [future multisig scope](DESIGN_SCOPE.md#future-multisig-and-inheritance-scope).
+
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
 **No!** CipherStick will create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails&&bails/b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
