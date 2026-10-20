@@ -52,7 +52,8 @@ prompt_passphrase() {
 # never appears in a process list. Uses zxcvbn as Tails ships it for its
 # Secrets password manager: the Rust port in Tails 7.14, or the Python one.
 passphrase_bits() {
-    python3 -c '
+    # Ignore ambient Python paths so local modules cannot read the passphrase.
+    python3 -I -c '
 import math
 import sys
 
