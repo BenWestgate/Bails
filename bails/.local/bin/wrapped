@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# wraps Bitcoin executables to sometimes ask for donations.
+# Runs the required setup check and Core launch-time safeguards.
 ###############################################################################
 BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
 BITCOIN_ADDRESS_SELFISH=	# TODO: add these
@@ -30,14 +30,21 @@ export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
-persistent-setup # Checks needed persistent features are on.
-# Symlink at default datadir to our custom datadir
-ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
+persistent-setup || exit 1 # Ensure required features are enabled on every launch.
 
-# Update favorite apps list
+# A menu launch needs Persistent Storage, but not Core's disk and cache work.
+if [ "${1:-}" != bitcoin-qt ]; then
+    "$@" &
+    exit 0
+fi
 
-favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
-gsettings set org.gnome.shell favorite-apps "$favorites"
+# Tails normally resets GNOME favorites on reboot; only set them if
+# this session has no user override. Respect changes made by the user.
+if command -v dconf >/dev/null 2>&1 &&
+    [ -z "$(dconf read /org/gnome/shell/favorite-apps)" ]; then
+    favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
+    gsettings set org.gnome.shell favorite-apps "$favorites"
+fi
 
 # Prune target the stick can hold, in MiB: free space plus what block and undo
 # files use now (the block index is not pruned), minus room for the
