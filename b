@@ -50,7 +50,11 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
 else
   printf '\033]2;Welcome to CipherStick!\a'
   # Install CipherStick to tmpfs
-  rsync -rvh --perms "$BAILS_DIR/bails/" "$HOME"
+  # Core's GUI saves the user's choices in Bitcoin-Qt.conf, so ship ours only as
+  # a first-install default.
+  qt_conf=.config/Bitcoin/Bitcoin-Qt.conf
+  rsync -rvh --perms --exclude="/$qt_conf" "$BAILS_DIR/bails/" "$HOME"
+  [ -e "$HOME/$qt_conf" ] || cp "$BAILS_DIR/bails/$qt_conf" "$HOME/$qt_conf"
   # Delete files the previous version installed that this version dropped.
   # Its saved checkout's git tree lists them; the files themselves were moved.
   old="$DOTFILES/.local/share/bails/.git"
@@ -71,7 +75,9 @@ else
         sleep 1
     done
     # Install CipherStick to Persistent Storage
-    rsync -rvh --perms --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
+    rsync -rvh --perms --exclude="/$qt_conf" --remove-source-files \
+      "$BAILS_DIR/bails/" $DOTFILES
+    [ -e "$DOTFILES/$qt_conf" ] || cp "$BAILS_DIR/bails/$qt_conf" "$DOTFILES/$qt_conf"
     rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
       "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     wallets='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/wallets'
