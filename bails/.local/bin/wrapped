@@ -55,10 +55,22 @@ assumed=$(sed -n 's/^chain_state_gb=//p' /live/persistence/TailsData_unlocked/do
 growth=$(( ${assumed:-0} * 10**9 / 1024 - ${chainstate:-0} ))
 room=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + ${blocks:-0} - (growth > 0 ? growth : 0))/1024 - 10240 ))
 space=$(( room > 1907 ? room : 1907 ))
+# Refit bitcoin.conf's prune to leave 10 GiB free when it would leave <1 or >11.
+conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf
+conf_prune=$(grep -m1 '^prune=' "$conf" | cut -d= -f2)
+if [ -z "$conf_prune" ] || ((conf_prune > 1 && conf_prune != space &&
+    (conf_prune > room + 9216 || conf_prune < room - 1024))); then
+    # In place: an appended line would land in the sample's [regtest] section.
+    sed -i "0,/^#*prune=.*/s//prune=$space/" "$conf" &&
+        conf_prune=$(grep -m1 '^prune=' "$conf" | cut -d= -f2)
+fi
+# If the GUI's prune, or even 1907, leaves <1 GiB free, lower it for this run.
 old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-if ((space < old_prune)); then # Reduce prune as needed to not run out of space
-    sed -i 's/"prune": "'"$old_prune"'/"prune": "'$space/ "$DATA_DIR/settings.json" &&
-        old_prune=$space
+old_prune=${old_prune:-$conf_prune}
+fit=$(( space < room + 10240 ? space : (room + 10240 > 550 ? room + 10240 : 550) ))
+if ((old_prune > room + 9216 && fit < old_prune)); then
+    set -- "$1" "-prune=$fit" "${@:2}"
+    old_prune=$fit
 fi
 # Warn when space is low and pruning is off, manual, or still too high
 if ((old_prune <= 1 || old_prune > room)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
