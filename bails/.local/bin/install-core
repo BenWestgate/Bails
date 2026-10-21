@@ -252,9 +252,10 @@ else
     echo '{
         "onion": "127.0.0.1:9050",
         "proxy": "127.0.0.1:9050",
-        "prune": "'$prune_MiB'",
         "server": true
-    }' > $DATA_DIR/settings.json # Enable server, proxies for Tor and prune
+    }' > $DATA_DIR/settings.json # Enable server and proxies for Tor
+    # Prune in bitcoin.conf, so wrapped can raise it and a GUI choice outranks it
+    sed -i "s/#prune=<n>/prune=$prune_MiB/" "$DOTFILES/.bitcoin/bitcoin.conf"
     
     if ((prune_MiB)); then
         storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."
