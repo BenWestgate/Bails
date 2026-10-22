@@ -40,7 +40,6 @@ export LOCAL_DIR="$DOTFILES/.local"
 export XDG_STATE_HOME="$LOCAL_DIR/state"
 readonly XDG_DATA_HOME="$LOCAL_DIR/share"
 readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
-readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp"
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
 
 
@@ -136,14 +135,17 @@ retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
 retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
     "$release_url/bitcoin-$VER-x86_64-linux-gnu.tar.gz" & get_core=$!
 printf '\033]2;Getting Bitcoin Core builder keys...\a'
-if cd guix.sigs 2>/dev/null; then
-    retry_on_fail git pull -v # Update guix.sigs
+if [ -d guix.sigs ]; then
+    retry_on_fail git -C guix.sigs pull -v # Update guix.sigs
 else
-    retry_on_fail git clone $GUIX_SIGS_REPO_URL --depth=1
+    retry_on_fail git clone "$GUIX_SIGS_REPO_URL" --depth=1
 fi 
 
 for dir in guix.sigs/*/; do [ "${dir#*/}" == "$VER/" ] && break; rm -rf "$dir"; done
 for name in guix.sigs/"$VER"/*; do gpg --show-keys "${name/"$VER"/builder-keys}.gpg"; done > builder-keys
+source_tar="$DOWNLOAD_DIR/bitcoin-$VER.tar.gz"
+retry_on_fail wget --continue -O "$source_tar" \
+    "$release_url/bitcoin-$VER.tar.gz" & get_source=$!
 if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
     action=update
     printf '\033]2;Updating all keys from keyserver...\a'
@@ -158,9 +160,6 @@ else # Import a trusted set on first-run.
         fi
     done
 fi
-# Download chain parameters in background to size prune
-retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
-
 printf '\033]2;Setup Persistent Storage...\a'
 until [[ -f $XDG_STATE_HOME/tps_is_set_up ]]; do sleep 1; done # Waits on tps
 # Capture the state only after Persistent Storage is mounted, before this run
@@ -206,12 +205,57 @@ ps -p $get_core &>/dev/null && fg %"$(jobs -l | grep $get_core | cut -f1 -d' ' |
 # Verify download integrity
 if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
-    stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
     zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
     install-core	# Launch this script again
     exit 1
 fi
+
+ps -p "$get_source" &>/dev/null && fg %"$(jobs -l | grep "$get_source" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+source_name="bitcoin-$VER.tar.gz"
+source_hash=$(awk -v file="$source_name" '$2 == file { print $1; exit }' SHA256SUMS)
+if [[ ! "$source_hash" =~ ^[[:xdigit:]]{64}$ ]] || \
+    ! printf '%s  %s\n' "$source_hash" "$source_tar" | sha256sum --check --status; then
+    rm -f "$source_tar"
+    zenity --error --title="Bitcoin Core source verification failed" \
+        --text="Could not authenticate the Bitcoin Core $VER release source." "$ICON"
+    exit 1
+fi
+
+source_root="bitcoin-$VER"
+core_doc_dir="$LOCAL_DIR/share/doc/bitcoin-core"
+completion_dir="$LOCAL_DIR/share/bash-completion/completions"
+mkdir -p "$LOCAL_DIR/share/icons" "$core_doc_dir" "$completion_dir"
+
+# Extract only explicit members after the release source archive has passed
+# the signed SHA256SUMS check above. These replace locally vendored copies and
+# keep help/completions matched to the installed Core release on updates too.
+tar -xOf "$source_tar" "$source_root/share/pixmaps/bitcoin128.png" >"$LOCAL_DIR/share/icons/bitcoin128.png" || exit 1
+tar -xOf "$source_tar" "$source_root/share/examples/bitcoin.conf" >"$core_doc_dir/bitcoin.conf.example" || exit 1
+tar -xOf "$source_tar" "$source_root/doc/bitcoin-conf.md" >"$core_doc_dir/bitcoin-conf.md" || exit 1
+tar -xOf "$source_tar" "$source_root/doc/tor.md" >"$core_doc_dir/tor.md" || exit 1
+for completion in bitcoin-cli bitcoin-tx bitcoind; do
+    tar -xOf "$source_tar" "$source_root/contrib/completions/bash/$completion.bash" >"$completion_dir/$completion" || exit 1
+done
+
+# Authenticate storage estimates on installs and updates before changing Core.
+release_chainparams="$DOWNLOAD_DIR/chainparams-release.cpp"
+tar -xOf "$source_tar" "$source_root/src/kernel/chainparams.cpp" >"$release_chainparams" || exit 1
+
+release_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$release_chainparams" | sed 's/[^0-9]*//g')
+release_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$release_chainparams" | sed 's/[^0-9]*//g')
+if [[ ! "$release_chain_state_size" =~ ^[0-9]+$ || ! "$release_blockchain_size" =~ ^[0-9]+$ ]] || \
+    ((release_chain_state_size <= 0 || release_chain_state_size > 128 || \
+      release_blockchain_size <= release_chain_state_size || release_blockchain_size > 4096)); then
+    zenity --error --title="Invalid Bitcoin Core storage metadata" \
+        --text="Bitcoin Core $VER contains invalid authenticated pruning size metadata." "$ICON"
+    exit 1
+fi
+assumed_chain_state_size=$release_chain_state_size
+assumed_blockchain_size=$release_blockchain_size
+rm -f "$source_tar"
+
+stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 printf '\033]2;Installing Bitcoin Core...\a'
 tar -xvf "${file_name::-4}" --strip-components=1 --directory=$LOCAL_DIR
 rm -Rvf "$DOWNLOAD_DIR"/{download*,*.tmp,wget-log*}
@@ -229,12 +273,10 @@ sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILE
 link-dotfiles
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
-# Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, for prune
-ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
 # wrapped reserves room for the chainstate to grow when fitting prune.
-printf 'chain_state_gb=%s\nblockchain_gb=%s\n' "$assumed_chain_state_size" "$assumed_blockchain_size" >$XDG_STATE_HOME/core-assumed-sizes
+printf 'chain_state_gb=%s\nblockchain_gb=%s\n' \
+    "$assumed_chain_state_size" "$assumed_blockchain_size" \
+    >"$XDG_STATE_HOME/core-assumed-sizes" || exit 1
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
