@@ -73,6 +73,7 @@ In the next steps, you will shut down the computer. To be able to follow the res
     git clone https://github.com/benwestgate/bails&&bails/b
     ```
 1. Follow the instructions on Screen.
+1. CipherStick's clone and backup actions are unfinished and unsupported. For a handoff to another person, use the [fresh-Tails handoff](docs/HANDOFF.md) instead of copying your Persistent Storage.
 1. You're Done!
    - [Share your feedback, questions and suggestions](https://github.com/BenWestgate/Bails/issues/new) to make CipherStick even better!
 
