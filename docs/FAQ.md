@@ -138,8 +138,13 @@ For reliability, it SHOULD be a new USB stick, not a heavily used one, and it SH
 
 # After Setup
 
+## What should I do before leaving CipherStick or CryoStick unattended?
+
+For a short absence, lock the Tails screen (Super+L). For longer absences, quit Bitcoin Core, wait for it to close, shut down Tails, and store the USB stick securely. Do not leave Tails running unattended where someone you distrust could tamper with it.
+
+For general security advice, see [Tails documentation](https://tails.net/doc/) and [Security in a Box](http://lxjacvxrozjlxd7pqced7dyefnbityrwqjosuuaqponlg3v7esifrzad.onion/en/) (open in Tor Browser).
+
 ## If I wanted to unplug CipherStick and use the computer for another task will the core download just restart where it left off on the next time I log in?
-For a short absence, lock the Tails screen. For longer absences, shut down safely as described below and store your CipherStick USB securely.
 If you shutdown Bitcoin Core safely, waiting for it to exit before shutting down Tails (from the menu in the upper right) it will resume where you left off the next time you start Tails, unlock its Persistent Storage, and connect to Tor.
 If you shutdown Tails without exiting Bitcoin Core safely, or by yanking the USB stick out, it is possible to corrupt the blockchain database and lose your progress. Only remove the USB to shutdown Tails in an emergency.
 
