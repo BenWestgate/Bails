@@ -271,15 +271,15 @@ sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
 link-dotfiles
-printf "\033]2;Bitcoin Core %s complete!\a" $action
-
-# wrapped reserves room for the chainstate to grow when fitting prune.
 printf 'chain_state_gb=%s\nblockchain_gb=%s\n' \
     "$assumed_chain_state_size" "$assumed_blockchain_size" \
     >"$XDG_STATE_HOME/core-assumed-sizes" || exit 1
+printf "\033]2;Bitcoin Core %s complete!\a" $action
+
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
+    offer_assumeutxo=1
     # Move completed verified download to persistent storage
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
@@ -316,4 +316,5 @@ This initial synchronisation is very demanding, and may expose hardware problems
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
 fi
 wrapped bitcoin-qt -min -startupnotify=chainstate-preload
+[ -n "${offer_assumeutxo:-}" ] && load-assumeutxo --offer
 touch $XDG_STATE_HOME/installed
