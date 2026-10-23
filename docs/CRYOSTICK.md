@@ -49,6 +49,12 @@ If Linux exposes a physical network interface while Offline Mode is active,
 CryoStick warns you to shut down and disable or remove the hardware, while still
 allowing you to continue the current session if you choose.
 
+CryoStick also warns at login if a laptop battery is present and external
+power is connected. Disconnect the charging cable and use the battery while
+working with private keys: the power connection is a potential side channel.
+This is a login-time reminder; it does not monitor cables connected later or
+remove other side channels.
+
 ## Keep the signing wallet in memory only
 
 Bitcoin Core normally saves wallets in your Persistent Storage. If you

@@ -120,6 +120,27 @@ Choose Shut Down to fix this now, or Continue Anyway to use this CryoStick.'
     esac
 }
 
+warn_external_power() {
+    local supply type scope present
+    on_ac_power || return 0
+    for supply in /sys/class/power_supply/*; do
+        [ -r "$supply/type" ] || continue
+        read -r type < "$supply/type"
+        [ "$type" = Battery ] || continue
+        scope=System
+        present=1
+        [ ! -r "$supply/scope" ] || read -r scope < "$supply/scope"
+        [ ! -r "$supply/present" ] || read -r present < "$supply/present"
+        [ "$scope" = System ] && [ "$present" = 1 ] || continue
+        zenity --warning --title='Disconnect the charging cable' \
+            --icon-name=cryostick128 \
+            --text='This CryoStick is connected to external power.
+
+A power connection is a potential side channel. Disconnect the charging cable and use the laptop battery while working with private keys.'
+        return
+    done
+}
+
 make_cryostick=
 if [ -e "$CRYOSTICK" ]; then
     tails_network_enabled && shutdown_without_offline_mode
@@ -150,6 +171,9 @@ physical_network_found && warn_physical_network
 if [ "$make_cryostick" = 1 ]; then
     touch "$CRYOSTICK"
 fi
+
+# This warning must not delay the unsafe-network shutdown path above.
+warn_external_power &
 
 gsettings set org.gnome.desktop.background picture-options none
 gsettings set org.gnome.desktop.background color-shading-type solid
