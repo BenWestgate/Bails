@@ -40,7 +40,7 @@ Keep Tails in **Offline Mode** and keep the computer's networking disabled
 or removed. Once a stick is marked as a CryoStick, it checks Offline Mode at
 every login. If networking is enabled, CryoStick immediately requests that
 NetworkManager disable networking and Wi-Fi and mobile radios. It also tries
-to block wireless devices with `rfkill`, without asking for an Administration
+to block wireless devices with `rfkill` when available, without asking for an Administration
 Password. These requests can fail or take time to complete, so disconnect
 network cables when the warning appears.
 

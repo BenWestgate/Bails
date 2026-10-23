@@ -56,12 +56,14 @@ shutdown_without_offline_mode() {
 
     # Try independent unprivileged controls before showing a dialog. Bound
     # each request so a stalled service cannot postpone the shutdown.
-    timeout --kill-after=1 2 nmcli --wait 0 networking off &
+    timeout --kill-after=1 2 nmcli --wait 1 networking off &
     network_pids+=("$!")
-    timeout --kill-after=1 2 nmcli --wait 0 radio all off &
+    timeout --kill-after=1 2 nmcli --wait 1 radio all off &
     network_pids+=("$!")
-    timeout --kill-after=1 2 rfkill block all &
-    network_pids+=("$!")
+    if command -v rfkill >/dev/null 2>&1; then
+        timeout --kill-after=1 2 rfkill block all &
+        network_pids+=("$!")
+    fi
     for pid in "${network_pids[@]}"; do
         if ! wait "$pid"; then
             network_warning='Some network controls failed. '

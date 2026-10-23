@@ -84,7 +84,7 @@ esac
             with self.subTest(mode=mode):
                 lines = self.run_shutdown(mode)
                 first = '\n'.join(lines)
-                for request in ('nmcli --wait 0 networking off', 'nmcli --wait 0 radio all off', 'rfkill block all'):
+                for request in ('nmcli --wait 1 networking off', 'nmcli --wait 1 radio all off', 'rfkill block all'):
                     self.assertIn(request, lines)
                     self.assertLess(lines.index(request), next(i for i, line in enumerate(lines) if line.startswith('zenity ')))
                 for request in ('pkill -x tca', 'stop-btc '):
