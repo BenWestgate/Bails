@@ -12,33 +12,33 @@ but it cannot spend.
 | Launcher icon | Orange and purple | Ice blue and navy |
 | Wallet | Watch-only | Signing wallet, created with codex32 |
 
-## Current interface
-
-CryoStick can create signing wallets and sign PSBTs today. There is not yet
-a Bails-specific GUI for sending PSBTs across the air gap. Bitcoin Core's
-existing wallet and PSBT controls provide the create, sign, and broadcast
-operations; the Bails-specific crossings between the online CipherStick and
-offline CryoStick currently use the terminal QR commands documented below.
-
 ## Make a CryoStick
 
 1. Set up a CipherStick as usual, but don't create a wallet yet.
+
 2. Open **CipherStick** > **Backup** and back it up to a second USB stick,
    including the Persistent Storage.
+
 3. Mark the copy and the offline computer, for example with tape, so you
    never mix them up.
+
 4. Disable networking on the offline computer in its BIOS, or remove the
    Wi-Fi card.
-5. Start Tails from the copy. In the Welcome Screen, choose **+**
-   (Additional Settings) > **Offline Mode**, then unlock your Persistent
+
+5. Start Tails from the copy. In the **Welcome Screen**, choose **+**
+   (**Additional Settings**) > **Offline Mode**, then unlock your Persistent
    Storage. Do not set an Administration Password.
+
 6. CipherStick sees that Offline Mode was selected and asks
    **Make a CryoStick?** Choose **Make CryoStick**.
+
 7. If the **Welcome Screen** feature of the Persistent Storage is not
    enabled, CryoStick opens Persistent Storage and waits for you to turn it on.
+
 8. If CryoStick finds physical network hardware, shut down and disable or
    remove it. **Continue Anyway** makes the USB stick a CryoStick despite
    the hardware warning.
+
 9. The desktop turns red and the launcher shows the CryoStick icon. Open
    **codex32** and create your signing wallet. To keep it in memory only,
    follow [Keep the signing wallet in memory only](#keep-the-signing-wallet-in-memory-only)
@@ -61,16 +61,19 @@ allowing you to continue the current session if you choose.
 
 Bitcoin Core normally saves wallets in your Persistent Storage. If you
 would rather keep nothing about the signing wallet on the CryoStick, give
-it a name that starts with `/tmp/`. Tails keeps `/tmp` in the computer's
+it a name that starts with */tmp/*. Tails keeps */tmp* in the computer's
 memory and erases it when you shut down. Decide before you create the
 wallet: a wallet already saved in Persistent Storage stays there.
 
 1. In Bitcoin Core, choose **File** > **Create Wallet**. Name it, for
    example, `/tmp/signing`. Tick **Encrypt Wallet** and
    **Make Blank Wallet**, click **Create** and choose a passphrase.
+
 2. Open **codex32** and choose the wallet `/tmp/signing` to fill it from
    your codex32 backup.
+
 3. Sign as usual.
+
 4. Before you shut down, choose **File** > **Close Wallet**.
 
 The wallet is gone after every shutdown, so repeat steps 1 and 2 each
@@ -87,7 +90,8 @@ message, create a wallet with the same name again and close it.
 On the CryoStick:
 
 1. In Bitcoin Core, choose **File** > **Export watch-only wallet** and save
-   it as `watch-only.dat` in your Home folder.
+   it as *watch-only.dat* in your Home folder.
+
 2. Open **Console** and show it as a QR code:
 
    ```bash
@@ -104,7 +108,7 @@ On the CipherStick:
    ```
 
 2. In Bitcoin Core, choose **File** > **Restore Wallet** and pick
-   `watch-only.dat`.
+   *watch-only.dat*.
 
 A new wallet's export is about 12 KB, too big for one QR code. Compressed
 it is about 2.4 KB, which fits in one large, dense QR code. Hold the
@@ -112,9 +116,9 @@ screens steady and close together when scanning.
 
 ## Send bitcoin
 
-There is no bespoke Bails PSBT transfer GUI yet. Every crossing uses the
-same two terminal commands: show a file as a QR code on one stick, and scan
-it on the other.
+Use Bitcoin Core to create, sign, and broadcast the transaction. To move
+each PSBT between the sticks, use these terminal commands to show a file
+as a QR code on one stick and scan it on the other.
 
 ```bash
 gzip -9 < FILE | python3-qr --factory=pil --error-correction=L > FILE.png && xdg-open FILE.png
@@ -122,26 +126,28 @@ zbarcam --raw -Sbinary --oneshot | gunzip > FILE
 ```
 
 1. **CipherStick:** in the **Send** tab, fill in the payment and click
-   **Create Unsigned**. Save it as `unsigned.psbt` and show it with the
+   **Create Unsigned**. Save it as *unsigned.psbt* and show it with the
    terminal command above.
-2. **CryoStick:** scan it into `unsigned.psbt` with the terminal command.
+
+2. **CryoStick:** scan it into *unsigned.psbt* with the terminal command.
    Choose **File** > **Load PSBT from file**, check the amount and address,
-   click **Sign Tx**, save it as `signed.psbt`, and show it with the
+   click **Sign Tx**, save it as *signed.psbt*, and show it with the
    terminal command.
-3. **CipherStick:** scan it into `signed.psbt`. Choose **File** >
+
+3. **CipherStick:** scan it into *signed.psbt*. Choose **File** >
    **Load PSBT from file** and click **Broadcast Tx**.
 
 A one-input payment is about 500 bytes, so its QR code is small.
 
 ## Testing without two computers
 
-`tests/cryostick-qr-roundtrip.sh` runs the whole flow on one computer:
-both sticks' wallets on one regtest node, and every crossing through a
+[The QR round-trip test](../tests/cryostick-qr-roundtrip.sh) runs the flow on
+one computer: both sticks' wallets on one regtest node, and every crossing through a
 real QR image read back with `zbarimg` instead of a webcam. Only the
 camera itself needs two real computers.
 
 ## Still to do
 
-Tracked in #312: the receive-address check, and replacing the manual terminal
-QR crossings with a Bails-specific scripted or graphical flow so users do not
-need to type the commands.
+[Offline-signing improvements](https://github.com/BenWestgate/Bails/issues/312)
+include checking receive addresses and moving files between the sticks
+without typing terminal commands.
