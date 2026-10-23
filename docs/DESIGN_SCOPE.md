@@ -72,12 +72,17 @@ Tails Cloner copies Persistent Storage, including wallets stored there. The
 recipient can unlock the cloned Persistent Storage, so its encryption does not
 isolate those wallets from the recipient.
 
-Safe clone sharing requires excluding private wallet material or a separately
-reviewed wallet-isolation design, such as an encrypted container whose
-passphrase is not shared with the recipient. Panic-mode wallet workflows are
-one proposed way to meet this requirement, not an optional safety improvement.
-Sharing a full clone containing private wallets is unsupported until that
-boundary is implemented and tested.
+The MVP offers **Backup** when wallets are saved in Persistent Storage and
+**Clone** only when no wallets are saved there. A stateless signer can remain
+cloneable by keeping its wallet in memory only. Wallet detection must cover the
+supported persistent wallet locations; an empty default wallet directory alone
+is not sufficient. Do not present the unfinished Clone and Backup actions as
+available until their Tails-native implementation and checks are complete.
+
+Encrypted wallet containers and panic-mode workflows are later enhancements,
+not prerequisites for this MVP policy. Until a separate isolation design is
+implemented and reviewed, a full copy containing persistent wallets is a
+private backup, not a clone to give another person.
 
 ## Legacy MVP scope
 
