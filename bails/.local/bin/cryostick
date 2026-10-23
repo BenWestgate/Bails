@@ -52,14 +52,38 @@ physical_network_found() {
 }
 
 shutdown_without_offline_mode() {
-    pkill -x tca >/dev/null 2>&1 || true
-    stop-btc >/dev/null 2>&1 &
-    zenity --error --title='CryoStick requires Offline Mode' --width=480 \
-        --timeout=5 --icon-name=cryostick128 --ok-label='Shut Down' \
-        --text='This CryoStick was started with networking enabled. Tails will shut down now.
+    local pid network_warning='' network_pids=()
 
-Start it again and turn on Offline Mode in the Welcome Screen.' >/dev/null 2>&1 || true
-    systemctl poweroff
+    # Try independent unprivileged controls before showing a dialog. Bound
+    # each request so a stalled service cannot postpone the shutdown.
+    timeout --kill-after=1 2 nmcli --wait 0 networking off &
+    network_pids+=("$!")
+    timeout --kill-after=1 2 nmcli --wait 0 radio all off &
+    network_pids+=("$!")
+    timeout --kill-after=1 2 rfkill block all &
+    network_pids+=("$!")
+    for pid in "${network_pids[@]}"; do
+        if ! wait "$pid"; then
+            network_warning='Some network controls failed. '
+        fi
+    done
+
+    # Neither the dialog nor application cleanup owns the shutdown timer.
+    zenity --error --title='CryoStick requires Offline Mode' --width=480 \
+        --timeout=10 --icon-name=cryostick128 --ok-label='OK' \
+        --text="This CryoStick was started with networking enabled.
+
+${network_warning}Network shutdown was requested. Disconnect network cables now.
+
+Tails will shut down in 10 seconds. Start it again and turn on Offline Mode in the Welcome Screen." &
+    pkill -x tca >/dev/null 2>&1 &
+    stop-btc >/dev/null 2>&1 &
+    sleep 10
+    if ! systemctl --no-ask-password --no-block poweroff; then
+        zenity --error --title='CryoStick could not shut down' \
+            --icon-name=cryostick128 \
+            --text='Keep network cables disconnected and turn off this computer now.' &
+    fi
     exit 1
 }
 
