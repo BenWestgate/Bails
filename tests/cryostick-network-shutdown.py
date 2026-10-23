@@ -104,7 +104,7 @@ esac
             with self.subTest(mode=mode):
                 lines = self.run_shutdown(mode)
                 first = '\n'.join(lines)
-                for request in ('nmcli --wait 1 networking off', 'nmcli --wait 1 radio all off'):
+                for request in ('nmcli networking off', 'nmcli radio all off'):
                     self.assertIn(request, lines)
                     self.assertLess(lines.index(request), lines.index('greeter-loaded'))
                     self.assertNotIn('profile-loaded', lines)
@@ -122,7 +122,7 @@ esac
 
     def test_offline_and_unmarked_startup(self):
         safe = self.run_shutdown('safe')
-        self.assertIn('nmcli --wait 1 networking off', safe)
+        self.assertIn('nmcli networking off', safe)
         self.assertIn('profile-loaded', safe)
         unmarked = self.run_shutdown('unmarked')
         self.assertEqual(unmarked, ['greeter-loaded', 'profile-loaded'])

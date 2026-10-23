@@ -50,9 +50,9 @@ physical_network_found() {
 cut_networking() {
     local pid network_pids=()
     network_warning=''
-    timeout --kill-after=1 2 nmcli --wait 1 networking off &
+    timeout --kill-after=1 2 nmcli networking off &
     network_pids+=("$!")
-    timeout --kill-after=1 2 nmcli --wait 1 radio all off &
+    timeout --kill-after=1 2 nmcli radio all off &
     network_pids+=("$!")
     for pid in "${network_pids[@]}"; do
         if ! wait "$pid"; then
