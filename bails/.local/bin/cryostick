@@ -65,7 +65,7 @@ shutdown_without_offline_mode() {
     # Neither the dialog nor application cleanup owns the shutdown timer.
     zenity --error --title='CryoStick requires Offline Mode' --width=480 \
         --timeout=10 --icon-name=cryostick128 --ok-label='OK' \
-        --text="This CryoStick was started with networking enabled.
+        --text="CryoStick could not confirm that Tails started in Offline Mode.
 
 ${network_warning}Network shutdown was requested. Disconnect network cables now.
 
