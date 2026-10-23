@@ -65,6 +65,20 @@ export, watch-only restoration, PSBT signing, QR transfer, and broadcast on a
 single regtest node. It does not test the Tails desktop or webcam transfer
 between two computers.
 
+## MVP requirement for sharing clones
+
+A clone given to another person must not disclose private wallet material.
+Tails Cloner copies Persistent Storage, including wallets stored there. The
+recipient can unlock the cloned Persistent Storage, so its encryption does not
+isolate those wallets from the recipient.
+
+Safe clone sharing requires excluding private wallet material or a separately
+reviewed wallet-isolation design, such as an encrypted container whose
+passphrase is not shared with the recipient. Panic-mode wallet workflows are
+one proposed way to meet this requirement, not an optional safety improvement.
+Sharing a full clone containing private wallets is unsupported until that
+boundary is implemented and tested.
+
 ## Legacy MVP scope
 
 The historical MVP included these goals. They describe past implementation
@@ -93,8 +107,6 @@ intent, not current support guarantees:
 - Verify receive addresses in the offline-signing flow.
 
 - Support offline read-only signing devices.
-
-- Add panic-mode wallet workflows.
 
 ## Future multisig and inheritance scope
 
