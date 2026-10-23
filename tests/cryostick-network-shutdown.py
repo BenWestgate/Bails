@@ -11,8 +11,16 @@ import unittest
 
 
 SOURCE = Path(__file__).resolve().parents[1] / 'bails/.local/bin/cryostick'
-FUNCTION = SOURCE.read_text().split('shutdown_without_offline_mode() {', 1)[1]
-FUNCTION = 'shutdown_without_offline_mode() {' + FUNCTION.split('\n}\n', 1)[0] + '\n}\n'
+SCRIPT = SOURCE.read_text()
+FUNCTION = ''
+for name in ('cut_networking', 'shutdown_without_offline_mode'):
+    body = SCRIPT.split(name + '() {', 1)[1].split('\n}\n', 1)[0]
+    FUNCTION += name + '() {' + body + '\n}\n'
+start = SCRIPT.index('if [ -e "$CRYOSTICK" ]; then\n    cut_networking')
+BOOTSTRAP = SCRIPT[start:SCRIPT.index('make_cryostick=\n', start)]
+BOOTSTRAP = BOOTSTRAP.replace('/usr/local/lib/tails-shell-library/tails-greeter.sh', '$TEST_GREETER')
+BOOTSTRAP = BOOTSTRAP.replace('. ~/.profile', 'echo profile-loaded >> "$EVENTS"')
+
 
 
 class ShutdownTest(unittest.TestCase):
@@ -20,13 +28,21 @@ class ShutdownTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             events = root / 'events'
+            marker = root / '.local/state/cryostick'
+            marker.parent.mkdir(parents=True)
+            if mode != 'unmarked':
+                marker.touch()
+            greeter = root / 'greeter.sh'
+            greeter.write_text('echo greeter-loaded >> "$EVENTS"\n'
+                               '[ "$MODE" != greeter-failed ] || return 1\n'
+                               'tails_network_enabled() { [ "$MODE" != safe ]; }\n')
             # Every command that could affect the host is replaced. The real
             # timeout bounds hung controls; only the ten-second grace is sped up.
             stub = '''#!/bin/bash
 name=${0##*/}
 printf '%s %s\\n' "$name" "$*" >> "$EVENTS"
 case "$name" in
-    nmcli|rfkill)
+    nmcli)
         case "$MODE" in
             denied) echo 'permission denied' >&2; exit 1 ;;
             stalled) trap '' TERM; /bin/sleep 30 ;;
@@ -51,18 +67,22 @@ case "$name" in
         ;;
 esac
 '''
-            for name in ('nmcli', 'rfkill', 'zenity', 'pkill', 'stop-btc', 'sleep', 'systemctl'):
+            for name in ('nmcli', 'zenity', 'pkill', 'stop-btc', 'sleep', 'systemctl'):
                 path = root / name
                 path.write_text(stub)
                 path.chmod(0o755)
-            env = dict(os.environ, PATH=f'{root}:/usr/bin:/bin', EVENTS=str(events), MODE=mode)
+            cleanup = root / '.local/bin'
+            cleanup.mkdir(parents=True)
+            (cleanup / 'stop-btc').write_text(stub)
+            (cleanup / 'stop-btc').chmod(0o755)
+            env = dict(os.environ, TEST_GREETER=str(greeter), TEST_DOTFILES=str(root), PATH=f'{root}:/usr/bin:/bin', EVENTS=str(events), MODE=mode)
             process = subprocess.Popen(
-                ['/bin/bash', '-c', FUNCTION + '\nshutdown_without_offline_mode'],
+                ['/bin/bash', '-c', 'DOTFILES="$TEST_DOTFILES"; CRYOSTICK="$DOTFILES/.local/state/cryostick"\n' + FUNCTION + BOOTSTRAP + '\nexit 77'],
                 env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 start_new_session=True,
             )
             try:
-                self.assertEqual(process.wait(timeout=5), 1)
+                self.assertEqual(process.wait(timeout=5), 77 if mode in ('safe', 'unmarked') else 1)
                 # A failed poweroff launches a final asynchronous warning.
                 if mode == 'poweroff-failed':
                     deadline = time.monotonic() + 1
@@ -80,12 +100,14 @@ esac
             return lines
 
     def test_shutdown_survives_failed_or_stalled_components(self):
-        for mode in ('success', 'denied', 'stalled', 'dialog-failed', 'dialog-hung', 'cleanup-hung'):
+        for mode in ('success', 'denied', 'stalled', 'dialog-failed', 'dialog-hung', 'cleanup-hung', 'greeter-failed'):
             with self.subTest(mode=mode):
                 lines = self.run_shutdown(mode)
                 first = '\n'.join(lines)
-                for request in ('nmcli --wait 1 networking off', 'nmcli --wait 1 radio all off', 'rfkill block all'):
+                for request in ('nmcli --wait 1 networking off', 'nmcli --wait 1 radio all off'):
                     self.assertIn(request, lines)
+                    self.assertLess(lines.index(request), lines.index('greeter-loaded'))
+                    self.assertNotIn('profile-loaded', lines)
                     self.assertLess(lines.index(request), next(i for i, line in enumerate(lines) if line.startswith('zenity ')))
                 for request in ('pkill -x tca', 'stop-btc '):
                     self.assertIn(request, lines)
@@ -97,6 +119,14 @@ esac
                 if mode in ('denied', 'stalled'):
                     self.assertIn('Some network controls failed.', first)
                 self.assertNotIn('sudo', first)
+
+    def test_offline_and_unmarked_startup(self):
+        safe = self.run_shutdown('safe')
+        self.assertIn('nmcli --wait 1 networking off', safe)
+        self.assertIn('profile-loaded', safe)
+        unmarked = self.run_shutdown('unmarked')
+        self.assertEqual(unmarked, ['greeter-loaded', 'profile-loaded'])
+        self.assertFalse(any(line.startswith('systemctl ') for line in safe))
 
     def test_failed_poweroff_warns_user(self):
         self.assertIn('Keep network cables disconnected and turn off this computer now.', '\n'.join(self.run_shutdown('poweroff-failed')))

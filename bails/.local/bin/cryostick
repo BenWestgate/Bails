@@ -28,10 +28,6 @@
 # login, requires Welcome Screen persistence, and warns if Linux exposes a
 # physical network interface.
 
-# shellcheck source=/dev/null
-. ~/.profile
-# shellcheck source=/dev/null
-. /usr/local/lib/tails-shell-library/tails-greeter.sh || exit 1
 DOTFILES=/live/persistence/TailsData_unlocked/dotfiles
 CRYOSTICK="$DOTFILES/.local/state/cryostick"
 
@@ -51,25 +47,21 @@ physical_network_found() {
     return 1
 }
 
-shutdown_without_offline_mode() {
-    local pid network_warning='' network_pids=()
-
-    # Try independent unprivileged controls before showing a dialog. Bound
-    # each request so a stalled service cannot postpone the shutdown.
+cut_networking() {
+    local pid network_pids=()
+    network_warning=''
     timeout --kill-after=1 2 nmcli --wait 1 networking off &
     network_pids+=("$!")
     timeout --kill-after=1 2 nmcli --wait 1 radio all off &
     network_pids+=("$!")
-    if command -v rfkill >/dev/null 2>&1; then
-        timeout --kill-after=1 2 rfkill block all &
-        network_pids+=("$!")
-    fi
     for pid in "${network_pids[@]}"; do
         if ! wait "$pid"; then
             network_warning='Some network controls failed. '
         fi
     done
+}
 
+shutdown_without_offline_mode() {
     # Neither the dialog nor application cleanup owns the shutdown timer.
     zenity --error --title='CryoStick requires Offline Mode' --width=480 \
         --timeout=10 --icon-name=cryostick128 --ok-label='OK' \
@@ -79,7 +71,7 @@ ${network_warning}Network shutdown was requested. Disconnect network cables now.
 
 Tails will shut down in 10 seconds. Start it again and turn on Offline Mode in the Welcome Screen." &
     pkill -x tca >/dev/null 2>&1 &
-    stop-btc >/dev/null 2>&1 &
+    PATH="$DOTFILES/.local/bin:$PATH" "$DOTFILES/.local/bin/stop-btc" >/dev/null 2>&1 &
     sleep 10
     if ! systemctl --no-ask-password --no-block poweroff; then
         zenity --error --title='CryoStick could not shut down' \
@@ -146,10 +138,24 @@ Choose Shut Down to fix this now, or Continue Anyway to use this CryoStick.'
     esac
 }
 
-make_cryostick=
+# First external actions on a marked stick: cut networking before loading
+# user startup code, reading greeter settings, or opening any dialog.
 if [ -e "$CRYOSTICK" ]; then
-    tails_network_enabled && shutdown_without_offline_mode
-else
+    cut_networking
+fi
+# shellcheck source=/dev/null
+if ! . /usr/local/lib/tails-shell-library/tails-greeter.sh; then
+    [ ! -e "$CRYOSTICK" ] || shutdown_without_offline_mode
+    exit 1
+fi
+if [ -e "$CRYOSTICK" ] && tails_network_enabled; then
+    shutdown_without_offline_mode
+fi
+# shellcheck source=/dev/null
+. ~/.profile
+
+make_cryostick=
+if [ ! -e "$CRYOSTICK" ]; then
     # Use the same Welcome Screen state check as Tor Connection Assistant.
     tails_network_enabled && exit 0
 
