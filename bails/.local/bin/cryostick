@@ -132,11 +132,13 @@ warn_external_power() {
         [ ! -r "$supply/scope" ] || read -r scope < "$supply/scope"
         [ ! -r "$supply/present" ] || read -r present < "$supply/present"
         [ "$scope" = System ] && [ "$present" = 1 ] || continue
-        zenity --warning --title='Disconnect the charging cable' \
+        zenity --warning --title='Use battery power for private keys' \
             --icon-name=cryostick128 \
             --text='This CryoStick is connected to external power.
 
-A power connection is a potential side channel. Disconnect the charging cable and use the laptop battery while working with private keys.'
+A power connection is a potential side channel. Use the laptop battery while handling recovery secrets or signing offline.
+
+If the battery is low, charge it first. Then disconnect the charging cable before starting. You can continue using this CryoStick.'
         return
     done
 }
