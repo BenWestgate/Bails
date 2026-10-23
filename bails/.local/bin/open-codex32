@@ -117,7 +117,7 @@ main() {
     fi
 
     if [ "$install_if_needed" = true ]; then
-        wait_for_core || core_status=$?
+        wait_for_core 120 || core_status=$?
     else
         core_is_compatible || core_status=$?
     fi
