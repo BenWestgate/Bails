@@ -36,6 +36,9 @@ but it cannot spend.
    follow [Keep the signing wallet in memory only](#keep-the-signing-wallet-in-memory-only)
    instead.
 
+The dock and app grid omit Network applications. The applications remain
+installed; hiding their icons does not disable networking.
+
 Keep Tails in **Offline Mode** and keep the computer's networking disabled
 or removed. Once a stick is marked as a CryoStick, it checks Offline Mode at
 every login. If networking is enabled, it stops Bitcoin Core and Tor Connection

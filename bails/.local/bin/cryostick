@@ -151,9 +151,34 @@ if [ "$make_cryostick" = 1 ]; then
     touch "$CRYOSTICK"
 fi
 
-gsettings set org.gnome.desktop.background picture-options none
-gsettings set org.gnome.desktop.background color-shading-type solid
-gsettings set org.gnome.desktop.background primary-color '#c01c28'
+# Hide network applications in this session, keeping our own launchers.
+applications="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+mkdir -p "$applications" || exit 1
+IFS=: read -r -a data_dirs <<< "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+for directory in "${data_dirs[@]}"; do
+  for desktop in "$directory"/applications/*.desktop; do
+    [[ -f "$desktop" ]] || continue
+    case "${desktop##*/}" in
+      bails.desktop|bitcoin-qt.desktop|io.github.benwestgate.codex32.desktop) continue ;;
+    esac
+    mask="$applications/${desktop##*/}"
+    entry="$desktop"
+    [[ ! -e "$mask" ]] || entry="$mask"
+    grep -qx 'Hidden=true' "$entry" && continue
+    grep -Eq '^Categories=([^;]*;)*Network(;|$)' "$entry" || continue
+    if [[ -e "$mask" ]]; then
+      sed -i '/^Hidden=/d; /^\[Desktop Entry\]$/aHidden=true' "$mask" || exit 1
+    else
+      printf '[Desktop Entry]\nHidden=true\n' > "$mask" || exit 1
+    fi
+  done
+done
+sed -i '/^Categories=/s/Network;//' \
+  "$DOTFILES/.local/share/applications/"{bails,bitcoin-qt}.desktop
+
+gsettings set org.gnome.desktop.background picture-uri "file://$DOTFILES/.local/share/backgrounds/cryostick-light.svg"
+gsettings set org.gnome.desktop.background picture-uri-dark "file://$DOTFILES/.local/share/backgrounds/cryostick-dark.svg"
+gsettings set org.gnome.desktop.background picture-options stretched
 # Updates restore the CipherStick launcher, so reapply this at every login.
 sed --in-place 's/^Name=CipherStick$/Name=CryoStick/; s/^Icon=bails128$/Icon=cryostick128/' \
     "$DOTFILES/.local/share/applications/bails.desktop"
