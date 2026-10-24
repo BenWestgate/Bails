@@ -146,6 +146,14 @@ Only update a CryoStick for a security fix, or for a new feature you need
 on an offline signer. Every update puts new code on the computer that
 holds your keys.
 
+**Trust boundary:** this procedure trusts the online CipherStick that
+prepared the update. Comparing the SHA-256 catches transfer-stick
+changes, not a compromised CipherStick. Its bundle can contain altered
+CipherStick or codex32 code and imported Bitcoin Core signing keys;
+`GOODSIG` alone does not authenticate an imported key's owner. An
+attacker controlling the online CipherStick could compromise the
+offline signer. This is not independent release authentication.
+
 Don't use **Update Bitcoin Core** or **Update CipherStick** on the
 CryoStick: they need a network connection. Update your CipherStick
 first, then carry its updates across, as Bitcoin Core's tutorial does
