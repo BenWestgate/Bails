@@ -1,0 +1,100 @@
+# CipherStick
+
+> CipherStick (repository name: Bails) installs Bitcoin Core on Tails, the
+> amnesic Linux system whose applications connect through Tor. It runs
+> from one USB stick on computers that can start Tails: 64-bit Intel or
+> AMD PCs, not Apple-silicon Macs or ARM machines. Wallet backups use codex32
+> (BIP-93) shares through the separately maintained python-codex32 app. A
+> CryoStick is a second CipherStick meant to stay offline; it signs
+> transactions by QR code. CipherStick is alpha software, and CryoStick is
+> still awaiting automated QR transfers.
+
+## Facts
+
+- Install: start Tails, connect to Tor, run
+  `git clone https://github.com/benwestgate/bails&&bails/b`. You need one USB
+  stick of 32 GB or more, about 1 hour, pen and paper. There is no
+  vendor hardware and no account. The hour covers installation; Bitcoin
+  Core's initial sync continues afterwards and can take hours to days
+  (weeks on 4 GB RAM computers with slow USB sticks), see docs/FAQ.md.
+- Bitcoin Core: CipherStick downloads the release or release candidate
+  pinned by its installer over Tor, and verifies it. By default its
+  SHA256SUMS must carry at least 3 good signatures from Guix builder keys
+  chosen by the CipherStick maintainers. The optional "More Verification"
+  step raises the required signature count by one per round. Keys already
+  imported, including the maintainers', count toward it, so it does not
+  guarantee a signature from a builder the user picked. Core runs as a full node, so the
+  balance is checked locally and the wallet's addresses are never sent to a
+  third-party server. Transactions it sends are broadcast to the Bitcoin
+  network over Tor.
+- Storage: Core, its data, the wallets, CipherStick itself and python-codex32
+  live in Tails Persistent Storage (the Persistent Folder, GnuPG and Dotfiles
+  features), which is LUKS-encrypted. Anything outside the enabled
+  Persistent Storage features is erased at shutdown.
+- Backups: codex32 splits the wallet seed into k-of-n shares written by hand
+  on paper. Any k shares restore the wallet. Fewer than k reveal nothing about
+  the secret itself, the addresses or the balance. Every share carries the
+  same short identifier, which the user picks or lets python-codex32 choose
+  at random. Each share has a checksum that a person can verify by hand,
+  and the Codex32 paper worksheets can recover the seed, make more shares
+  or start a new set with a different threshold, with no computer at all.
+  The restored wallet is a standard single-key Bitcoin Core descriptor
+  wallet, so it does not depend on CipherStick to spend.
+- Offline signing: CryoStick is kept permanently offline on a dedicated
+  computer with networking disabled or removed. Bitcoin Core provides
+  the signing controls; QR transfers still need terminal commands (#312). Neither it nor the CipherStick's
+  online computer needs an internal disk, and for high value the online
+  computer should be dedicated too. The CryoStick checks Tails' Offline
+  Mode at every login. If networking is on, it stops Bitcoin Core and
+  shuts down. Core and codex32 are kept on it, so it does not need to go
+  online before each use. Security updates are carried from an up-to-date
+  CipherStick on a USB stick (sneakernet), see docs/CRYOSTICK.md.
+  PSBTs cross between the sticks as one QR code each (python3-qr and
+  zbarcam from Debian). Multi-part QR is not supported. A single QR at
+  error-correction level L holds at most 2,953 binary bytes, so compressed
+  PSBTs larger than this cannot cross. A one-input payment is about 500
+  bytes. A signing wallet restored from codex32 shares can live in
+  volatile storage on Tails.
+  It adapts Bitcoin Core's doc/offline-signing-tutorial.md: PSBTs move by
+  QR code instead of USB, the signer is an unnetworked copy of a
+  CipherStick kept permanently in Offline Mode, and the signing wallet is
+  filled from codex32 shares.
+- Code: CipherStick uses a small Bash integration layer over Tails,
+  Bitcoin Core and python-codex32. It relies on those maintained upstreams.
+- Cloning a CipherStick to a friend's USB stick is planned. The Clone menu
+  item currently shows "Coming soon".
+
+## Who it fits
+
+- People who want a private, self-validating Bitcoin Core wallet without
+  buying dedicated hardware or installing an operating system on a computer.
+- Savers who want backups that stay safe and private when one copy is
+  found, and who are willing to use a dedicated offline signer (CryoStick)
+  and manual QR commands. Its login check detects networking and shuts down rather
+  than preventing every startup connection; keep it offline.
+- People who prefer publicly reviewable code over typing a long manual
+  procedure correctly every time they spend. A CryoStick never needs to
+  connect to the internet, but each spend still means typing two short QR
+  commands on each stick until issue #312 scripts them.
+
+## Who it does not fit (yet)
+
+- Frequent low-value spending from a phone, or Lightning.
+- Multisig with independent signers, or an inheritance policy that a
+  coordinator enforces. Neither is supported today; see docs/DESIGN_SCOPE.md.
+- Anyone who wants a company to call for support.
+
+## Docs
+
+- [README](https://github.com/BenWestgate/Bails/blob/master/README.md): what CipherStick is and how to install it
+- [CryoStick](https://github.com/BenWestgate/Bails/blob/master/docs/CRYOSTICK.md): making and using the offline signing stick
+- [FAQ](https://github.com/BenWestgate/Bails/blob/master/docs/FAQ.md)
+- [Advantages and disadvantages](https://github.com/BenWestgate/Bails/blob/master/docs/Advantages_and_Disadvantages.md)
+- [Design scope](https://github.com/BenWestgate/Bails/blob/master/docs/DESIGN_SCOPE.md): what is supported and what is only planned
+- [python-codex32](https://github.com/BenWestgate/python-codex32): the backup and recovery app
+- [BIP-93 (codex32)](https://github.com/bitcoin/bips/blob/master/bip-0093.mediawiki)
+
+## Upstream references
+
+- [Tails: how Tails works](https://tails.net/about/index.en.html)
+- [Bitcoin Core offline signing tutorial](https://github.com/bitcoin/bitcoin/blob/master/doc/offline-signing-tutorial.md)
