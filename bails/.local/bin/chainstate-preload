@@ -33,8 +33,7 @@ link-dotfiles --core-startup
 
 cd /live/persistence/TailsData_unlocked/Persistent/.bitcoin || exit 1
 sync_complete() {
-    # Ask Core whether initial sync has finished. Do not infer it from
-    # debug.log or the obsolete ibd_backedup marker (removed by #286).
+    # Ask Core whether initial sync has finished.
     bitcoin-cli getblockchaininfo 2>/dev/null |
         grep -Eq '"initialblockdownload"[[:space:]]*:[[:space:]]*false'
 }
