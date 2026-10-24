@@ -148,16 +148,7 @@ VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
 case "$VER" in
     ''|*[!0-9.]*) echo "Unexpected Bitcoin Core version: $VER" >&2; exit 1 ;;
 esac
-release_path="bitcoin-core-$VER"
-
-# python-codex32 requires Bitcoin Core 32 or newer. Until 32.0 is stable,
-# use the authenticated 32.0rc2 release candidate instead of stable 31.x.
-if [ "${VER%%.*}" -lt 32 ]; then
-    VER=32.0rc2
-    release_path="bitcoin-core-32.0/test.rc2"
-fi
-
-release_url="$BITCOIN_CORE_DOMAIN/bin/$release_path"
+release_url="$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER"
 mkdir -p "bitcoin-core-$VER"
 # Download Bitcoin core checksums and signatures in background
 retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
