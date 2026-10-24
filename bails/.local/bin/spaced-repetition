@@ -41,7 +41,9 @@ wake_trainer() {
 }
 
 wait_interval() {
-    sleep "$1" &
+    local delay=$1
+    ((delay > max_interval)) && delay=$max_interval
+    sleep "$delay" &
     sleep_pid=$!
     wait "$sleep_pid" 2>/dev/null || true
     sleep_pid=
@@ -72,6 +74,7 @@ check_passphrase() {
 
 save_schedule() {
     local due tmp
+    ((interval > max_interval)) && interval=$max_interval
     due=$(($(date +%s) + interval))
     tmp="$STATE_FILE.tmp.$$"
     printf '%s %s\n' "$interval" "$due" >"$tmp"
@@ -84,6 +87,7 @@ load_schedule() {
     read -r saved_interval saved_due <"$STATE_FILE" || return 1
     [[ "$saved_interval" =~ ^[0-9]+$ && "$saved_due" =~ ^[0-9]+$ ]] || return 1
     ((saved_interval >= min_interval)) || return 1
+    ((saved_interval > max_interval)) && saved_interval=$max_interval
 
     if ((practice_now)); then
         interval=$saved_interval
@@ -112,6 +116,7 @@ load_schedule() {
 
 # Initialize variables
 min_interval=5
+max_interval=$((7 * 24 * 60 * 60))
 interval=30 # initial value
 exp=0
 enter='Enter'
