@@ -41,7 +41,7 @@ if [ "${1:-}" = "--core-startup" ]; then
             --icon-name=tor-disconnected-symbolic \
             --text='Tails is not connected to Tor yet. Open Tor Connection now?' \
             --ok-label='Open Tor Connection' --cancel-label='Not Now'; then
-            "$HOME/.local/bin/tails-desktop-launch" /usr/share/applications/tca.desktop
+            /usr/local/bin/gtk-abspath-launch /usr/share/applications/tca.desktop
         fi
     ) &
 fi
