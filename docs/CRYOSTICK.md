@@ -38,8 +38,18 @@ but it cannot spend.
 
 Keep Tails in **Offline Mode** and keep the computer's networking disabled
 or removed. Once a stick is marked as a CryoStick, it checks Offline Mode at
-every login. If networking is enabled, it stops Bitcoin Core and Tor Connection
-Assistant and shuts Tails down.
+every login. On a marked stick, its first external commands request that
+NetworkManager disable networking and Wi-Fi and mobile radios, before loading
+user startup code or checking the Welcome Screen settings. If a control fails,
+it warns and requests shutdown after five seconds. If Offline Mode cannot be
+confirmed from the Welcome Screen settings, it shuts down after ten seconds.
+These requests do not ask for an Administration Password. Disconnect network
+cables when the warning appears.
+
+CryoStick starts closing Bitcoin Core and Tor Connection Assistant in the
+background and requests shutdown after the warning's five- or ten-second grace.
+Closing the warning does not cancel shutdown. This check runs after login; it
+does not prevent network activity before CryoStick starts.
 
 CryoStick also checks at every login that the **Welcome Screen** Persistent
 Storage feature is enabled. If it is not, CryoStick opens Persistent Storage
