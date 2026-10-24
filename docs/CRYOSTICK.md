@@ -49,14 +49,11 @@ If Linux exposes a physical network interface while Offline Mode is active,
 CryoStick warns you to shut down and disable or remove the hardware, while still
 allowing you to continue the current session if you choose.
 
-If physical surveillance is part of your threat model, consider using a
-laptop's battery while handling recovery secrets or signing offline. If the
-battery is low, charge it first, then disconnect the charging cable before
-starting. The connection matters even when the battery is not charging.
-
-A power connection is a potential side channel. Disconnecting it removes that
-connection, not every side channel. Battery operation is a recommendation,
-not a requirement.
+If physical surveillance is a concern, we recommend using a laptop on
+battery power when handling recovery secrets or signing offline, if possible.
+A connected power cable is a potential side channel, even when the battery
+is not charging. Unplugging it removes that connection, not every side
+channel. Battery operation is optional.
 
 ## Keep the signing wallet in memory only
 
