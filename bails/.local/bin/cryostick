@@ -48,31 +48,25 @@ physical_network_found() {
 }
 
 cut_networking() {
-    local pid network_pids=()
     network_warning=''
-    timeout --kill-after=1 2 nmcli networking off &
-    network_pids+=("$!")
-    timeout --kill-after=1 2 nmcli radio all off &
-    network_pids+=("$!")
-    for pid in "${network_pids[@]}"; do
-        if ! wait "$pid"; then
-            network_warning='Some network controls failed. '
-        fi
-    done
+    timeout --kill-after=1 2 nmcli networking off >/dev/null 2>&1 || network_warning='Network controls failed. '
+    timeout --kill-after=1 2 nmcli radio all off >/dev/null 2>&1 || network_warning='Network controls failed. '
+    [ -z "$network_warning" ] || shutdown_without_offline_mode 5
 }
 
 shutdown_without_offline_mode() {
+    local grace=${1:-10}
     # Neither the dialog nor application cleanup owns the shutdown timer.
     zenity --error --title='CryoStick requires Offline Mode' --width=480 \
-        --timeout=10 --icon-name=cryostick128 --ok-label='OK' \
+        --timeout="$grace" --icon-name=cryostick128 --ok-label='OK' \
         --text="CryoStick could not confirm that Tails started in Offline Mode.
 
 ${network_warning}Network shutdown was requested. Disconnect network cables now.
 
-Tails will shut down in 10 seconds. Start it again and turn on Offline Mode in the Welcome Screen." &
+Tails will shut down in $grace seconds. Start it again and turn on Offline Mode in the Welcome Screen." &
     pkill -x tca >/dev/null 2>&1 &
     PATH="$DOTFILES/.local/bin:$PATH" "$DOTFILES/.local/bin/stop-btc" >/dev/null 2>&1 &
-    sleep 10
+    sleep "$grace"
     if ! systemctl --no-ask-password --no-block poweroff; then
         zenity --error --title='CryoStick could not shut down' \
             --icon-name=cryostick128 \
@@ -148,7 +142,8 @@ if ! . /usr/local/lib/tails-shell-library/tails-greeter.sh; then
     [ ! -e "$CRYOSTICK" ] || shutdown_without_offline_mode
     exit 1
 fi
-if [ -e "$CRYOSTICK" ] && tails_network_enabled; then
+if [ -e "$CRYOSTICK" ] &&
+    [ "$(_get_tg_setting "$NETWORK_SETTING" TAILS_NETWORK)" != false ]; then
     shutdown_without_offline_mode
 fi
 # shellcheck source=/dev/null

@@ -35,7 +35,18 @@ class ShutdownTest(unittest.TestCase):
             greeter = root / 'greeter.sh'
             greeter.write_text('echo greeter-loaded >> "$EVENTS"\n'
                                '[ "$MODE" != greeter-failed ] || return 1\n'
-                               'tails_network_enabled() { [ "$MODE" != safe ]; }\n')
+                               'NETWORK_SETTING="$TEST_GREETER"\n'
+                               '_get_tg_setting() {\n'
+                               '    case "$MODE" in\n'
+                               '        missing-setting) : ;;\n'
+                               '        malformed-setting) echo unexpected ;;\n'
+                               '        safe) echo false ;;\n'
+                               '        *) echo true ;;\n'
+                               '    esac\n'
+                               '}\n'
+                               'tails_network_enabled() {\n'
+                               '    [ "$(_get_tg_setting)" = true ]\n'
+                               '}\n')
             # Every command that could affect the host is replaced. The real
             # timeout bounds hung controls; only the ten-second grace is sped up.
             stub = '''#!/bin/bash
@@ -58,7 +69,7 @@ case "$name" in
         if [ "$MODE" = cleanup-hung ]; then /bin/sleep 30; fi
         ;;
     sleep)
-        [ "$1" = 10 ] || exit 99
+        [ "$1" = 10 ] || [ "$1" = 5 ] || exit 99
         /bin/sleep 0.2
         echo grace-ended >> "$EVENTS"
         ;;
@@ -82,7 +93,7 @@ esac
                 start_new_session=True,
             )
             try:
-                self.assertEqual(process.wait(timeout=5), 77 if mode in ('safe', 'unmarked') else 1)
+                self.assertEqual(process.wait(timeout=8), 77 if mode in ('safe', 'unmarked') else 1)
                 # A failed poweroff launches a final asynchronous warning.
                 if mode == 'poweroff-failed':
                     deadline = time.monotonic() + 1
@@ -100,7 +111,8 @@ esac
             return lines
 
     def test_shutdown_survives_failed_or_stalled_components(self):
-        for mode in ('success', 'denied', 'stalled', 'dialog-failed', 'dialog-hung', 'cleanup-hung', 'greeter-failed'):
+        for mode in ('success', 'dialog-failed', 'dialog-hung', 'cleanup-hung',
+                     'greeter-failed', 'missing-setting', 'malformed-setting'):
             with self.subTest(mode=mode):
                 lines = self.run_shutdown(mode)
                 first = '\n'.join(lines)
@@ -116,9 +128,20 @@ esac
                 self.assertIn('systemctl --no-ask-password --no-block poweroff', lines)
                 self.assertLess(lines.index('grace-ended'), lines.index('systemctl --no-ask-password --no-block poweroff'))
                 self.assertIn('Disconnect network cables now.', first)
-                if mode in ('denied', 'stalled'):
-                    self.assertIn('Some network controls failed.', first)
                 self.assertNotIn('sudo', first)
+
+    def test_network_controls_fail_closed_in_five_seconds(self):
+        for mode in ('denied', 'stalled'):
+            with self.subTest(mode=mode):
+                lines = self.run_shutdown(mode)
+                for request in ('nmcli networking off', 'nmcli radio all off'):
+                    self.assertIn(request, lines)
+                self.assertNotIn('greeter-loaded', lines)
+                self.assertNotIn('profile-loaded', lines)
+                self.assertIn('sleep 5', lines)
+                self.assertIn('systemctl --no-ask-password --no-block poweroff', lines)
+                self.assertIn('Network controls failed.', '\n'.join(lines))
+                self.assertIn('Tails will shut down in 5 seconds.', '\n'.join(lines))
 
     def test_offline_and_unmarked_startup(self):
         safe = self.run_shutdown('safe')
