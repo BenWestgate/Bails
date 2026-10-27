@@ -14,7 +14,7 @@ CipherStick is a script that installs Bitcoin Core on Tails. The legacy in-tree 
 
 1. **Planned Multi-party Multi-sig for Inheritance Protection**: The planned inheritance design uses multi-party multi-sig so spending requires collaboration between independent parties.
 
-1. **Planned Offline Private Keys**: The planned savings design keeps private keys off Internet-connected devices and moves signing data by QR code.
+1. **Offline Private Keys**: A [CryoStick](CRYOSTICK.md) keeps private keys on a computer that never goes online. Moving signing data by QR code is planned.
 
 1. **Minimal Software Beyond Bitcoin Core**: CipherStick minimizes code, primarily using python and bash scripts making it easily auditable.
 
@@ -30,7 +30,7 @@ CipherStick is a script that installs Bitcoin Core on Tails. The legacy in-tree 
 
 1. **Minimal Hardware**: CipherStick requires access to one or two cheap computers, making it cost-effective. The computer does not need to be erased to use CipherStick as it runs from the USB stick.
 
-1. **Fast Setup**: CipherStick can be completed by non-technologists with minimal effort in under an hour.
+1. **Fast Setup**: CipherStick can be completed by non-technologists with minimal effort in about an hour.
 
 1. **CipherStick Cloning**: CipherStick installations can be cloned for friends and family, saving time required to sync the blockchain for the recipient and providing an additional encrypted wallet backup for the CipherStick cloned.
 
@@ -40,7 +40,7 @@ CipherStick is a script that installs Bitcoin Core on Tails. The legacy in-tree 
 
 While CipherStick provides the best balance of privacy, security, ease of use, and cost when storing privacy-critical sums of bitcoin, it has the following disadvantages that might not be expected:
 
-1. **Setup Time**: Completing the setup requires investing approximately 45 minutes spread over a couple of days.
+1. **Setup Time**: Completing the setup requires investing about an hour, spread over a couple of days.
 
 1. **Persistent Storage Passphrase Loss**: Losing the Tails Persistent Storage passphrase can make its encrypted contents inaccessible, so wallet recovery material must be backed up separately.
 
