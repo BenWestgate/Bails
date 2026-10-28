@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=Bitcoin Core (signet)
+Comment=Practise with free signet coins
+Exec=/live/persistence/TailsData_unlocked/dotfiles/.local/bin/wrapped /live/persistence/TailsData_unlocked/dotfiles/.local/bin/bitcoin-qt -chain=signet -server -proxy=127.0.0.1:9050 -conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf -datadir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
+Terminal=false
+Type=Application
+Icon=bitcoin128
+Categories=Office;Finance;Qt;
+StartupWMClass=Bitcoin-qt
