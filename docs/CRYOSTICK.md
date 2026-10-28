@@ -1,4 +1,4 @@
-# CryoStick: an offline signing stick
+# CryoStick: an offline signing USB stick
 
 A CryoStick is a copy of your CipherStick that never goes online. You
 create your wallet on it and sign with it. Your CipherStick keeps a
@@ -36,10 +36,12 @@ but it cannot spend.
    follow [Keep the signing wallet in memory only](#keep-the-signing-wallet-in-memory-only)
    instead.
 
-Keep Tails in **Offline Mode** and keep the computer's networking disabled
-or removed. Once a stick is marked as a CryoStick, it checks Offline Mode at
-every login. If networking is enabled, it stops Bitcoin Core and Tor Connection
-Assistant and shuts Tails down.
+Always start Tails in **Offline Mode** and keep networking disabled or removed.
+CryoStick checks after login, so it cannot protect you before then.
+
+If CryoStick warns that it must shut down, unplug any network cable and let it
+shut down. Closing the warning will not stop this. If the computer stays on,
+turn it off. Next time, select **Offline Mode** in the Welcome Screen.
 
 CryoStick also checks at every login that the **Welcome Screen** Persistent
 Storage feature is enabled. If it is not, CryoStick opens Persistent Storage
@@ -48,6 +50,20 @@ and waits until you enable it, so Offline Mode is saved for future starts.
 If Linux exposes a physical network interface while Offline Mode is active,
 CryoStick warns you to shut down and disable or remove the hardware, while still
 allowing you to continue the current session if you choose.
+
+If physical surveillance is a concern, we recommend using a laptop on
+battery power when handling recovery secrets or signing offline.
+A connected power cable is a potential side channel, even when the battery
+is not charging. Unplugging it removes that connection, not every side
+channel. Battery operation is optional.
+
+## Move the watch-only wallet to your CipherStick
+
+With Bitcoin Core open, choose **CipherStick** > **Bitcoin QR**.
+See [Bitcoin QR](BITCOIN_QR.md) to transfer a watch-only wallet, check receiving
+addresses, and move transactions for signing. The guide also explains file
+transfer using encrypted removable storage when a webcam is unavailable or a
+QR is too large.
 
 ## Keep the signing wallet in memory only
 
@@ -73,11 +89,3 @@ If you forget to close the wallet, Bitcoin Core shows
 "Skipping -wallet path that doesn't exist" at its next start. Click
 **OK**: codex32 can't reach Bitcoin Core until you do. To stop the
 message, create a wallet with the same name again and close it.
-
-## Move the watch-only wallet to your CipherStick
-
-With Bitcoin Core open, choose **CipherStick** > **Bitcoin QR**.
-See [Bitcoin QR](BITCOIN_QR.md) to transfer a watch-only wallet, check receiving
-addresses, and move transactions for signing. The guide also explains file
-transfer using encrypted removable storage when a webcam is unavailable or a
-QR is too large.

@@ -1,246 +1,96 @@
-#!/usr/bin/python3
+#!/bin/bash
 # Copyright (c) 2026 Bails contributors
 # Distributed under the MIT license; see LICENSE.
-"""Static Bitcoin QRs; Bitcoin Core owns wallet export and transaction review."""
-import base64
-import gzip
-import io
-import json
-import re
-import shutil
-import subprocess
-import sys
-import tempfile
-import qrcode
-from threading import Timer
-from urllib.parse import unquote, urlsplit
-import zlib
-
-MAX_FILE = 1024 * 1024
-CORE_ARGS = sys.argv[1:]
-
-
-class Cancelled(Exception):
-    pass
-
-
-def run(*args, **kwargs):
-    return subprocess.run(args, capture_output=True, check=True, **kwargs).stdout
-
-
-def dialog(*args, **kwargs):
-    try:
-        return run("zenity", "--title=Bitcoin QR", "--no-markup", *args, **kwargs).decode().rstrip("\n")
-    except subprocess.CalledProcessError as error:
-        if error.returncode == 1:
-            raise Cancelled() from error
-        raise
-
-
-def rpc(method, *args, wallet=None, data=None):
-    options = [f"-rpcwallet={wallet}"] if wallet is not None else []
-    if data is not None:
-        options.append("-stdin")
-    return json.loads(run("bitcoin-cli", *CORE_ARGS, *options, method, *args, input=data) or b"null")
-
-
-def wallet_name():
-    wallets = rpc("listwallets")
-    if not wallets:
-        raise ValueError("Open a wallet in Bitcoin Core first.")
-    rows = [value for i, name in enumerate(wallets) for value in (str(i), name.replace("\n", " "))]
-    choice = dialog("--list", "--text=Choose the loaded Bitcoin Core wallet.",
-                    "--column=ID", "--column=Wallet", "--hide-column=1", "--print-column=1", "--", *rows)
-    if not choice:
-        raise Cancelled()
-    return wallets[int(choice)]
-
-
-def psbt_bytes(data):
-    if not data.startswith(b"psbt\xff"):
-        data = base64.b64decode(b"".join(data.split()), validate=True)
-    if len(data) > MAX_FILE:
-        raise ValueError("The PSBT is larger than 1 MiB. Use file transfer.")
-    rpc("decodepsbt", data=base64.b64encode(data) + b"\n")
-    return data
-
-
-def save(data, name):
-    target = dialog("--file-selection", "--save", f"--filename={name}",
-                    "--title=Save received or exported file (choose a new filename)")
-    with open(target, "xb") as output:
-        output.write(data)
-
-
-def show(data, name, directory):
-    payload = min((data, gzip.compress(data, compresslevel=9, mtime=0)), key=len)
-    if len(payload) > 2953:
-        dialog("--info", "--text=This file is too large for one static QR. Save it for USB or microSD transfer.")
-        save(data, name)
-        return
-    with tempfile.NamedTemporaryFile(suffix=".png", dir=directory, delete=False) as image:
-        code = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L)
-        code.add_data(payload)
-        code.make(fit=True)
-        code.box_size = max(1, (768 - 80) // (code.modules_count + 8))
-        code.make_image().save(image, format="PNG")
-    Timer(0.5, run, args=("xdg-open", image.name)).start()
-
-
-def clipboard():
-    import gi
-    gi.require_versions({"Gtk": "3.0", "Gdk": "3.0"})
-    from gi.repository import Gdk, Gtk
-    return Gtk, Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-
-
-def receive_psbt(encoded):
-    Gtk, board = clipboard()
-    notice = Gtk.MessageDialog(title="Receive PSBT", message_type=Gtk.MessageType.INFO,
-                               text="Select Copy. In Bitcoin Core, select your wallet,\nthen choose File > Load PSBT from clipboard.")
-    notice.add_buttons("Go Back", Gtk.ResponseType.CANCEL, "Copy", Gtk.ResponseType.OK)
-    notice.get_widget_for_response(Gtk.ResponseType.OK).get_style_context().add_class("suggested-action")
-    text = Gtk.TextView(editable=False, wrap_mode=Gtk.WrapMode.CHAR)
-    buffer = text.get_buffer()
-    buffer.set_text(encoded.decode("ascii"))
-    scroll = Gtk.ScrolledWindow(min_content_width=600, min_content_height=200)
-    scroll.add(text)
-    notice.get_content_area().pack_start(scroll, True, True, 0)
-    notice.show_all()
-    text.grab_focus()
-    buffer.select_range(*buffer.get_bounds())
-    try:
-        while notice.run() == Gtk.ResponseType.OK:
-            board.set_text(encoded.decode("ascii"), -1)
-    finally:
-        display = notice.get_display()
-        notice.destroy()
-        display.flush()
-
-
-def scan():
-    data = run("zbarcam", "--nodbus", "--raw", "-Sdisable", "-Sqrcode.enable",
-               "-Sbinary", "--oneshot", timeout=180)
-    if not data:
-        raise Cancelled()
-    # ZBar's raw oneshot mode returns exactly the payload, without a newline.
-    if len(data) > 2953:
-        raise ValueError("The QR payload exceeds the supported file size.")
-    if data.startswith(b"\x1f\x8b"):
-        with gzip.GzipFile(fileobj=io.BytesIO(data)) as source:
-            data = source.read(MAX_FILE + 1)
-        if len(data) > MAX_FILE:
-            raise ValueError("The decompressed file exceeds 1 MiB.")
-    if data.lstrip().startswith((b"{", b"[")):
-        export = json.loads(data)
-        descriptors = export.get("descriptors") if isinstance(export, dict) else None
-        if not isinstance(descriptors, list) or not descriptors or any(not isinstance(d, dict) for d in descriptors) or not isinstance(export.get("wallet_name"), str):
-            raise ValueError("Expected a public descriptor export.")
-        labels = export.get("labels", {})
-        if not isinstance(labels, dict) or any(not isinstance(a, str) or not isinstance(label, str) for a, label in labels.items()):
-            raise ValueError("Expected address labels as text.")
-        name = "[Watch-only] " + (export["wallet_name"] or "default").replace("/", "_").replace("\\", "_")
-        existing = {w["name"] for w in rpc("listwalletdir")["wallets"]}
-        while name in existing:
-            name = dialog("--entry", "--text=That wallet name already exists. Choose a new name.", f"--entry-text={name}").strip()
-            if not name or "/" in name or "\\" in name:
-                raise ValueError("Choose a nonempty wallet name without slashes.")
-        rpc("createwallet", name, "true", "true")
-        results = rpc("importdescriptors", wallet=name, data=json.dumps(descriptors).encode() + b"\n")
-        retry = {i: dict(d) for i, (d, r) in enumerate(zip(descriptors, results)) if not r["success"] and "new range must include current range" in r.get("error", {}).get("message", "")}
-        if retry:
-            current = {d["desc"]: d for d in rpc("listdescriptors", "false", wallet=name)["descriptors"]}
-            for d in retry.values():
-                existing = current.get(d["desc"], {})
-                if "range" in d and "range" in existing:
-                    d["range"] = [min(d["range"][0], existing["range"][0]), max(d["range"][1], existing["range"][1])]
-                    d["next_index"] = max(d.get("next_index", 0), existing.get("next_index", 0))
-            for i, result in zip(retry, rpc("importdescriptors", wallet=name, data=json.dumps(list(retry.values())).encode() + b"\n")):
-                results[i] = result
-        errors = [r["error"]["message"] for r in results if not r["success"]]
-        if errors:
-            raise ValueError("Descriptor import failed; the new wallet may be incomplete.\n" + "\n".join(errors))
-        for address, label in labels.items():
-            rpc("setlabel", address, label, wallet=name)
-        dialog("--info", f"--text=Imported:\n\n{name}\n\nSelect this wallet in Bitcoin Core.\n\nFind imported receiving addresses and their labels under Window > Receiving addresses.")
-    elif data.startswith(b"psbt\xff") or data.lstrip().startswith(b"cHNidP"):
-        receive_psbt(base64.b64encode(psbt_bytes(data)))
-    else:
-        address = data.decode("ascii", errors="replace").strip()
-        if address.lower().startswith("bitcoin:"):
-            address = unquote(urlsplit(address).path)
-        if not rpc("validateaddress", address)["isvalid"]:
-            raise ValueError("Expected a Bitcoin address or bitcoin: payment URI.")
-        if address.lower().startswith(("bc1", "tb1", "bcrt1")):
-            address = address.lower()
-        wallets = rpc("listwallets")
-        if not wallets:
-            raise ValueError("Open your wallet in Bitcoin Core, then scan the address again.")
-        matches = []
-        for owner in wallets:
-            info = rpc("getaddressinfo", address, wallet=owner)
-            if not info.get("ismine"):
-                continue
-            wallet = rpc("getwalletinfo", wallet=owner)
-            single = wallet.get("descriptors") and re.fullmatch(r"(?:(?:pkh|wpkh|tr)\([^(),{}]+\)|sh\(wpkh\([^(),{}]+\)\))#[a-z0-9]{8}", info.get("parent_desc", ""))
-            matches.append((bool(single and wallet.get("private_keys_enabled")), owner, wallet))
-        matches = [m for m in matches if m[0]] or matches
-        for confirmed, owner, wallet in matches:
-            message = "This wallet holds the key needed to sign for this address." if confirmed else ("⚠ WARNING: You do not own the signing key for this address in this wallet.\n\nThis address was found in a watch-only wallet, which does not contain its signing key.\n\nYOU WILL NOT BE ABLE TO SPEND WITH THIS WALLET ALONE.\nDO NOT SEND FUNDS TO THIS ADDRESS UNTIL YOU VERIFY IT IN YOUR OFFLINE SIGNING WALLET.\n\nCheck again carefully. If you expected this to be your signing wallet and this is not a mistake, this computer may be compromised." if not wallet.get("private_keys_enabled") else "Multisig or another unverified spending policy. Signing is not confirmed.")
-            if "unlocked_until" in wallet:
-                message = "⚠ ENCRYPTED WALLET\nEnsure you have the encryption passphrase and can unlock this wallet.\n\n" + message
-            dialog("--info" if confirmed and "unlocked_until" not in wallet else "--warning", "--title=WARNING: Encrypted wallet" if "unlocked_until" in wallet else ("--title=Address confirmed" if confirmed else ("--title=WARNING: Signing key not owned" if not wallet.get("private_keys_enabled") else "--title=Signing not confirmed")), f"--text={message}\n\n{'✓ ' if confirmed else ''}Address matches wallet:\n{owner or '(default)'}\n\n{address}")
-        if not matches:
-            dialog("--warning", "--title=WARNING: Address not owned",
-                   f"--text=⚠ WARNING: You do not own this address.\n\n{address}\n\n"
-                   "None of your open Bitcoin Core wallets recognize this address.\n\n"
-                   "Check again carefully that you are requesting a receiving address from YOUR "
-                   "WALLET. If this address truly came from that wallet and this is not a mistake, "
-                   "your computer and all software running on it, including Bitcoin Core, may be compromised. Do not send funds to this address.")
-
-
-def main():
-    for command in ("zenity", "bitcoin-cli", "zbarcam", "xdg-open"):
-        if not shutil.which(command):
-            raise ValueError(f"Missing {command}. See docs/BITCOIN_QR.md for requirements.")
-    with tempfile.TemporaryDirectory(prefix="bails-qr-", dir="/tmp") as directory:
-        while True:
-            action = dialog("--list", "--width=640", "--height=420", "--text=Scan an address, PSBT, or watch-only wallet.\n\nQR codes work in any orientation.", "--column=Action", "↓  Scan QR", "↑  Send PSBT", "↑  Export Watch-Only Wallet").split("  ", 1)[-1]
-            if not action:
-                return
-            try:
-                if action == "Scan QR":
-                    scan()
-                elif action == "Send PSBT":
-                    _, board = clipboard()
-                    copied = board.wait_for_text() or ""
-                    initial = copied if copied.lstrip().startswith("cHNidP") and len(copied) <= 2 * MAX_FILE else ""
-                    data = psbt_bytes(dialog("--text-info", "--editable", "--width=800", "--height=400", "--title=Send PSBT: Create Unsigned > Copy to Clipboard in Core; review or paste below", "--ok-label=Show QR", input=initial.encode("utf-8")).encode("ascii"))
-                    show(data, "transaction.psbt", directory)
-                elif action == "Export Watch-Only Wallet":
-                    export = rpc("listdescriptors", "false", wallet=wallet_name())
-                    export["labels"] = {address: label for label in rpc("listlabels", wallet=export["wallet_name"]) if label
-                                        for address in rpc("getaddressesbylabel", label, wallet=export["wallet_name"])}
-                    data = json.dumps(export, separators=(",", ":"), ensure_ascii=False).encode()
-                    if len(data) > MAX_FILE:
-                        raise ValueError("The descriptor export exceeds 1 MiB. Use file transfer.")
-                    show(data, "watch-only-descriptors.json", directory)
-            except Cancelled:
-                continue
-            except (OSError, ValueError, EOFError, zlib.error, subprocess.SubprocessError) as error:
-                detail = error.stderr.decode(errors="replace") if isinstance(error, subprocess.CalledProcessError) else str(error)
-                dialog("--error", f"--text={detail}")
-
-
-if __name__ == "__main__":
-    import os
-    os.umask(0o077)
-    try:
-        main()
-    except Cancelled:
-        pass
-    except (ImportError, OSError, ValueError, subprocess.SubprocessError) as error:
-        print(f"Bitcoin QR: {error}", file=sys.stderr)
-        if shutil.which("zenity"):
-            subprocess.run(["zenity", "--error", "--no-markup", "--title=Bitcoin QR", f"--text={error}"], check=False)
-        sys.exit(1)
+set -o pipefail
+umask 077
+dialog() { zenity --title='Bitcoin QR' --no-markup "$@"; }
+fail() { printf '%s\n' "$*" >&2; exit 1; }
+for command in zenity zbarcam qr bitcoin-cli jq xdg-open timeout bails-qr-copy; do
+    command -v "$command" >/dev/null || { dialog --error --text="Missing $command"; exit 1; }
+done
+directory=$(mktemp -d /tmp/bitcoin-qr.XXXXXXXX) || exit 1
+trap 'rm -rf -- "$directory"' EXIT
+rpc() { bitcoin-cli "$@"; }
+show() {
+    [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Too large for one QR. Use Core file transfer with encrypted removable storage.'
+    image=$(mktemp "$directory/qr.XXXXXXXX.png")
+    qr --error-correction=L < "$directory/data" > "$image"
+    xdg-open "$image"
+}
+export_wallet() {
+    rpc listwallets > "$directory/wallets"
+    choice=$(jq -r 'to_entries[] | .key, (.value | @json)' "$directory/wallets" | dialog --list --column=ID --column=Wallet --hide-column=1 --print-column=1) || exit 0
+    wallet=$(jq -er --argjson i "$choice" '.[$i]' "$directory/wallets")
+    rpc -rpcwallet="$wallet" listdescriptors false > "$directory/export"
+    rpc -rpcwallet="$wallet" listlabels | jq -c '.[]' > "$directory/labels"
+    while IFS= read -r label; do
+        rpc -rpcwallet="$wallet" -named getaddressesbylabel label="$(printf '%s\n' "$label" | jq -r .)" | jq --argjson label "$label" 'map_values($label)'
+    done < "$directory/labels" | jq -s 'add // {}' > "$directory/labels.json"
+    jq -c --slurpfile labels "$directory/labels.json" '. + {labels:$labels[0]}' "$directory/export" > "$directory/data"
+    show
+}
+import_wallet() {
+    jq -e '(.wallet_name | type == "string") and ((.labels // {}) | type == "object" and all(.[]; type == "string"))' "$directory/data" >/dev/null
+    jq -ce '.descriptors | select(type == "array" and length > 0)' "$directory/data" > "$directory/descriptors"
+    name=$(dialog --entry --text='Choose a new watch-only wallet name.') || exit 0
+    [[ -n "$name" && "$name" != *[/\\]* && "$name" != . && "$name" != .. ]] || fail 'Use a nonempty wallet name without slashes.'
+    rpc -named createwallet wallet_name="$name" disable_private_keys=true blank=true >/dev/null
+    rpc -rpcwallet="$name" -stdin importdescriptors < "$directory/descriptors" > "$directory/results"
+    jq -e 'length > 0 and all(.success == true)' "$directory/results" >/dev/null || fail "Import incomplete. Do not use $name. Inspect it in Core."
+    jq -c '(.labels // {}) | to_entries[]' "$directory/data" > "$directory/labels"
+    while IFS= read -r label; do
+        rpc -rpcwallet="$name" -named setlabel address="$(printf '%s\n' "$label" | jq -r .key)" label="$(printf '%s\n' "$label" | jq -r .value)"
+    done < "$directory/labels"
+    dialog --info --text="Imported $name. Select it in Bitcoin Core."
+}
+check_address() {
+    address=$(jq -Rse 'select(test("^[A-Za-z0-9:?=&%._+-]+$"))' "$directory/data" | jq -r .)
+    address=${address#bitcoin:}; address=${address%%\?*}
+    printf '%s\n' "$address" | rpc -stdin validateaddress | jq -e '.isvalid' >/dev/null
+    rpc listwallets | jq -c '.[]' > "$directory/wallets"
+    [ -s "$directory/wallets" ] || fail 'Open your signing wallet in Bitcoin Core first.'
+    found=false
+    while IFS= read -r wallet; do
+        wallet=$(printf '%s\n' "$wallet" | jq -r .)
+        printf '%s\n' "$address" | rpc -rpcwallet="$wallet" -stdin getaddressinfo > "$directory/address"
+        if jq -e '.ismine' "$directory/address" >/dev/null; then
+            found=true
+            rpc -rpcwallet="$wallet" getwalletinfo > "$directory/wallet"
+            message='Signing is not confirmed. Verify the spending policy and all required keys before sending funds.'
+            if jq -e '.private_keys_enabled == false' "$directory/wallet" >/dev/null; then
+                message='WARNING: This watch-only wallet has no signing keys. YOU CANNOT SPEND WITH THIS WALLET ALONE. Verify the address in your offline signing wallet before sending funds.'
+            fi
+            dialog --warning --text="Address recognized by wallet $wallet:\n$address\n\n$message\n\nIf encrypted, ensure you have the passphrase and can unlock the wallet."
+        fi
+    done < "$directory/wallets"
+    $found || dialog --warning --text="WARNING: Address not owned.\n$address\n\nNo open wallet recognizes this address. If it came from YOUR wallet, check carefully: your computer and Bitcoin Core may be compromised. Do not send funds."
+}
+while action=$(dialog --list --column=Action 'Scan QR' 'Send PSBT' 'Export Watch-Only Wallet'); do
+    (
+        set -e
+        case "$action" in
+        'Export Watch-Only Wallet') export_wallet ;;
+        'Send PSBT')
+            dialog --text-info --editable --title='Paste PSBT from Core; press OK to show QR' > "$directory/text" || exit 0
+            tr -d '[:space:]' < "$directory/text" > "$directory/encoded"
+            { cat "$directory/encoded"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null
+            base64 -d < "$directory/encoded" > "$directory/data"
+            show ;;
+        'Scan QR')
+            timeout 180 zbarcam --nodbus --raw -Sdisable -Sqrcode.enable -Sbinary --oneshot > "$directory/data"
+            [ -s "$directory/data" ] || exit 0
+            [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Payload exceeds one static QR.'
+            if [ "$(head -c 5 "$directory/data" | base64 -w0)" = cHNidP8= ]; then
+                base64 -w0 < "$directory/data" > "$directory/text"
+            else
+                cp "$directory/data" "$directory/text"
+            fi
+            if { cat "$directory/text"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null 2>&1; then
+                bails-qr-copy < "$directory/text"
+            elif jq -e '.descriptors' "$directory/data" >/dev/null 2>&1; then import_wallet
+            else check_address
+            fi ;;
+        esac
+    ) 2> "$directory/error"
+    [ "$?" -eq 0 ] || dialog --error --text="Transfer failed. $(cat "$directory/error")"
+done
