@@ -57,6 +57,13 @@ A connected power cable is a potential side channel, even when the battery
 is not charging. Unplugging it removes that connection, not every side
 channel. Battery operation is optional.
 
+Every device you plug in is more hardware to trust. Use a wired keyboard
+and mouse, never Bluetooth: a compromised keyboard can log the secrets you
+type. An old laptop needs neither, and is easier to keep tamper-evident.
+Paint its case screws with glitter nail polish, photograph the pattern,
+and keep the laptop in a safe or a tamper-evident bag between uses. If the
+pattern has changed, someone may have opened it.
+
 ## Move the watch-only wallet to your CipherStick
 
 On the CryoStick:
@@ -104,6 +111,30 @@ zbarcam --raw -Sbinary --oneshot | gunzip > FILE
    **Load PSBT from file** and click **Broadcast Tx**.
 
 A one-input payment is about 500 bytes, so its QR code is small.
+
+## Practise on signet
+
+Signet coins are free and worthless, so try the whole flow there first.
+Bitcoin Core keeps signet wallets apart from your real ones.
+
+1. On each stick, quit Bitcoin Core (**File** > **Exit**) and start it on
+   signet from **Console**. `-server` lets codex32 reach it. On the
+   CipherStick, also add the Tor proxy. Both are saved for mainnet only:
+
+   ```bash
+   bitcoin-qt -signet -server &                          # CryoStick
+   bitcoin-qt -signet -server -proxy=127.0.0.1:9050 &    # CipherStick
+   ```
+
+2. On the CryoStick, open **codex32** and create a signing wallet. It
+   uses signet when that is the only network running. Then
+   [move the watch-only wallet](#move-the-watch-only-wallet-to-your-cipherstick)
+   to the CipherStick.
+3. In Tor Browser, get coins for a **Receive** address from a signet
+   faucet, such as <https://signetfaucet.com>. Then
+   [send some](#send-bitcoin).
+
+To return to mainnet, quit Bitcoin Core and start it from the menu.
 
 ## Keep the signing wallet in memory only
 
