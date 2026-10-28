@@ -84,60 +84,8 @@ message, create a wallet with the same name again and close it.
 
 ## Move the watch-only wallet to your CipherStick
 
-On the CryoStick:
-
-1. In Bitcoin Core, choose **File** > **Export watch-only wallet** and save
-   it as `watch-only.dat` in your Home folder.
-2. Open **Console** and show it as a QR code:
-
-   ```bash
-   gzip -9 < watch-only.dat | python3-qr --factory=pil --error-correction=L > watch-only.png
-   xdg-open watch-only.png
-   ```
-
-On the CipherStick:
-
-1. Open **Console** and scan the QR code with the webcam:
-
-   ```bash
-   zbarcam --raw -Sbinary --oneshot | gunzip > ~/Persistent/watch-only.dat
-   ```
-
-2. In Bitcoin Core, choose **File** > **Restore Wallet** and pick
-   `watch-only.dat`.
-
-A new wallet's export is about 12 KB, too big for one QR code. Compressed
-it is about 2.4 KB, which fits in one large, dense QR code. Hold the
-screens steady and close together when scanning.
-
-## Send bitcoin
-
-Every crossing uses the same two commands: show a file as a QR code on
-one stick, and scan it on the other.
-
-```bash
-gzip -9 < FILE | python3-qr --factory=pil --error-correction=L > FILE.png && xdg-open FILE.png
-zbarcam --raw -Sbinary --oneshot | gunzip > FILE
-```
-
-1. **CipherStick:** in the **Send** tab, fill in the payment and click
-   **Create Unsigned**. Save it as `unsigned.psbt` and show it.
-2. **CryoStick:** scan it into `unsigned.psbt`. Choose **File** >
-   **Load PSBT from file**, check the amount and address, click
-   **Sign Tx**, save it as `signed.psbt` and show it.
-3. **CipherStick:** scan it into `signed.psbt`. Choose **File** >
-   **Load PSBT from file** and click **Broadcast Tx**.
-
-A one-input payment is about 500 bytes, so its QR code is small.
-
-## Testing without two computers
-
-`tests/cryostick-qr-roundtrip.sh` runs the whole flow on one computer:
-both sticks' wallets on one regtest node, and every crossing through a
-real QR image read back with `zbarimg` instead of a webcam. Only the
-camera itself needs two real computers.
-
-## Still to do
-
-Tracked in #312: the receive-address check, and scripting the
-crossings so users don't type commands.
+With Bitcoin Core open, choose **CipherStick** > **Bitcoin QR**.
+See [Bitcoin QR](BITCOIN_QR.md) to transfer a watch-only wallet, check receiving
+addresses, and move transactions for signing. The guide also explains file
+transfer using encrypted removable storage when a webcam is unavailable or a
+QR is too large.
