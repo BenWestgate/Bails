@@ -62,6 +62,10 @@ else
     while IFS= read -r -d '' f; do
       [ -e "$BAILS_DIR/bails/$f" ] || rm -fv -- "$HOME/$f" "$DOTFILES/$f"
     done
+  # ~/.profile adds ~/.local/bin only if it existed at login, so new
+  # Console windows in this session would not find our commands.
+  # shellcheck disable=SC2016 # expand when bash reads it
+  grep -qs '.local/bin' ~/.bashrc || echo 'PATH="$HOME/.local/bin:$PATH"' >>~/.bashrc
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   # The background setup deletes BAILS_DIR after persisting it. Leave the
