@@ -49,6 +49,12 @@ If Linux exposes a physical network interface while Offline Mode is active,
 CryoStick warns you to shut down and disable or remove the hardware, while still
 allowing you to continue the current session if you choose.
 
+If physical surveillance is a concern, we recommend using a laptop on
+battery power when handling recovery secrets or signing offline.
+A connected power cable is a potential side channel, even when the battery
+is not charging. Unplugging it removes that connection, not every side
+channel. Battery operation is optional.
+
 ## Keep the signing wallet in memory only
 
 Bitcoin Core normally saves wallets in your Persistent Storage. If you
