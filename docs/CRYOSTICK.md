@@ -1,4 +1,4 @@
-# CryoStick: an offline signing stick
+# CryoStick: an offline signing USB stick
 
 A CryoStick is a copy of your CipherStick that never goes online. You
 create your wallet on it and sign with it. Your CipherStick keeps a
@@ -38,7 +38,7 @@ but it cannot spend.
 
 Keep Tails in **Offline Mode** and keep the computer's networking disabled
 or removed. Once a stick is marked as a CryoStick, it checks Offline Mode at
-every login. If networking is enabled, it stops Bitcoin Core and Tor Connection
+every login. If networking is enabled, it disables it, stops Tor Connection
 Assistant and shuts Tails down.
 
 CryoStick also checks at every login that the **Welcome Screen** Persistent
@@ -54,31 +54,6 @@ battery power when handling recovery secrets or signing offline.
 A connected power cable is a potential side channel, even when the battery
 is not charging. Unplugging it removes that connection, not every side
 channel. Battery operation is optional.
-
-## Keep the signing wallet in memory only
-
-Bitcoin Core normally saves wallets in your Persistent Storage. If you
-would rather keep nothing about the signing wallet on the CryoStick, give
-it a name that starts with `/tmp/`. Tails keeps `/tmp` in the computer's
-memory and erases it when you shut down. Decide before you create the
-wallet: a wallet already saved in Persistent Storage stays there.
-
-1. In Bitcoin Core, choose **File** > **Create Wallet**. Name it, for
-   example, `/tmp/signing`. Tick **Encrypt Wallet** and
-   **Make Blank Wallet**, click **Create** and choose a passphrase.
-2. Open **codex32** and choose the wallet `/tmp/signing` to fill it from
-   your codex32 backup.
-3. Sign as usual.
-4. Before you shut down, choose **File** > **Close Wallet**.
-
-The wallet is gone after every shutdown, so repeat steps 1 and 2 each
-time you need to sign. Only the wallet's name is saved in Persistent
-Storage, and **Close Wallet** removes it.
-
-If you forget to close the wallet, Bitcoin Core shows
-"Skipping -wallet path that doesn't exist" at its next start. Click
-**OK**: codex32 can't reach Bitcoin Core until you do. To stop the
-message, create a wallet with the same name again and close it.
 
 ## Move the watch-only wallet to your CipherStick
 
@@ -128,12 +103,30 @@ zbarcam --raw -Sbinary --oneshot | gunzip > FILE
 
 A one-input payment is about 500 bytes, so its QR code is small.
 
-## Testing without two computers
+## Keep the signing wallet in memory only
 
-`tests/cryostick-qr-roundtrip.sh` runs the whole flow on one computer:
-both sticks' wallets on one regtest node, and every crossing through a
-real QR image read back with `zbarimg` instead of a webcam. Only the
-camera itself needs two real computers.
+Bitcoin Core normally saves wallets in your Persistent Storage. If you
+would rather keep nothing about the signing wallet on the CryoStick, give
+it a name that starts with `/tmp/`. Tails keeps `/tmp` in the computer's
+memory and erases it when you shut down. Decide before you create the
+wallet: a wallet already saved in Persistent Storage stays there.
+
+1. In Bitcoin Core, choose **File** > **Create Wallet**. Name it, for
+   example, `/tmp/signing`. Tick **Encrypt Wallet** and
+   **Make Blank Wallet**, click **Create** and choose a passphrase.
+2. Open **codex32** and choose the wallet `/tmp/signing` to fill it from
+   your codex32 backup.
+3. Sign as usual.
+4. Before you shut down, choose **File** > **Close Wallet**.
+
+The wallet is gone after every shutdown, so repeat steps 1 and 2 each
+time you need to sign. Only the wallet's name is saved in Persistent
+Storage, and **Close Wallet** removes it.
+
+If you forget to close the wallet, Bitcoin Core shows
+"Skipping -wallet path that doesn't exist" at its next start. Click
+**OK**: codex32 can't reach Bitcoin Core until you do. To stop the
+message, create a wallet with the same name again and close it.
 
 ## Still to do
 
