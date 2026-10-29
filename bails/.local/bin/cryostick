@@ -183,4 +183,4 @@ gsettings set org.gnome.desktop.background color-shading-type solid
 gsettings set org.gnome.desktop.background primary-color '#c01c28'
 # Updates restore the CipherStick launcher, so reapply this at every login.
 sed --in-place 's/^Name=CipherStick$/Name=CryoStick/; s/^Icon=bails128$/Icon=cryostick128/' \
-    "$DOTFILES/.local/share/applications/bails.desktop"
+    "$DOTFILES/.local/share/applications/"{bails,org.gnome.Zenity}.desktop
