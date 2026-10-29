@@ -31,16 +31,26 @@ cross() {
 
 bitcoind -regtest -datadir="$dir" -daemonwait -fallbackfee=0.0001 >/dev/null
 
-echo "CryoStick: create the signing wallet and export it watch-only"
+echo "CryoStick: create the signing wallet and fold its public descriptors"
 cli createwallet cryostick >/dev/null
-cli -rpcwallet=cryostick exportwatchonlywallet "$dir/export.dat" >/dev/null
-echo "watch-only export: $(stat -c %s "$dir/export.dat") bytes, $(gzip -9 <"$dir/export.dat" | wc -c) compressed"
+cli -rpcwallet=cryostick listdescriptors | python3 -c '
+import json, subprocess, sys, time
+out = []
+for d in json.load(sys.stdin)["descriptors"]:
+    if d.get("active") and not d["internal"]:
+        desc = d["desc"].split("#")[0].replace("/0/*", "/<0;1>/*")
+        info = json.loads(subprocess.check_output(sys.argv[1:] + ["getdescriptorinfo", desc]))
+        out.append({"desc": desc + "#" + info["checksum"], "timestamp": int(time.time()), "active": True})
+print(json.dumps(out, separators=(",", ":")))' bitcoin-cli -regtest -datadir="$dir" >"$dir/export.json"
+echo "watch-only descriptors: $(stat -c %s "$dir/export.json") bytes, $(gzip -9 <"$dir/export.json" | wc -c) compressed"
 
-echo "CipherStick: scan it and restore the watch-only wallet"
-cross <"$dir/export.dat" >"$dir/watch-only.dat"
-cmp "$dir/export.dat" "$dir/watch-only.dat"
-cli restorewallet cipherstick "$dir/watch-only.dat" >/dev/null
+echo "CipherStick: scan them into a new watch-only wallet"
+cross <"$dir/export.json" >"$dir/watch-only.json"
+cmp "$dir/export.json" "$dir/watch-only.json"
+cli -named createwallet wallet_name=cipherstick disable_private_keys=true blank=true >/dev/null
+cli -rpcwallet=cipherstick importdescriptors "$(cat "$dir/watch-only.json")" | grep -q '"success": false' && exit 1
 [ "$(cli -rpcwallet=cipherstick getwalletinfo | field private_keys_enabled)" = False ]
+[ "$(cli -rpcwallet=cipherstick getrawchangeaddress)" = "$(cli -rpcwallet=cryostick getrawchangeaddress)" ]
 
 echo "CipherStick: receive coins, then make an unsigned PSBT"
 cli generatetoaddress 101 "$(cli -rpcwallet=cipherstick getnewaddress)" >/dev/null
