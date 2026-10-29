@@ -43,14 +43,44 @@ readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitc
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
 
 
+# Count distinct valid signatures made by release builders.
+count_good_signatures() {
+    local approved_file
+    approved_file="$(mktemp)"
+    awk -F: '$1 == "fpr" { print $10 }' "$DOWNLOAD_DIR/builder-keys" | sort -u >"$approved_file"
+
+    # GnuPG returns a nonzero status when any signature cannot be checked, for
+    # example while some builder keys are still missing, so ignore it and read
+    # the status stream. Each signature's verdict precedes its VALIDSIG, which
+    # is also emitted for expired signatures and revoked or expired keys, so
+    # count a signature only when its own verdict was GOODSIG.
+    gpg --status-fd 1 --verify SHA256SUMS.asc SHA256SUMS 2>/dev/null |
+        awk -v approved_file="$approved_file" '
+         FILENAME == approved_file { approved[$1] = 1; next }
+         $2 ~ /^(GOODSIG|EXPSIG|EXPKEYSIG|REVKEYSIG|BADSIG|ERRSIG)$/ {
+             good = $2 == "GOODSIG"
+         }
+         $2 == "VALIDSIG" {
+             signer = approved[$NF] ? $NF : $3
+             if (good && approved[signer] && !seen[signer]++) {
+                 count++
+             }
+             good = 0
+         }
+         END { print count + 0 }' "$approved_file" -
+    rm -f "$approved_file"
+}
+
+
 # Look for good signatures
 # Parameter 1 = Good Signatures required
 check_sigs() {
     temp_file="$(mktemp)"
     trap 'rm -rf -- "$temp_file"' EXIT
     type=warning
-    # shellcheck disable=SC2086
-    keys="$(grep fingerprint $DOWNLOAD_DIR/builder-keys | sed 's/ //g' | cut -f2 -d= | shuf)"
+    # Search each signer once; subkeys also emit fpr records.
+    keys="$(awk -F: '$1 == "pub" { p = 1 } $1 == "fpr" && p { print $10; p = 0 }' \
+        "$DOWNLOAD_DIR/builder-keys" | sort -u | shuf)"
     for key in $keys; do
         search_key
         (( good_sig < $1 )) || { type=info; break; }
@@ -88,7 +118,7 @@ search_key() {
         echo "Searching $key on fallback keyserver.ubuntu.com keyserver..."
         search_key '--keyserver keyserver.ubuntu.com'
     fi
-    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
+    good_sig=$(count_good_signatures)
 }
 
 
@@ -142,7 +172,9 @@ else
 fi 
 
 for dir in guix.sigs/*/; do [ "${dir#*/}" == "$VER/" ] && break; rm -rf "$dir"; done
-for name in guix.sigs/"$VER"/*; do gpg --show-keys "${name/"$VER"/builder-keys}.gpg"; done > builder-keys
+for name in guix.sigs/"$VER"/*; do
+    gpg --batch --with-colons --show-keys "${name/"$VER"/builder-keys}.gpg"
+done > builder-keys
 if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
     action=update
     printf '\033]2;Updating all keys from keyserver...\a'
@@ -150,15 +182,17 @@ if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
 else # Import a trusted set on first-run.
     action=installation
     for key in ./trusted-keys/*; do
-        if grep "$(gpg --show-keys "$key" | grep 'Key fingerprint')" builder-keys; then
+        trusted_fingerprint=$(gpg --batch --with-colons --show-keys "$key" | awk -F: '$1 == "fpr" { print $10; exit }')
+        if awk -F: -v fingerprint="$trusted_fingerprint" \
+            '$1 == "fpr" && $10 == fingerprint { found = 1 } END { exit !found }' builder-keys; then
             gpg --import "$key"
         else
             echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
         fi
     done
-    # Download chain parameters in background to set prune
-    retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 fi
+# Download chain parameters in background to size prune
+retry_on_fail wget --continue -O chainparams.cpp $BITCOIN_CHAINPARAMS_URL & get_size=$!
 
 printf '\033]2;Setup Persistent Storage...\a'
 until [[ -f $XDG_STATE_HOME/tps_is_set_up ]]; do sleep 1; done # Waits on tps
@@ -183,7 +217,7 @@ export BINVERIFY_MIN_GOOD_SIGS=${BINVERIFY_MIN_GOOD_SIGS:-3}
 who_trusts="the CipherStick maintainers"
 while true; do
     printf '\033]2;Verify checksum signatures...\a'
-    good_sig=$(gpg --verify SHA256SUMS.asc SHA256SUMS 2>&1 | grep --count 'Good signature')
+    good_sig=$(count_good_signatures)
     # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version number.
     if ((good_sig >= BINVERIFY_MIN_GOOD_SIGS)); then
         zenity --question --title='Further download verification' --text="Your Bitcoin Core download has been successfully verified by $good_sig signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue Setup' --default-cancel --ok-label='More Verification' "$ICON" --icon-name=gtk-dialog-authentication
@@ -218,20 +252,25 @@ until [ -f $XDG_DATA_HOME/bails/b ]; do sleep 1; done # Be sure CipherStick inst
 # Change mime association from electrum to bitcoin core
 sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.cache > "$XDG_DATA_HOME/applications/mimeinfo.cache"
 # Configure data directory
-rsync -vhb --remove-source-files "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
+# Keep the user's bitcoin.conf; the tarball's sample is a first-install default.
+[ -e "$DOTFILES/.bitcoin/bitcoin.conf" ] && rm -v "$LOCAL_DIR/bitcoin.conf"
+rsync -vhb --ignore-missing-args --remove-source-files \
+  "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
 sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
 link-dotfiles
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
+# Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, for prune
+ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
+assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
+# wrapped reserves room for the chainstate to grow when fitting prune.
+printf 'chain_state_gb=%s\nblockchain_gb=%s\n' "$assumed_chain_state_size" "$assumed_blockchain_size" >$XDG_STATE_HOME/core-assumed-sizes
 if [ -e $XDG_STATE_HOME/installed ] && [ -n "$OLD_VER" ]; then
     zenity --info --title='Update successful' --text="${OLD_VER%Copyright*}was updated to $(bitcoind --version | head -1 | cut -d' ' -f4)" "$ICON" --icon-name=bitcoin128 &
 else
-    # Bring chainparams.cpp download to foreground, set assumed chainstate & blockchain size, configure prune
-    ps -p "$get_size" &>/dev/null && fg %"$(jobs -l | grep "$get_size" | cut -f1 -d' ' | tr -c -d '[:digit:]')"
-    assumed_chain_state_size=$(grep --max-count=1 m_assumed_chain_state_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
-    assumed_blockchain_size=$(grep --max-count=1 m_assumed_blockchain_size "$DOWNLOAD_DIR"/chainparams.cpp | sed 's/[^0-9]*//g')
     # Move completed verified download to persistent storage
     rsync -vh --remove-source-files --recursive "$DOWNLOAD_DIR" $XDG_DATA_HOME
     mkdir -p $DATA_DIR/{wallets,blocks} # TODO: this can be replaced by creating the symlink in panic mode solution
@@ -244,12 +283,12 @@ else
     # Disable pruning if USB stick is large enough
     prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
     echo '{
-        "dbcache": "450",
         "onion": "127.0.0.1:9050",
         "proxy": "127.0.0.1:9050",
-        "prune": "'$prune_MiB'",
         "server": true
-    }' > $DATA_DIR/settings.json # Enable server, proxies for Tor and prune
+    }' > $DATA_DIR/settings.json # Enable server and proxies for Tor
+    # Prune in bitcoin.conf, so wrapped can raise it and a GUI choice outranks it
+    sed -i "s/#prune=<n>/prune=$prune_MiB/" "$DOTFILES/.bitcoin/bitcoin.conf"
     
     if ((prune_MiB)); then
         storageRequiresMsg="Approximately $((prune_GB + assumed_chain_state_size)) GB of data will be stored in your Persistent Storage."

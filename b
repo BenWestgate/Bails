@@ -33,46 +33,6 @@ BAILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD="$(git --git-dir="$BAILS_DIR/.git" log -1 --format='%h, %cs' 2>/dev/null)"
 FULL_VERSION="$VERSION${BUILD:+ ($BUILD)}"
 
-remove_legacy_wallet_files() {
-  local root="${1:?}"
-  local associations
-
-  if [ -e "$root/.local/bin/Sparrow" ] || \
-    [ -e "$root/.local/lib/app/Sparrow.cfg" ] || \
-    [ -e "$root/.local/lib/sparrow-Sparrow.desktop" ] || \
-    [ -e "$root/.local/share/applications/sparrow-Sparrow.desktop" ]; then
-    rm -rf -- \
-      "$root/.local/bin/Sparrow" \
-      "$root/.local/lib/Sparrow.png" \
-      "$root/.local/lib/app" \
-      "$root/.local/lib/libapplauncher.so" \
-      "$root/.local/lib/runtime" \
-      "$root/.local/lib/sparrow-Sparrow-MimeInfo.xml" \
-      "$root/.local/lib/sparrow-Sparrow.desktop" \
-      "$root/.local/share/applications/sparrow-Sparrow.desktop" \
-      "$root/.local/share/icons/Sparrow.png" \
-      "$root/.local/share/mime/packages/sparrow-Sparrow-MimeInfo.xml" \
-      "$root/.local/share/sparrow"
-  fi
-
-  for associations in "$root/.local/share/applications/defaults.list" \
-    "$root/.local/share/applications/mimeinfo.cache"; do
-    if [ -f "$associations" ] && [ ! -L "$associations" ]; then
-      sed -i '/^x-scheme-handler\/bitcoin=/s/sparrow-Sparrow\.desktop/bitcoin-qt.desktop/g' \
-        "$associations"
-    fi
-  done
-
-  rm -rf -- \
-    "$root/.local/bin/bails-wallet" \
-    "$root/.local/bin/decrypt-vault" \
-    "$root/.local/bin/install-sparrow" \
-    "$root/.local/lib/python3.11/site-packages/bails-wallet" \
-    "$root/.local/lib/python3.11/site-packages/codex32" \
-    "$root/.local/lib/python3.11/site-packages/bails" \
-    "$root/.local/share/applications/decrypt-vault.desktop"
-}
-
 if [ "$1" == "--version" ]; then
   echo "CipherStick version $FULL_VERSION"
   exit 0
@@ -89,10 +49,23 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
 else
   printf '\033]2;Welcome to CipherStick!\a'
   # Install CipherStick to tmpfs
-  rsync -rvh --perms "$BAILS_DIR/bails/" "$HOME"
-  remove_legacy_wallet_files "$HOME"
+  # Core's GUI saves the user's choices in Bitcoin-Qt.conf, so ship ours only as
+  # a first-install default.
+  qt_conf=.config/Bitcoin/Bitcoin-Qt.conf
+  rsync -rvh --perms --exclude="/$qt_conf" "$BAILS_DIR/bails/" "$HOME"
+  [ -e "$HOME/$qt_conf" ] || cp "$BAILS_DIR/bails/$qt_conf" "$HOME/$qt_conf"
+  # Delete files the previous version installed that this version dropped.
+  # Its saved checkout's git tree lists them; the files themselves were moved.
+  old="$DOTFILES/.local/share/bails/.git"
+  [ -d "$old" ] && git --git-dir="$old" ls-tree -r -z --name-only HEAD:bails |
+    while IFS= read -r -d '' f; do
+      [ -e "$BAILS_DIR/bails/$f" ] || rm -fv -- "$HOME/$f" "$DOTFILES/$f"
+    done
   # shellcheck disable=SC1091
   . "$HOME/.profile"
+  # The background setup deletes BAILS_DIR after persisting it. Leave the
+  # source checkout first so later commands never inherit a deleted cwd.
+  cd "$HOME" || exit 1
   (
     persistent-setup &
     until /usr/local/lib/tpscli is-unlocked && \
@@ -101,10 +74,11 @@ else
         sleep 1
     done
     # Install CipherStick to Persistent Storage
-    rsync -rvh --perms --remove-source-files "$BAILS_DIR/bails/" $DOTFILES
+    rsync -rvh --perms --exclude="/$qt_conf" --remove-source-files \
+      "$BAILS_DIR/bails/" $DOTFILES
+    [ -e "$DOTFILES/$qt_conf" ] || cp "$BAILS_DIR/bails/$qt_conf" "$DOTFILES/$qt_conf"
     rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
       "$BAILS_DIR"/ $DOTFILES/.local/share/bails
-    remove_legacy_wallet_files "$DOTFILES"
     wallets='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/wallets'
     if [ -d "$wallets" ] && [ ! -L "$wallets" ]; then
       chmod u+w "$wallets"

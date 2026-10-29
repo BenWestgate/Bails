@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# wraps Bitcoin executables to sometimes ask for donations.
+# Runs the required setup check and Core launch-time safeguards.
 ###############################################################################
 BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
 BITCOIN_ADDRESS_SELFISH=	# TODO: add these
@@ -29,39 +29,69 @@ export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
-persistent-setup # Checks needed persistent features are on.
-# Symlink at default datadir to our custom datadir
-ln -s /live/persistence/TailsData_unlocked/Persistent/.* ~
+persistent-setup || exit 1 # Ensure required features are enabled on every launch.
 
-# Update favorite apps list
+# A menu launch needs Persistent Storage, but not Core's disk and cache work.
+if [ "${1:-}" != bitcoin-qt ]; then
+    "$@" &
+    exit 0
+fi
 
-favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
-gsettings set org.gnome.shell favorite-apps "$favorites"
+# Tails normally resets GNOME favorites on reboot; only set them if
+# this session has no user override. Respect changes made by the user.
+if command -v dconf >/dev/null 2>&1 &&
+    [ -z "$(dconf read /org/gnome/shell/favorite-apps)" ]; then
+    favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
+    gsettings set org.gnome.shell favorite-apps "$favorites"
+fi
 
-space=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + \
-  $(du --summarize "$DATA_DIR/blocks" | cut -f1))/1024 - 10240 ))
-space=$(( space > 1907 ? space : 1907 ))
+# Prune target the stick can hold, in MiB: free space plus what block and undo
+# files use now (the block index is not pruned), minus room for the
+# chainstate to grow to Core's assumed size and a 10 GiB reserve.
+blocks=$(du --total "$DATA_DIR"/blocks/{blk,rev}*.dat 2>/dev/null | tail -1 | cut -f1)
+chainstate=$(du --summarize "$DATA_DIR/chainstate" 2>/dev/null | cut -f1)
+assumed=$(sed -n 's/^chain_state_gb=//p' /live/persistence/TailsData_unlocked/dotfiles/.local/state/core-assumed-sizes 2>/dev/null)
+growth=$(( ${assumed:-0} * 10**9 / 1024 - ${chainstate:-0} ))
+room=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + ${blocks:-0} - (growth > 0 ? growth : 0))/1024 - 10240 ))
+space=$(( room > 1907 ? room : 1907 ))
+# Refit bitcoin.conf's prune to leave 10 GiB free when it would leave <1 or >11.
+conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf
+conf_prune=$(grep -m1 '^prune=' "$conf" | cut -d= -f2)
+if [ -z "$conf_prune" ] || ((conf_prune > 1 && conf_prune != space &&
+    (conf_prune > room + 9216 || conf_prune < room - 1024))); then
+    # In place: an appended line would land in the sample's [regtest] section.
+    sed -i "0,/^#*prune=.*/s//prune=$space/" "$conf" &&
+        conf_prune=$(grep -m1 '^prune=' "$conf" | cut -d= -f2)
+fi
+# If the GUI's prune, or even 1907, leaves <1 GiB free, lower it for this run.
 old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-if ((space < old_prune)); then # Reduce prune as needed to not run out of space
-    sed -i 's/"prune": "'"$old_prune"'/"prune": "'$space/ "$DATA_DIR/settings.json"
+old_prune=${old_prune:-$conf_prune}
+fit=$(( space < room + 10240 ? space : (room + 10240 > 550 ? room + 10240 : 550) ))
+if ((old_prune > room + 9216 && fit < old_prune)); then
+    set -- "$1" "-prune=$fit" "${@:2}"
+    old_prune=$fit
 fi
-# Warn if prune is off and space is low
-if ((old_prune == 0)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
-    zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
+# Warn when space is low and pruning is off, manual, or still too high
+if ((old_prune <= 1 || old_prune > room)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
+    zenity --warning --title="Disk Space Low" --width=360 --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning or lowering its target in <b>Bitcoin Core → Settings → Options</b> to avoid running out of space.' "$ICON"
 fi
 
-old_dbcache=$(grep '"dbcache":' "$DATA_DIR/settings.json" | cut -d\" -f4)
-
-if [ -z "$old_dbcache" ]; then
-    last_run=$(find $DATA_DIR/blocks -exec stat -c "%Y %n" {} + | grep blk | sort -nr | head -n1 | awk '{print $1}')
-    if ((last_run < $(date -d "2 weeks ago" +%s))); then # Add dbcache setting
-        sed -i '2a\    "dbcache": "450",' settings.json
-        old_dbcache=450
+# Core runs blocknotify only once it has caught up, so the stamp it touches
+# records when the node was last in sync. If that was over 2 weeks ago, or
+# never, start Core with a large dbcache sized for this computer. Options go
+# before a bitcoin: URI, which must come last.
+synced=/live/persistence/TailsData_unlocked/dotfiles/.local/state/bitcoin-core-synced
+if [ "$1" = bitcoin-qt ]; then
+    shift
+    set -- bitcoin-qt "-blocknotify=touch $synced" "$@"
+    if [ -z "$(find "$synced" -mtime -14 2>/dev/null)" ]; then
+        # Stay under Core's warning limit, 75% of (total RAM - 2 GiB); dividing
+        # first rounds down.
+        # shellcheck disable=SC2017
+        dbcache=$(( ($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / 1048576 - 2048) / 4 * 3 ))
+        set -- "$1" "-dbcache=$(( dbcache > 450 ? dbcache : 450 ))" "${@:2}"
     fi
 fi
-# If set, change dbcache to available memory minus 2 GiB
-new_dbcache=$(( $(grep Available /proc/meminfo | sed s/[^0-9]//g)/1024 - 2048 ))
-sed -i 's/"dbcache": "'"$old_dbcache"'/"dbcache": "'$new_dbcache/ "$DATA_DIR/settings.json"
 
 if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
         # 1 out of 20 start-ups show donation message
