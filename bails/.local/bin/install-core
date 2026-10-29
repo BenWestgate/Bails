@@ -245,7 +245,9 @@ else
     ln --symbolic --force -b {"$HOME"/.bitcoin,$DATA_DIR}/debug.log # symlinks to tmpfs debug.log
     ln --symbolic --force -b $DOTFILES/.bitcoin/{README.md,bitcoin.conf} $DATA_DIR # symlinks to dotfiles/.bitcoin
     # Calculate space available for block file storage
-    space=$(($(df --output=avail $SOURCE | tail -1) * 1024 / 10 ** 9 - assumed_chain_state_size - 10))
+    # Leave 10 GB, or the chainstate's size plus 1 GB for compaction, free
+    reserve=$((assumed_chain_state_size + 1 > 10 ? assumed_chain_state_size + 1 : 10))
+    space=$(($(df --output=avail $SOURCE | tail -1) * 1024 / 10 ** 9 - assumed_chain_state_size - reserve))
     prune_GB=$((space > 2 ? space : 2 ))
     # Disable pruning if USB stick is large enough
     prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
