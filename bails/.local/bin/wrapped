@@ -24,7 +24,6 @@
 ###############################################################################
 BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
 BITCOIN_ADDRESS_SELFISH=	# TODO: add these
-export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 

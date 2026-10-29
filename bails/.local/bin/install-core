@@ -29,7 +29,6 @@
 # Set environment variables and constants
 export PATH="$HOME/.local/bin:$PATH"
 export ICON=--window-icon="$HOME/.local/share/icons/bails128.png"
-export WAYLAND_DISPLAY="" # Needed for zenity dialogs to have window icon
 export TMPDIR=$XDG_RUNTIME_DIR
 export SOURCE="/live/persistence/TailsData_unlocked"
 export DATA_DIR="$SOURCE/Persistent/.bitcoin"

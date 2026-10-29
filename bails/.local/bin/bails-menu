@@ -27,7 +27,6 @@
 #################################################
 
 # Set environment variables
-export WAYLAND_DISPLAY=""
 export DOTFILES="/live/persistence/TailsData_unlocked/dotfiles"
 export DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
 XDG_DATA_HOME="$DOTFILES/.local/share"
