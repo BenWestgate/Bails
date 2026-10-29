@@ -62,6 +62,10 @@ else
     while IFS= read -r -d '' f; do
       [ -e "$BAILS_DIR/bails/$f" ] || rm -fv -- "$HOME/$f" "$DOTFILES/$f"
     done
+  # ~/.profile adds ~/.local/bin only if it existed at login, so new
+  # Console windows in this session would not find our commands.
+  # shellcheck disable=SC2016 # expand when bash reads it
+  grep -qs '.local/bin' ~/.bashrc || echo 'PATH="$HOME/.local/bin:$PATH"' >>~/.bashrc
   # shellcheck disable=SC1091
   . "$HOME/.profile"
   # The background setup deletes BAILS_DIR after persisting it. Leave the
@@ -112,7 +116,7 @@ else
       fi
     fi
     # Display info about IBD, keeping Tails private and extra reading material
-    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your CipherStick USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
+    zenity --info --title='Setup almost complete' --icon-name=bails128 "$ICON" --text='Bitcoin Core has begun syncing the block chain automatically.\nMake sure no one messes with the PC.\n\ncodex32 creates your wallet, backs it up on paper cards and restores it from them. Bitcoin Core holds the wallet and keeps it in sync.\n\nCreate wallets with codex32, not in Bitcoin Core. A wallet created in Bitcoin Core has no codex32 backup, only copies on USB sticks, and USB sticks are not reliable for long-term backups.\n\nTo lock the screen for privacy, press ❖+L (⊞+L or ⌘+L)\n\nIt is safer to exit Bitcoin Core (Ctrl+Q), <a href="file:///usr/share/doc/tails/website/doc/first_steps/shutdown.en.html">shutdown Tails</a> and take your CipherStick USB stick with you or store it in a safe place than leave Tails running unattended where people you distrust could tamper with it.\n\nIf you want to learn more about using Tails safely read the <a href="file:///usr/share/doc/tails/website/doc.en.html">documentation</a>.\n\nAnother excellent read to improve your physical and digital security tactics is the <a href="'"$SECURITY_IN_A_BOX_TOR_URL"'">security in-a-box</a> website.'
     zenity --info --title="CipherStick install successful" --text="CipherStick $FULL_VERSION has been installed." "$ICON" --icon-name=bails128
     # Exit by killing controlling terminal
     echo "CipherStick installation complete! 
