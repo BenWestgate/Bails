@@ -24,6 +24,15 @@
 # Prompts the user for their user account password as spaced repetition.
 ###############################################################################
 
+readonly STATE_DIR='/live/persistence/TailsData_unlocked/dotfiles/.local/state'
+readonly STATE_FILE="$STATE_DIR/spaced-repetition.state"
+resume_only=0
+[ "${1:-}" = "--resume" ] && resume_only=1
+
+wait_interval() {
+    sleep "$1" 9>&-
+}
+
 screen_is_locked() {
     # Check if the current session is locked
     session_state=$(loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p LockedHint | cut -d= -f2)
@@ -49,15 +58,39 @@ check_passphrase() {
     printf '%s\n%s\n%s' "$temp_passw" "$passphrase" "$passphrase" | passwd
 }
 
+save_schedule() {
+    printf '%s %s\n' "$interval" "$(($(date +%s) + interval))" >"$STATE_FILE.tmp" &&
+        mv "$STATE_FILE.tmp" "$STATE_FILE"
+}
+
 # Initialize variables
 min_interval=5
 interval=30 # initial value
 exp=0
 enter='Enter'
-sleep $interval
+
+if ((resume_only)) && [ ! -r "$STATE_FILE" ]; then
+    exit 0
+fi
+
+exec 9>"$XDG_RUNTIME_DIR/spaced-repetition.lock" || exit 1
+flock -n 9 || exit
+mkdir -p "$STATE_DIR" || exit 1
+delay=$interval
+if [ -r "$STATE_FILE" ] && read -r saved_interval saved_due <"$STATE_FILE" &&
+    [[ "$saved_interval" =~ ^[1-9][0-9]*$ && "$saved_due" =~ ^[0-9]+$ ]] &&
+    ((saved_interval >= min_interval)); then
+    interval=$saved_interval
+    delay=$((saved_due - $(date +%s)))
+    ((delay < 0)) && delay=0
+else
+    save_schedule || exit 1
+fi
+wait_interval "$delay"
+
 while true; do
     if screen_is_locked; then
-        sleep $interval
+        wait_interval "$interval"
         continue
     fi
     if codex32_is_open; then
@@ -73,14 +106,15 @@ while true; do
         unset passphrase temp_passw
         interval=$((interval * (RANDOM % 2500 + 2000) / 2 ** exp / 1500))
         (( interval < min_interval )) && interval=$min_interval
-        sleep $interval
         exp=0
         enter='Enter'
+        save_schedule || exit 1
+        wait_interval "$interval"
     else
         unset passphrase temp_passw
         zenity --notification --text="Passphrase does not match.\nTry again."
         sleep 2
         enter='Re-enter'
-        ((exp = (exp == 0) ? 2 : exp + 1)) 
+        ((exp = (exp == 0) ? 2 : exp + 1))
     fi
 done
