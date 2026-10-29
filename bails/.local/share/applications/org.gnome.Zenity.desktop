@@ -4,3 +4,4 @@ Name=CipherStick
 Exec=zenity
 Icon=bails128
 NoDisplay=true
+StartupWMClass=zenity
