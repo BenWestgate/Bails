@@ -40,11 +40,8 @@ export LOCAL_DIR="$DOTFILES/.local"
 export XDG_STATE_HOME="$LOCAL_DIR/state"
 readonly XDG_DATA_HOME="$LOCAL_DIR/share"
 readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
-# Pinned Bitcoin Core release. python-codex32 requires Bitcoin Core 32 or newer
-# and 32.0 is not final yet, so this is the authenticated 32.0rc2 candidate.
-# Bump both together when a new release is adopted.
-readonly VER=32.0rc2
-readonly RELEASE_PATH="bitcoin-core-32.0/test.rc2"
+# Pinned Bitcoin Core release. python-codex32 requires Bitcoin Core 32 or newer.
+readonly VER=32.1
 # Storage estimates come from the pinned release's tag, not master.
 readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/v$VER/src/kernel/chainparams.cpp"
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
@@ -176,7 +173,7 @@ set -m # Enable job control to bring background downloads to the foreground
 # Download to Persistent Storage if setup, otherwise amnesia
 cd "$XDG_DATA_HOME/bitcoin" 2>/dev/null || cd "$HOME/.local/share/bitcoin" || exit 1
 DOWNLOAD_DIR=$PWD
-release_url="$BITCOIN_CORE_DOMAIN/bin/$RELEASE_PATH"
+release_url="$BITCOIN_CORE_DOMAIN/bin/bitcoin-core-$VER"
 mkdir -p "bitcoin-core-$VER"
 # Download Bitcoin core checksums and signatures in background
 retry_on_fail wget --continue --directory-prefix="bitcoin-core-$VER" \
