@@ -57,33 +57,55 @@ A connected power cable is a potential side channel, even when the battery
 is not charging. Unplugging it removes that connection, not every side
 channel. Battery operation is optional.
 
+Every device you plug in is more hardware to trust. Use a wired keyboard
+and mouse, never Bluetooth: a compromised keyboard can log the secrets you
+type. An old laptop needs neither, and is easier to keep tamper-evident.
+Paint its case screws with glitter nail polish, photograph the pattern,
+and keep the laptop in a safe or a tamper-evident bag between uses. If the
+pattern has changed, someone may have opened it.
+
 ## Move the watch-only wallet to your CipherStick
 
-On the CryoStick:
+The CipherStick only needs the wallet's public descriptors. Bitcoin Core
+lists receive (`/0/*`) and change (`/1/*`) descriptors separately; the
+command below folds each pair into one `/<0;1>/*` descriptor to save space.
+Anyone who has them can see your balance, so don't share them.
 
-1. In Bitcoin Core, choose **File** > **Export watch-only wallet** and save
-   it as `watch-only.dat` in your Home folder.
-2. Open **Console** and show it as a QR code:
+On the CryoStick, open **Console**. Replace `WALLET` with your signing
+wallet's name, and on signet use `cli="bitcoin-cli -signet"`:
 
-   ```bash
-   gzip -9 < watch-only.dat | python3-qr --factory=pil --error-correction=L > watch-only.png
-   xdg-open watch-only.png
-   ```
+```bash
+cli="bitcoin-cli"
+$cli -rpcwallet=WALLET listdescriptors | python3 -c '
+import json, subprocess, sys, time
+out = []
+for d in json.load(sys.stdin)["descriptors"]:
+    if d.get("active") and not d["internal"]:
+        desc = d["desc"].split("#")[0].replace("/0/*", "/<0;1>/*")
+        info = json.loads(subprocess.check_output(sys.argv[1:] + ["getdescriptorinfo", desc]))
+        out.append({"desc": desc + "#" + info["checksum"], "timestamp": int(time.time()), "active": True})
+print(json.dumps(out, separators=(",", ":")))' $cli > watch-only.json
+gzip -9 < watch-only.json | python3-qr --factory=pil --error-correction=L > watch-only.png
+xdg-open watch-only.png
+```
 
-On the CipherStick:
+On the CipherStick, open **Console**, scan the QR code with the webcam
+and import it into a new watch-only wallet. On signet, again use
+`cli="bitcoin-cli -signet"`:
 
-1. Open **Console** and scan the QR code with the webcam:
+```bash
+cli="bitcoin-cli"
+zbarcam --raw -Sbinary --oneshot | gunzip > watch-only.json
+$cli -named createwallet wallet_name=watch-only disable_private_keys=true blank=true
+$cli -rpcwallet=watch-only importdescriptors "$(cat watch-only.json)"
+```
 
-   ```bash
-   zbarcam --raw -Sbinary --oneshot | gunzip > ~/Persistent/watch-only.dat
-   ```
+The CipherStick watches from the time of export. Bitcoin Core's own
+descriptor timestamps can't be used: on an offline node, "now" means the
+time of its last block, which may be the genesis block.
 
-2. In Bitcoin Core, choose **File** > **Restore Wallet** and pick
-   `watch-only.dat`.
-
-A new wallet's export is about 12 KB, too big for one QR code. Compressed
-it is about 2.4 KB, which fits in one large, dense QR code. Hold the
-screens steady and close together when scanning.
+A new wallet's four descriptors are about 800 bytes, or 520 compressed,
+so the QR code is small. Labels are not copied.
 
 ## Send bitcoin
 
@@ -104,6 +126,30 @@ zbarcam --raw -Sbinary --oneshot | gunzip > FILE
    **Load PSBT from file** and click **Broadcast Tx**.
 
 A one-input payment is about 500 bytes, so its QR code is small.
+
+## Practise on signet
+
+Signet coins are free and worthless, so try the whole flow there first.
+Bitcoin Core keeps signet wallets apart from your real ones.
+
+1. On each stick, quit Bitcoin Core (**File** > **Exit**) and start it on
+   signet from **Console**. `-server` lets codex32 reach it. On the
+   CipherStick, also add the Tor proxy. Both are saved for mainnet only:
+
+   ```bash
+   bitcoin-qt -signet -server &                          # CryoStick
+   bitcoin-qt -signet -server -proxy=127.0.0.1:9050 &    # CipherStick
+   ```
+
+2. On the CryoStick, open **codex32** and create a signing wallet. It
+   uses signet when that is the only network running. Then
+   [move the watch-only wallet](#move-the-watch-only-wallet-to-your-cipherstick)
+   to the CipherStick.
+3. In Tor Browser, get coins for a **Receive** address from a signet
+   faucet, such as <https://signetfaucet.com>. Then
+   [send some](#send-bitcoin).
+
+To return to mainnet, quit Bitcoin Core and start it from the menu.
 
 ## Keep the signing wallet in memory only
 

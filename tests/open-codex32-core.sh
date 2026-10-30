@@ -36,14 +36,16 @@ assert_wait_status() {
     }
 }
 
+mock_chain=main
 mock_status=0
 mock_version=320000
 # Called indirectly by core_is_compatible from the sourced launcher.
 # shellcheck disable=SC2329
 bitcoin-cli() {
-    [ "$#" -eq 2 ] || return 1
+    [ "$#" -eq 3 ] || return 1
     [ "$1" = "-datadir=/live/persistence/TailsData_unlocked/Persistent/.bitcoin" ] || return 1
-    [ "$2" = "getnetworkinfo" ] || return 1
+    [ "$2" = "-chain=$mock_chain" ] || return 1
+    [ "$3" = "getnetworkinfo" ] || return 1
     ((mock_status == 0)) || return "$mock_status"
     printf '{"version": %s}\n' "$mock_version"
 }
@@ -53,6 +55,11 @@ bitcoin-cli() {
 sleep() { :; }
 
 assert_status 0
+mock_chain=signet
+assert_status 0
+mock_chain=testnet4
+assert_status 2
+mock_chain=main
 mock_version=310100
 assert_status 1
 mock_status=1
