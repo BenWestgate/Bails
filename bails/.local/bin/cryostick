@@ -178,9 +178,32 @@ if [ "$make_cryostick" = 1 ]; then
     touch "$CRYOSTICK"
 fi
 
-gsettings set org.gnome.desktop.background picture-options none
-gsettings set org.gnome.desktop.background color-shading-type solid
-gsettings set org.gnome.desktop.background primary-color '#c01c28'
+# GNOME resolves nested desktop IDs, overrides, and category syntax.
+network_apps="$(python3 - <<'PY'
+from gi.repository import Gio
+for app in Gio.AppInfo.get_all():
+    if "Network" in (app.get_categories() or "").split(";"):
+        print(app.get_id(), app.get_filename(), sep="\t")
+PY
+)" || exit 1
+applications="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+mkdir -p "$applications" || exit 1
+while IFS=$'\t' read -r entry_id file; do
+  case "$entry_id" in
+    ''|bails.desktop|bitcoin-qt.desktop|io.github.benwestgate.codex32.desktop) continue ;;
+  esac
+  if [[ "$file" == "$applications"/* ]]; then
+    sed -i '/^Hidden *=/d; /^\[Desktop Entry\]$/aHidden=true' "$file" || exit 1
+  else
+    printf '[Desktop Entry]\nHidden=true\n' > "$applications/$entry_id" || exit 1
+  fi
+done <<< "$network_apps"
+sed -i '/^Categories=/s/Network;//' \
+  "$DOTFILES/.local/share/applications/"{bails,bitcoin-qt}.desktop
+
+gsettings set org.gnome.desktop.background picture-uri "file://$DOTFILES/.local/share/backgrounds/cryostick-light.svg"
+gsettings set org.gnome.desktop.background picture-uri-dark "file://$DOTFILES/.local/share/backgrounds/cryostick-dark.svg"
+gsettings set org.gnome.desktop.background picture-options stretched
 # Updates restore the CipherStick launcher, so reapply this at every login.
 sed --in-place 's/^Name=CipherStick$/Name=CryoStick/; s/^Icon=bails128$/Icon=cryostick128/' \
     "$DOTFILES/.local/share/applications/"{bails,org.gnome.Zenity}.desktop

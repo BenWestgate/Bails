@@ -42,8 +42,16 @@ fi
 # this session has no user override. Respect changes made by the user.
 if command -v dconf >/dev/null 2>&1 &&
     [ -z "$(dconf read /org/gnome/shell/favorite-apps)" ]; then
-    favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
-    gsettings set org.gnome.shell favorite-apps "$favorites"
+    python3 - <<'PYTHON'
+from gi.repository import Gio
+settings = Gio.Settings.new('org.gnome.shell')
+ours = ['bails.desktop', 'bitcoin-qt.desktop', 'io.github.benwestgate.codex32.desktop']
+installed = {app.get_id() for app in Gio.AppInfo.get_all()}
+favorites = [app for app in settings.get_strv('favorite-apps') if app not in ours and app in installed]
+if not settings.set_strv('favorite-apps', ours + favorites):
+    raise SystemExit('Could not update desktop favorites')
+Gio.Settings.sync()
+PYTHON
 fi
 
 # Prune target the stick can hold, in MiB: free space plus what block and undo
