@@ -9,10 +9,10 @@ scanning also stops after three minutes.
 1. In Core, prepare the payment and choose **Create Unsigned**, then
    **Copy to Clipboard**.
 2. Choose **Send PSBT**, paste the text, and click **OK** to show its QR.
-3. On the other computer, choose **Scan QR**. The received PSBT is copied.
+3. On the other computer, choose **Scan QR**, then **Copy PSBT to clipboard**.
 4. In Core, select your wallet and choose **File** >
-   **Load PSBT from clipboard**. Keep the **PSBT copied** message open
-   until the transaction appears, then click **Done**.
+   **Load PSBT from clipboard**. Keep the **Received PSBT** window open
+   until the transaction appears, then close it.
 5. Check the recipient, amount, change, and fee before signing.
 6. Copy the signed PSBT from Core and repeat the transfer back to the
    CipherStick. Review it in Core before broadcasting.

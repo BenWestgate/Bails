@@ -5,12 +5,13 @@ set -o pipefail
 umask 077
 dialog() { zenity --title='Bitcoin QR' --no-markup "$@"; }
 fail() { printf '%s\n' "$*" >&2; exit 1; }
-for command in zenity zbarcam qr bitcoin-cli jq xdg-open timeout bails-qr-copy; do
+for command in zenity zbarcam qr bitcoin-cli python3 xdg-open timeout; do
     command -v "$command" >/dev/null || { dialog --error --text="Missing $command"; exit 1; }
 done
 directory=$(mktemp -d /tmp/bitcoin-qr.XXXXXXXX) || exit 1
 trap 'rm -rf -- "$directory"' EXIT
 rpc() { bitcoin-cli "$@"; }
+json() { python3 -I -c $'import json, sys; d=json.load(sys.stdin)\n'"$1" "${@:2}"; }
 show() {
     [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Too large for one QR. Use Core file transfer with encrypted removable storage.'
     image=$(mktemp "$directory/qr.XXXXXXXX.png")
@@ -19,45 +20,44 @@ show() {
 }
 export_wallet() {
     rpc listwallets > "$directory/wallets"
-    choice=$(jq -r 'to_entries[] | .key, (.value | @json)' "$directory/wallets" | dialog --list --column=ID --column=Wallet --hide-column=1 --print-column=1) || exit 0
-    wallet=$(jq -er --argjson i "$choice" '.[$i]' "$directory/wallets")
+    choice=$(json 'for i, w in enumerate(d): print(i); print(json.dumps(w))' < "$directory/wallets" | dialog --list --column=ID --column=Wallet --hide-column=1 --print-column=1) || exit 0
+    wallet=$(json 'print(d[int(sys.argv[1])])' "$choice" < "$directory/wallets")
     rpc -rpcwallet="$wallet" listdescriptors false > "$directory/export"
-    rpc -rpcwallet="$wallet" listlabels | jq -c '.[]' > "$directory/labels"
+    rpc -rpcwallet="$wallet" listlabels | json 'for label in d: print(json.dumps(label))' > "$directory/labels"
     while IFS= read -r label; do
-        rpc -rpcwallet="$wallet" -named getaddressesbylabel label="$(printf '%s\n' "$label" | jq -r .)" | jq --argjson label "$label" 'map_values($label)'
-    done < "$directory/labels" | jq -s 'add // {}' > "$directory/labels.json"
-    jq -c --slurpfile labels "$directory/labels.json" '. + {labels:$labels[0]}' "$directory/export" > "$directory/data"
+        rpc -rpcwallet="$wallet" -named getaddressesbylabel label="$(json 'print(d)' <<< "$label")" | json 'print(json.dumps(dict.fromkeys(d, json.loads(sys.argv[1]))))' "$label"
+    done < "$directory/labels" > "$directory/labels.json"
+    json 'd["labels"] = {k:v for line in open(sys.argv[1]) for k,v in json.loads(line).items()}; print(json.dumps(d, separators=(",", ":")))' "$directory/labels.json" < "$directory/export" > "$directory/data"
     show
 }
 import_wallet() {
-    jq -e '(.wallet_name | type == "string") and ((.labels // {}) | type == "object" and all(.[]; type == "string"))' "$directory/data" >/dev/null
-    jq -ce '.descriptors | select(type == "array" and length > 0)' "$directory/data" > "$directory/descriptors"
+    json 'assert isinstance(d["wallet_name"], str); labels=d.get("labels", {}); assert isinstance(labels, dict) and all(isinstance(v, str) for v in labels.values()); assert isinstance(d["descriptors"], list) and d["descriptors"]; print(json.dumps(d["descriptors"], separators=(",", ":")))' < "$directory/data" > "$directory/descriptors"
     name=$(dialog --entry --text='Choose a new watch-only wallet name.') || exit 0
     [[ -n "$name" && "$name" != *[/\\]* && "$name" != . && "$name" != .. ]] || fail 'Use a nonempty wallet name without slashes.'
     rpc -named createwallet wallet_name="$name" disable_private_keys=true blank=true >/dev/null
     rpc -rpcwallet="$name" -stdin importdescriptors < "$directory/descriptors" > "$directory/results"
-    jq -e 'length > 0 and all(.success == true)' "$directory/results" >/dev/null || fail "Import incomplete. Do not use $name. Inspect it in Core."
-    jq -c '(.labels // {}) | to_entries[]' "$directory/data" > "$directory/labels"
+    json 'assert d and all(x["success"] is True for x in d)' < "$directory/results" || fail "Import incomplete. Do not use $name. Inspect it in Core."
+    json 'for pair in d.get("labels", {}).items(): print(json.dumps(pair))' < "$directory/data" > "$directory/labels"
     while IFS= read -r label; do
-        rpc -rpcwallet="$name" -named setlabel address="$(printf '%s\n' "$label" | jq -r .key)" label="$(printf '%s\n' "$label" | jq -r .value)"
+        rpc -rpcwallet="$name" -named setlabel address="$(json 'print(d[0])' <<< "$label")" label="$(json 'print(d[1])' <<< "$label")"
     done < "$directory/labels"
     dialog --info --text="Imported $name. Select it in Bitcoin Core."
 }
 check_address() {
-    address=$(jq -Rse 'select(test("^[A-Za-z0-9:?=&%._+-]+$"))' "$directory/data" | jq -r .)
+    address=$(python3 -I -c 'import re, sys; s=sys.stdin.read(); assert re.fullmatch(r"[A-Za-z0-9:?=&%._+-]+", s); print(s)' < "$directory/data")
     address=${address#bitcoin:}; address=${address%%\?*}
-    printf '%s\n' "$address" | rpc -stdin validateaddress | jq -e '.isvalid' >/dev/null
-    rpc listwallets | jq -c '.[]' > "$directory/wallets"
+    printf '%s\n' "$address" | rpc -stdin validateaddress | json 'assert d["isvalid"] is True'
+    rpc listwallets | json 'for wallet in d: print(json.dumps(wallet))' > "$directory/wallets"
     [ -s "$directory/wallets" ] || fail 'Open your signing wallet in Bitcoin Core first.'
     found=false
     while IFS= read -r wallet; do
-        wallet=$(printf '%s\n' "$wallet" | jq -r .)
+        wallet=$(json 'print(d)' <<< "$wallet")
         printf '%s\n' "$address" | rpc -rpcwallet="$wallet" -stdin getaddressinfo > "$directory/address"
-        if jq -e '.ismine' "$directory/address" >/dev/null; then
+        if json 'sys.exit(d["ismine"] is not True)' < "$directory/address"; then
             found=true
             rpc -rpcwallet="$wallet" getwalletinfo > "$directory/wallet"
             message='Signing is not confirmed. Verify the spending policy and all required keys before sending funds.'
-            if jq -e '.private_keys_enabled == false' "$directory/wallet" >/dev/null; then
+            if json 'sys.exit(d["private_keys_enabled"] is not False)' < "$directory/wallet"; then
                 message='WARNING: This watch-only wallet has no signing keys. YOU CANNOT SPEND WITH THIS WALLET ALONE. Verify the address in your offline signing wallet before sending funds.'
             fi
             dialog --warning --text="Address recognized by wallet $wallet:\n$address\n\n$message\n\nIf encrypted, ensure you have the passphrase and can unlock the wallet."
@@ -86,8 +86,28 @@ while action=$(dialog --list --column=Action 'Scan QR' 'Send PSBT' 'Export Watch
                 cp "$directory/data" "$directory/text"
             fi
             if { cat "$directory/text"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null 2>&1; then
-                bails-qr-copy < "$directory/text"
-            elif jq -e '.descriptors' "$directory/data" >/dev/null 2>&1; then import_wallet
+                python3 -I -c '
+import sys
+import gi
+gi.require_versions({"Gtk": "3.0", "Gdk": "3.0"})
+from gi.repository import Gdk, Gtk
+text = sys.stdin.read(4096)
+window = Gtk.Window(title="Received PSBT")
+box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=18)
+label = Gtk.Label(label="Copy the PSBT, then in Bitcoin Core choose\nFile → Load PSBT from clipboard.\nKeep this window open until it loads.")
+button = Gtk.Button(label="Copy PSBT to clipboard")
+def copy(button):
+    Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(text, -1)
+    button.set_label("PSBT copied to clipboard")
+button.connect("clicked", copy)
+box.pack_start(label, True, True, 0)
+box.pack_start(button, False, False, 0)
+window.add(box)
+window.connect("destroy", Gtk.main_quit)
+window.show_all()
+Gtk.main()
+' < "$directory/text"
+            elif json 'assert "descriptors" in d' < "$directory/data" 2>/dev/null; then import_wallet
             else check_address
             fi ;;
         esac
