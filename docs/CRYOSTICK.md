@@ -36,6 +36,9 @@ but it cannot spend.
    follow [Keep the signing wallet in memory only](#keep-the-signing-wallet-in-memory-only)
    instead.
 
+The dock and app grid omit Network applications. The applications remain
+installed; hiding their icons does not disable networking.
+
 Always start Tails in **Offline Mode** and keep networking disabled or removed.
 CryoStick checks after login, so it cannot protect you before then.
 

@@ -36,6 +36,9 @@ find . -type f | while read -r file; do ln --symbolic --force "$PWD${file:1}" "$
 if [ "${1:-}" = "--core-startup" ]; then
     (
         sleep 30
+        # shellcheck source=/dev/null
+        . /usr/local/lib/tails-shell-library/tails-greeter.sh || exit 1
+        tails_network_enabled || exit 0
         systemctl --quiet is-active tails-tor-has-bootstrapped.target && exit 0
         if zenity --question --title='Connect Tails to Tor' \
             --icon-name=tor-disconnected-symbolic \
