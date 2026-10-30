@@ -150,13 +150,6 @@ case "$VER" in
 esac
 release_path="bitcoin-core-$VER"
 
-# python-codex32 requires Bitcoin Core 32 or newer. Until 32.0 is stable,
-# use the authenticated 32.0rc2 release candidate instead of stable 31.x.
-if [ "${VER%%.*}" -lt 32 ]; then
-    VER=32.0rc2
-    release_path="bitcoin-core-32.0/test.rc2"
-fi
-
 release_url="$BITCOIN_CORE_DOMAIN/bin/$release_path"
 mkdir -p "bitcoin-core-$VER"
 # Download Bitcoin core checksums and signatures in background
