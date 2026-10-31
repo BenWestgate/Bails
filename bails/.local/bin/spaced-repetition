@@ -26,7 +26,7 @@
 
 screen_is_locked() {
     # Check if the current session is locked
-    session_state=$(loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p LockedHint | cut -d= -f2)
+    session_state=$(loginctl show-session "$(loginctl | grep "$(whoami)" | awk '{print $1; exit}')" -p LockedHint | cut -d= -f2)
     [ "$session_state" = "yes" ]
 }
 
