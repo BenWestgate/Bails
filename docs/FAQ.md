@@ -145,6 +145,11 @@ If you shutdown Tails without exiting Bitcoin Core safely, or by yanking the USB
 ## How do I update CipherStick?
 Click **Applications > Favorites > CipherStick > Settings > Update CipherStick**. Make sure you still Trust this repository and it has retained a good reputation before doing so.
 
+## Can I browse the web on my CipherStick?
+Treat CipherStick as a single-purpose Bitcoin computer. Use Tor Browser only for what directly comes before a bitcoin transaction, such as opening an invoice or a CipherStick bug report, and avoid it entirely when the wallet holds large amounts. Don't download files or type terminal commands you don't understand.
+
+Every other app you run adds risk, even inside Tails. CipherStick can't uninstall the apps that come with Tails, so the safest habit is simply not to open them.
+
 ## How can I copy the block chain from a Bitcoin node I already have?
 By copying the _blocks_ and _chainstate_ folders from your Bitcoin [data directory](https://github.com/bitcoin/bitcoin/blob/master/doc/files.md#data-directory-location). If you don't trust this node is not compromised, do NOT do this, wait for CipherStick to synchronize.
 
