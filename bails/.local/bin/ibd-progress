@@ -90,7 +90,7 @@ if (( wallets_made )); then
         rm $DOTFILES/.config/autostart/{ibd-progress,wallet-watch}.desktop
         exit 0
     fi
-    zenity --warning --title='Risk of Bitcoin data loss' --text='Warning: If you fund a wallet but do not geographically distribute your backup USB sticks and passphrase fallbacks and something happens to your current location, you will <b>LOSE ALL YOUR BITCOINS</b>!\n\nDo you understand this risk?' $ICON &
+    zenity --warning --title='Risk of Bitcoin data loss' --text='Warning: If you fund a wallet but do not geographically distribute your backup USB sticks and something happens to your current location, you will <b>LOSE ALL YOUR BITCOINS</b>!\n\nDo you understand this risk?' $ICON &
     # wait 24 hours
     sleep 86400
 fi
