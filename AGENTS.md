@@ -19,8 +19,11 @@ functionality and stable interfaces over local reimplementations.
 When modifying dependency-sensitive code:
 
 - Avoid hard-coded Python minor-version paths, desktop application names, GTK
-  generations, executable locations, dialog geometry, and other incidental
-  properties of one release.
+  generations, executable locations, and other incidental properties of one
+  release. Let the toolkit size dialogs by default. For a demonstrated layout
+  problem, a dialog-specific size hint (such as Zenity's `--width`) is fine
+  when verified on supported Tails and usable at its minimum screen size.
+  Do not add a compatibility layer merely to share a dialog width.
 - Prefer runtime capability checks and centralized compatibility adapters.
 - Do not duplicate validation or policy already owned by an upstream component.
 - Preserve Tails' Tor routing, amnesia, explicit-persistence, and safe-default

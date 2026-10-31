@@ -24,7 +24,6 @@
 ###############################################################################
 BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
 BITCOIN_ADDRESS_SELFISH=	# TODO: add these
-export WAYLAND_DISPLAY=""
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
 
@@ -42,24 +41,34 @@ fi
 # this session has no user override. Respect changes made by the user.
 if command -v dconf >/dev/null 2>&1 &&
     [ -z "$(dconf read /org/gnome/shell/favorite-apps)" ]; then
-    favorites="['bails.desktop', 'bitcoin-qt.desktop', 'tor-browser.desktop', 'tca.desktop', 'org.boum.tails.PersistentStorage.desktop', 'tails-documentation.desktop', 'tails-installer.desktop', 'thunderbird.desktop', 'org.keepassxc.KeePassXC.desktop', 'org.kde.kleopatra.desktop']"
-    gsettings set org.gnome.shell favorite-apps "$favorites"
+    python3 - <<'PYTHON'
+from gi.repository import Gio
+settings = Gio.Settings.new('org.gnome.shell')
+ours = ['bails.desktop', 'bitcoin-qt.desktop', 'io.github.benwestgate.codex32.desktop']
+installed = {app.get_id() for app in Gio.AppInfo.get_all()}
+favorites = [app for app in settings.get_strv('favorite-apps') if app not in ours and app in installed]
+if not settings.set_strv('favorite-apps', ours + favorites):
+    raise SystemExit('Could not update desktop favorites')
+Gio.Settings.sync()
+PYTHON
 fi
 
 # Prune target the stick can hold, in MiB: free space plus what block and undo
 # files use now (the block index is not pruned), minus room for the
-# chainstate to grow to Core's assumed size and a 10 GiB reserve.
+# chainstate to grow to Core's assumed size and a reserve: 10 GiB, or 1 GiB
+# more than that size, since chainstate compaction can briefly need a copy.
 blocks=$(du --total "$DATA_DIR"/blocks/{blk,rev}*.dat 2>/dev/null | tail -1 | cut -f1)
 chainstate=$(du --summarize "$DATA_DIR/chainstate" 2>/dev/null | cut -f1)
 assumed=$(sed -n 's/^chain_state_gb=//p' /live/persistence/TailsData_unlocked/dotfiles/.local/state/core-assumed-sizes 2>/dev/null)
 growth=$(( ${assumed:-0} * 10**9 / 1024 - ${chainstate:-0} ))
-room=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + ${blocks:-0} - (growth > 0 ? growth : 0))/1024 - 10240 ))
+reserve=$(( ${assumed:-0} * 1024 + 1024 > 10240 ? ${assumed:-0} * 1024 + 1024 : 10240 ))
+room=$(( ($(df --output=avail "$DATA_DIR" | tail -1) + ${blocks:-0} - (growth > 0 ? growth : 0))/1024 - reserve ))
 space=$(( room > 1907 ? room : 1907 ))
-# Refit bitcoin.conf's prune to leave 10 GiB free when it would leave <1 or >11.
+# Refit bitcoin.conf's prune when it is over 1 GiB from leaving the reserve free.
 conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf
 conf_prune=$(grep -m1 '^prune=' "$conf" | cut -d= -f2)
 if [ -z "$conf_prune" ] || ((conf_prune > 1 && conf_prune != space &&
-    (conf_prune > room + 9216 || conf_prune < room - 1024))); then
+    (conf_prune > room + 1024 || conf_prune < room - 1024))); then
     # In place: an appended line would land in the sample's [regtest] section.
     sed -i "0,/^#*prune=.*/s//prune=$space/" "$conf" &&
         conf_prune=$(grep -m1 '^prune=' "$conf" | cut -d= -f2)
@@ -67,14 +76,14 @@ fi
 # If the GUI's prune, or even 1907, leaves <1 GiB free, lower it for this run.
 old_prune=$(grep '"prune":' "$DATA_DIR/settings.json" | cut -d\" -f4)
 old_prune=${old_prune:-$conf_prune}
-fit=$(( space < room + 10240 ? space : (room + 10240 > 550 ? room + 10240 : 550) ))
-if ((old_prune > room + 9216 && fit < old_prune)); then
+fit=$(( space < room + reserve ? space : (room + reserve > 550 ? room + reserve : 550) ))
+if ((old_prune > room + reserve - 1024 && fit < old_prune)); then
     set -- "$1" "-prune=$fit" "${@:2}"
     old_prune=$fit
 fi
 # Warn when space is low and pruning is off, manual, or still too high
 if ((old_prune <= 1 || old_prune > room)) && (( $(df --output=avail "$DATA_DIR" | tail -1) < 10**7 )); then
-    zenity --warning --title="Disk Space Low" --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning or lowering its target in <b>Bitcoin Core>Settings>Options</b> to avoid running out of space.' "$ICON"
+    zenity --warning --title="Disk Space Low" --width=360 --text='Less than 10 GB available space remains on your USB Stick.\n\nConsider enabling pruning or lowering its target in <b>Bitcoin Core → Settings → Options</b> to avoid running out of space.' "$ICON"
 fi
 
 # Core runs blocknotify only once it has caught up, so the stamp it touches
