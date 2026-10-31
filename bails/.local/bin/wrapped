@@ -20,12 +20,37 @@
 # THE SOFTWARE.
 
 ###############################################################################
-# Runs the required setup check and Core launch-time safeguards.
+# Runs the required setup check and Core launch-time safeguards, and
+# sometimes asks for donations when Bitcoin Core or codex32 starts.
 ###############################################################################
-BITCOIN_ADDRESS_BENEVOLENT=	# TODO: add these
-BITCOIN_ADDRESS_SELFISH=	# TODO: add these
+BITCOIN_ADDRESS_BENEVOLENT='bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl'
+BITCOIN_ADDRESS_SELFISH='bc1qtp5zkexpz5etahs3367vmg7yvtvjzyge4yepnl'
 export ICON="--window-icon=$HOME/.local/share/icons/bails128.png"
 export DATA_DIR=/live/persistence/TailsData_unlocked/Persistent/.bitcoin
+
+# Ask 1 launch in 20, after the app has started so it never waits on this.
+# A payment URI the user opened should not trigger a second invitation.
+ask_donation() {
+    case "$*" in *bitcoin:*) return ;; esac
+    [ -z "${DONT_ASK_DONATIONS:-}" ] && (( RANDOM % 20 == 0 )) || return
+    if (( RANDOM % 2 )); then
+        text='CipherStick needs donations to keep everybody free and safe to use Bitcoin.
+
+Every bit helps in our fight against surveillance, censorship and confiscation!'
+        address=$BITCOIN_ADDRESS_BENEVOLENT
+    else
+        text='CipherStick protects your wallet.
+
+Help us keep your bitcoins safe!'
+        address=$BITCOIN_ADDRESS_SELFISH
+    fi
+    if zenity --question --title='Make CipherStick stronger' \
+        --text="$text" --ok-label='Donate Now' --cancel-label='Later' \
+        --icon=bails128; then
+        bitcoin-qt -conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf \
+            -datadir="$DATA_DIR" "bitcoin:$address" &
+    fi
+}
 
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
@@ -34,6 +59,7 @@ persistent-setup || exit 1 # Ensure required features are enabled on every launc
 # A menu launch needs Persistent Storage, but not Core's disk and cache work.
 if [ "${1:-}" != bitcoin-qt ]; then
     "$@" &
+    [ "${1:-}" != open-codex32 ] || ask_donation "$@"
     exit 0
 fi
 
@@ -103,22 +129,5 @@ if [ "$1" = bitcoin-qt ]; then
     fi
 fi
 
-if ! (( RANDOM % 20 )) && [ -z "$DONT_ASK_DONATIONS" ]; then
-        # 1 out of 20 start-ups show donation message
-    export DONT_ASK_DONATIONS=1 # We already asked for donations NOTE: if this doesn't work use a TEMP file.
-    if (( RANDOM % 2 )); then
-        # In half of the cases, display a message with benevolent incentive
-        text="CipherStick needs donations to keep everybody free and safe to use Bitcoin.\n\nEvery bit helps in our fight against surveillance, censorship and confiscation!"
-        bitcoin_address=$BITCOIN_ADDRESS_BENEVOLENT
-    else
-        # In the other half, display a message with a more selfish incentive
-        text="CipherStick protects your wallet.\n\nHelp us keep your bitcoins safe!"
-        bitcoin_address=$BITCOIN_ADDRESS_SELFISH
-    fi
-    if zenity --question --title "Make CipherStick stronger" --text "$text" --ok-label "Donate Now" --cancel-label='Later' --icon-name=bails128 "$ICON" --modal --ellipsize; then
-        notify-send --icon bails128 'Opening Bitcoin Core with our donation address...' 'Thank you for making the Bitcoin network safer to use!'
-        xdg-open "bitcoin:$bitcoin_address"
-        exit 0
-    fi
-fi
 "$@" &
+ask_donation "$@"
