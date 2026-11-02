@@ -4,27 +4,13 @@ With Bitcoin Core open, choose **CipherStick** > **Bitcoin QR**.
 Keep QR images open until scanned. Close the camera window to cancel;
 scanning also stops after three minutes.
 
-## Move a transaction for signing
-
-1. In Core, prepare the payment and choose **Create Unsigned**, then
-   **Copy to Clipboard**.
-2. Choose **Send PSBT**, paste the text, and click **OK** to show its QR.
-3. On the other computer, choose **Scan QR**, then **Copy PSBT to clipboard**.
-4. In Core, select your wallet and choose **File** >
-   **Load PSBT from clipboard**. Keep the **Received PSBT** window open
-   until the transaction appears, then close it.
-5. Check the recipient, amount, change, and fee before signing.
-6. Copy the signed PSBT from Core and repeat the transfer back to the
-   CipherStick. Review it in Core before broadcasting.
-
-The tool never unlocks, signs, or broadcasts. QR transfers are unencrypted.
-Sending uses explicit paste; unrelated clipboard contents are not read.
-
 ## Set up a watch-only wallet
 
 1. On the CryoStick, choose **Export Watch-Only Wallet** and select your
    loaded signing wallet.
+
 2. On the CipherStick, choose **Scan QR** and enter a new wallet name.
+
 3. Select the imported wallet in Core. Find addresses and labels under
    **Window** > **Receiving addresses**.
 
@@ -44,11 +30,37 @@ that you can spend, or that nobody else has the keys. A watch-only wallet
 cannot sign. Verify the spending policy and required keys before sending
 funds. For an encrypted wallet, make sure you can unlock it.
 
+## Move a transaction for signing
+
+1. In Core, prepare the payment and choose **Create Unsigned**, then
+   **Copy to Clipboard**.
+
+2. Choose **Send PSBT**, paste the text, and click **OK** to show its QR.
+
+3. On the other computer, choose **Scan QR**, then **Copy PSBT to clipboard**.
+
+4. In Core, select your wallet and choose **File** >
+   **Load PSBT from clipboard**. Keep the **Received PSBT** window open
+   until the transaction appears, then close it.
+
+5. Check the recipient, amount, change, and fee before signing.
+
+6. Copy the signed PSBT from Core and repeat the transfer back to the
+   CipherStick. Review it in Core before broadcasting.
+
+The tool never unlocks, signs, or broadcasts. QR transfers are unencrypted.
+Sending uses explicit paste; unrelated clipboard contents are not read.
+
 ## Use encrypted removable storage instead
 
 If there is no webcam or a QR is too large, use a separate encrypted USB
 stick or microSD card. Unlock it only while needed, then lock and eject it.
-Do not plug the CryoStick into the online computer.
+Keep the transfer media separate from both system sticks. Do not plug
+the CryoStick into the online computer. This avoids exposing either
+system's Persistent Storage to the other computer.
+
+Encryption protects a lost transfer stick; it does not make its files
+trustworthy. Prefer QR transfers when the data fits in one QR.
 
 For wallets, use Core's **File** > **Export watch-only wallet** on the
 CryoStick, then **File** > **Restore Wallet** on the CipherStick.
