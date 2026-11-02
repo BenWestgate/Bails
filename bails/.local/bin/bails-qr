@@ -112,5 +112,7 @@ Gtk.main()
             fi ;;
         esac
     ) 2> "$directory/error"
-    [ "$?" -eq 0 ] || dialog --error --text="Transfer failed. $(cat "$directory/error")"
+    # Keep the subshell outside a conditional so its set -e remains effective.
+    transfer_status=$?
+    [ "$transfer_status" -eq 0 ] || dialog --error --text="Transfer failed. $(cat "$directory/error")"
 done
