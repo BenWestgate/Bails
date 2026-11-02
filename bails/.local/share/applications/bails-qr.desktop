@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bitcoin QR
+Comment=Transfer PSBTs and watch-only wallets using static QR codes
+Exec=bails-qr
+Icon=scanner
+Terminal=false
+Categories=Finance;Utility;
