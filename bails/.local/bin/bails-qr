@@ -5,7 +5,7 @@ set -o pipefail
 umask 077
 dialog() { zenity --title='Bitcoin QR' --no-markup "$@"; }
 fail() { printf '%s\n' "$*" >&2; exit 1; }
-for command in zenity zbarcam qr bitcoin-cli python3 xdg-open timeout; do
+for command in zenity zbarcam python3-qr bitcoin-cli python3 xdg-open timeout; do
     command -v "$command" >/dev/null || { dialog --error --text="Missing $command"; exit 1; }
 done
 directory=$(mktemp -d /tmp/bitcoin-qr.XXXXXXXX) || exit 1
@@ -15,7 +15,7 @@ json() { python3 -I -c $'import json, sys; d=json.load(sys.stdin)\n'"$1" "${@:2}
 show() {
     [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Too large for one QR. Use Core file transfer with encrypted removable storage.'
     image=$(mktemp "$directory/qr.XXXXXXXX.png")
-    qr --error-correction=L < "$directory/data" > "$image"
+    python3-qr --factory=pil --error-correction=L < "$directory/data" > "$image"
     xdg-open "$image"
 }
 export_wallet() {
@@ -65,33 +65,16 @@ check_address() {
     done < "$directory/wallets"
     $found || dialog --warning --text="WARNING: Address not owned.\n$address\n\nNo open wallet recognizes this address. If it came from YOUR wallet, check carefully: your computer and Bitcoin Core may be compromised. Do not send funds."
 }
-while action=$(dialog --list --column=Action 'Scan QR' 'Send PSBT' 'Export Watch-Only Wallet'); do
-    (
-        set -e
-        case "$action" in
-        'Export Watch-Only Wallet') export_wallet ;;
-        'Send PSBT')
-            dialog --text-info --editable --title='Paste PSBT from Core; press OK to show QR' > "$directory/text" || exit 0
-            tr -d '[:space:]' < "$directory/text" > "$directory/encoded"
-            { cat "$directory/encoded"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null
-            base64 -d < "$directory/encoded" > "$directory/data"
-            show ;;
-        'Scan QR')
-            timeout 180 zbarcam --nodbus --raw -Sdisable -Sqrcode.enable -Sbinary --oneshot > "$directory/data"
-            [ -s "$directory/data" ] || exit 0
-            [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Payload exceeds one static QR.'
-            if [ "$(head -c 5 "$directory/data" | base64 -w0)" = cHNidP8= ]; then
-                base64 -w0 < "$directory/data" > "$directory/text"
-            else
-                cp "$directory/data" "$directory/text"
-            fi
-            if { cat "$directory/text"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null 2>&1; then
-                python3 -I -c '
+receive_psbt() {
+    python3 -I -c '
 import sys
 import gi
 gi.require_versions({"Gtk": "3.0", "Gdk": "3.0"})
 from gi.repository import Gdk, Gtk
-text = sys.stdin.read(4096)
+if sys.argv[1] == "--check":
+    raise SystemExit(0 if Gtk.init_check()[0] else 1)
+with open(sys.argv[1]) as source:
+    text = source.read(4096)
 window = Gtk.Window(title="Received PSBT")
 box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=18)
 label = Gtk.Label(label="Copy the PSBT, then in Bitcoin Core choose\nFile → Load PSBT from clipboard.\nKeep this window open until it loads.")
@@ -106,7 +89,31 @@ window.add(box)
 window.connect("destroy", Gtk.main_quit)
 window.show_all()
 Gtk.main()
-' < "$directory/text"
+' "$1"
+}
+while action=$(dialog --list --column=Action 'Scan QR' 'Send PSBT' 'Export Watch-Only Wallet'); do
+    (
+        set -e
+        case "$action" in
+        'Export Watch-Only Wallet') export_wallet ;;
+        'Send PSBT')
+            dialog --text-info --editable --title='Paste PSBT from Core; press OK to show QR' > "$directory/text" || exit 0
+            tr -d '[:space:]' < "$directory/text" > "$directory/encoded"
+            { cat "$directory/encoded"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null
+            base64 -d < "$directory/encoded" > "$directory/data"
+            show ;;
+        'Scan QR')
+            receive_psbt --check 2>/dev/null || fail 'Cannot open the clipboard window. Start Bitcoin QR from the Tails desktop or use Core file transfer.'
+            timeout 180 zbarcam --nodbus --raw -Sdisable -Sqrcode.enable -Sbinary --oneshot > "$directory/data"
+            [ -s "$directory/data" ] || exit 0
+            [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Payload exceeds one static QR.'
+            if [ "$(head -c 5 "$directory/data" | base64 -w0)" = cHNidP8= ]; then
+                base64 -w0 < "$directory/data" > "$directory/text"
+            else
+                cp "$directory/data" "$directory/text"
+            fi
+            if { cat "$directory/text"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null 2>&1; then
+                receive_psbt "$directory/text"
             elif json 'assert "descriptors" in d' < "$directory/data" 2>/dev/null; then import_wallet
             else check_address
             fi ;;
