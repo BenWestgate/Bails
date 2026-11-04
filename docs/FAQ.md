@@ -48,7 +48,7 @@ For large savings, Maxwell suggests a 2-of-2 multisig wallet. One key is on a ta
 
 ## When I’m installing Tails, I should Create Persistent Storage, right?
 
-**No!** CipherStick will create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before running the `git clone https://github.com/benwestgate/bails&&bails/b` command. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
+**No!** CipherStick will create the Persistent Storage for you. You will miss important steps if you try to set this up yourself before starting the verified local CipherStick installer. If you do this and did not select a long passphrase consisting of 4-7 random words you MUST restart, delete your persistent storage and start over.
 
 ## I don't have a USB stick, what one should I get?
 
@@ -149,7 +149,7 @@ If you shutdown Bitcoin Core safely, waiting for it to exit before shutting down
 If you shutdown Tails without exiting Bitcoin Core safely, or by yanking the USB stick out, it is possible to corrupt the blockchain database and lose your progress. Only remove the USB to shutdown Tails in an emergency.
 
 ## How do I update CipherStick?
-Click **Applications > Favorites > CipherStick > Settings > Update CipherStick**. Make sure you still Trust this repository and it has retained a good reputation before doing so.
+Choose **Applications > Favorites > CipherStick > Settings > Update CipherStick**. The updater fetches versioned tags, verifies the selected tag with the release key pinned in the installed CipherStick, and executes only the authenticated tag contents. If no correctly signed newer release is available, the update fails closed. See [Authenticated CipherStick Releases](RELEASES.md).
 
 ## Can I browse the web on my CipherStick?
 Treat CipherStick as a single-purpose Bitcoin computer. Use Tor Browser only for what directly comes before a bitcoin transaction, such as opening an invoice or a CipherStick bug report, and avoid it entirely when the wallet holds large amounts. Don't download files or type terminal commands you don't understand.
