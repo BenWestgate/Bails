@@ -55,6 +55,8 @@ Help us keep your bitcoins safe!'
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
 persistent-setup || exit 1 # Ensure required features are enabled on every launch.
+# Older installs set rpcport globally, which stops Core starting on signet.
+sed -i 's/^rpcport=17600$/main.rpcport=17600/' /live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf
 
 # A menu launch needs Persistent Storage, but not Core's disk and cache work.
 if [ "${1:-}" != bitcoin-qt ]; then
