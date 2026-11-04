@@ -55,12 +55,6 @@ Help us keep your bitcoins safe!'
 # shellcheck disable=SC1090
 . "/home/$USER/.profile"
 persistent-setup || exit 1 # Ensure required features are enabled on every launch.
-# Remove Bails' obsolete global RPC override; leave named network sections alone.
-conf=/live/persistence/TailsData_unlocked/dotfiles/.bitcoin/bitcoin.conf
-if [ -f "$conf" ] &&
-    sed -En '0,/^\[/{/^(main\.)?rpcport=17600$/p;}' "$conf" | grep -q .; then
-    sed -i '0,/^\[/{/^rpcport=17600$/d;/^main\.rpcport=17600$/d;}' "$conf"
-fi
 
 # A menu launch needs Persistent Storage, but not Core's disk and cache work.
 if [ "${1:-}" != bitcoin-qt ]; then
