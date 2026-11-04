@@ -90,6 +90,10 @@ Bitcoin Core keeps signet wallets apart from your real ones.
    faucet, such as <https://signetfaucet.com>. Then
    [send some](BITCOIN_QR.md#move-a-transaction-for-signing).
 
+If an older installation rejects signet because of a global `rpcport=17600`
+setting, remove that obsolete line from Persistent Storage's
+`dotfiles/.bitcoin/bitcoin.conf`, then restart Bitcoin Core (signet).
+
 Close **Bitcoin Core (signet)** when you are done practising. Mainnet can continue running.
 
 ## Keep the signing wallet in memory only
