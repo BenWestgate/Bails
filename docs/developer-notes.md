@@ -86,6 +86,11 @@ compatibility steps where practical.
 
 - Keep existing shell entry points in Bash and follow the nearby style.
 
+- Write new helpers as short Bash scripts (under about 100 lines) that follow
+  the [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html).
+  Use a few lines of inline Python only where it cuts total lines or does what
+  Bash cannot. Do not add Python scripts or adapters.
+
 - Quote paths and user-controlled values unless splitting is intentional.
 
 - Prefer tools already present in Tails or Debian over new dependencies.

@@ -24,7 +24,7 @@ When modifying dependency-sensitive code:
   problem, a dialog-specific size hint (such as Zenity's `--width`) is fine
   when verified on supported Tails and usable at its minimum screen size.
   Do not add a compatibility layer merely to share a dialog width.
-- Prefer runtime capability checks and centralized compatibility adapters.
+- Prefer runtime capability checks.
 - Do not duplicate validation or policy already owned by an upstream component.
 - Preserve Tails' Tor routing, amnesia, explicit-persistence, and safe-default
   properties. Security-sensitive exceptions must be explicit and documented.
