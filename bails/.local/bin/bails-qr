@@ -10,7 +10,10 @@ for command in zenity zbarcam python3-qr bitcoin-cli python3 xdg-open timeout; d
 done
 directory=$(mktemp -d /tmp/bitcoin-qr.XXXXXXXX) || exit 1
 trap 'rm -rf -- "$directory"' EXIT
-rpc() { bitcoin-cli "$@"; }
+# Use signet when only a signet node answers, so testers can practise.
+chain=main
+bitcoin-cli getblockcount >/dev/null 2>&1 || ! bitcoin-cli -signet getblockcount >/dev/null 2>&1 || chain=signet
+rpc() { bitcoin-cli -chain="$chain" "$@"; }
 json() { python3 -I -c $'import json, sys; d=json.load(sys.stdin)\n'"$1" "${@:2}"; }
 show() {
     [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Too large for one QR. Use Core file transfer with encrypted removable storage.'
@@ -22,7 +25,24 @@ export_wallet() {
     rpc listwallets > "$directory/wallets"
     choice=$(json 'for i, w in enumerate(d): print(i); print(json.dumps(w))' < "$directory/wallets" | dialog --list --column=ID --column=Wallet --hide-column=1 --print-column=1) || exit 0
     wallet=$(json 'print(d[int(sys.argv[1])])' "$choice" < "$directory/wallets")
-    rpc -rpcwallet="$wallet" listdescriptors false > "$directory/export"
+    rpc -rpcwallet="$wallet" listdescriptors false > "$directory/listed"
+    # Fold each receive /0/* and change /1/* pair into one <0;1>/* descriptor
+    # to save space, until Core lists that form itself.
+    json 'for x in d["descriptors"]: x.get("internal") is False and "/0/*" in x["desc"] and print(x["desc"].split("#")[0].replace("/0/*", "/<0;1>/*"))' < "$directory/listed" |
+        while IFS= read -r desc; do printf '%s#%s\n' "$desc" "$(rpc getdescriptorinfo "$desc" | json 'print(d["checksum"])')"; done > "$directory/multipath"
+    json '
+folded = {m.split("#")[0]: m for m in open(sys.argv[1]).read().split()}
+pairs = {}
+for x in d["descriptors"]:
+    base = x["desc"].split("#")[0].replace("/0/*", "/<0;1>/*").replace("/1/*", "/<0;1>/*")
+    if "internal" in x and base in folded:
+        pairs.setdefault(base, []).append(x)
+pairs = {b: p for b, p in pairs.items() if sorted(x["internal"] for x in p) == [False, True]}
+d["descriptors"] = [x for x in d["descriptors"] if x not in sum(pairs.values(), [])]
+for base, pair in pairs.items():
+    d["descriptors"].append({"desc": folded[base], "active": True, "timestamp": min(x["timestamp"] for x in pair),
+        "range": [0, max(x["range"][1] for x in pair)], "next_index": max(x["next_index"] for x in pair)})
+print(json.dumps(d))' "$directory/multipath" < "$directory/listed" > "$directory/export"
     rpc -rpcwallet="$wallet" listlabels | json 'for label in d: print(json.dumps(label))' > "$directory/labels"
     while IFS= read -r label; do
         rpc -rpcwallet="$wallet" -named getaddressesbylabel label="$(json 'print(d)' <<< "$label")" | json 'print(json.dumps(dict.fromkeys(d, json.loads(sys.argv[1]))))' "$label"
