@@ -10,9 +10,9 @@ for command in zenity zbarcam python3-qr bitcoin-cli python3 xdg-open timeout; d
 done
 directory=$(mktemp -d /tmp/bitcoin-qr.XXXXXXXX) || exit 1
 trap 'rm -rf -- "$directory"' EXIT
-# Use signet when only a signet node answers, so testers can practise.
+# Prefer signet for practice even while mainnet continues synchronizing.
 chain=main
-bitcoin-cli getblockcount >/dev/null 2>&1 || ! bitcoin-cli -signet getblockcount >/dev/null 2>&1 || chain=signet
+bitcoin-cli -signet getblockcount >/dev/null 2>&1 && chain=signet
 rpc() { bitcoin-cli -chain="$chain" "$@"; }
 json() { python3 -I -c $'import json, sys; d=json.load(sys.stdin)\n'"$1" "${@:2}"; }
 show() {

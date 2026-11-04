@@ -81,15 +81,16 @@ Signet coins are free and worthless, so try the whole flow there first.
 Bitcoin Core keeps signet wallets apart from your real ones.
 
 1. On each stick open **Bitcoin Core (signet)** from the **Applications** menu.
-2. On the CryoStick, open **codex32** and create a signing wallet. It
-   uses signet when that is the only network running. Then
+   Mainnet can keep synchronizing while you practise.
+2. On the CryoStick, open **codex32** and create a signing wallet. Choose
+   signet if codex32 asks which network to use. Then
    [move the watch-only wallet](#move-the-watch-only-wallet-to-your-cipherstick)
    to the CipherStick.
 3. In Tor Browser, get coins for a **Receive** address from a signet
    faucet, such as <https://signetfaucet.com>. Then
    [send some](BITCOIN_QR.md#move-a-transaction-for-signing).
 
-To return to mainnet, quit it and open **Bitcoin Core** from the menu.
+Close **Bitcoin Core (signet)** when you are done practising. Mainnet can continue running.
 
 ## Keep the signing wallet in memory only
 
