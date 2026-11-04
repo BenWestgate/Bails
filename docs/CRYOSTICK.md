@@ -80,8 +80,7 @@ QR is too large.
 Signet coins are free and worthless, so try the whole flow there first.
 Bitcoin Core keeps signet wallets apart from your real ones.
 
-1. On each stick, quit Bitcoin Core (**File** > **Exit**) and open
-   **Bitcoin Core (signet)** from the **Applications** menu.
+1. On each stick open **Bitcoin Core (signet)** from the **Applications** menu.
 2. On the CryoStick, open **codex32** and create a signing wallet. It
    uses signet when that is the only network running. Then
    [move the watch-only wallet](#move-the-watch-only-wallet-to-your-cipherstick)
