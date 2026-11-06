@@ -80,7 +80,8 @@ QR is too large.
 Signet coins are free and worthless, so try the whole flow there first.
 Bitcoin Core keeps signet wallets apart from your real ones.
 
-1. On each stick open **Bitcoin Core (signet)** from the **Applications** menu.
+1. On each stick open
+   **Bitcoin Core (signet)** from the **Applications** menu.
    Mainnet can keep synchronizing while you practise.
 2. On the CryoStick, open **codex32** and create a signing wallet. Choose
    signet if codex32 asks which network to use. Then
