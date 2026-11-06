@@ -67,6 +67,8 @@ Portable SSDs aka USB sticks with SSD-like performance:
 - [Netac Portable SSD Dual Interface](https://amzn.to/3DOD4wR)
 - [SSK SSD Solid State Flash Drive](https://amzn.to/3Qpgoer)
 
+If a portable SSD or NVMe stick does not start Tails, choose **Tails (External Hard Disk)** in the boot menu. See [Starting Tails from an external hard disk](https://tails.net/doc/advanced_topics/external_hard_disk/index.en.html).
+
 USB sticks with at least double the typical IOPS performance (may be cheaper)
 - [SanDisc Extreme Pro USB](https://amzn.to/3KngiA0)
 - [SAMSUNG FIT Plus USB](https://amzn.to/3OjRmdY)
