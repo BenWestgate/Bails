@@ -63,7 +63,7 @@ shutdown_without_offline_mode() {
 
 ${network_warning}Network shutdown was requested. Disconnect network cables now.
 
-Tails will shut down in $grace seconds. Start it again and turn on Offline Mode in the Welcome Screen." &
+Tails will shut down in $grace seconds. Start it again, unlock Persistent Storage, then turn on Offline Mode in the Welcome Screen." &
     pkill -x tca >/dev/null 2>&1 &
     PATH="$DOTFILES/.local/bin:$PATH" "$DOTFILES/.local/bin/stop-btc" >/dev/null 2>&1 &
     sleep "$grace"

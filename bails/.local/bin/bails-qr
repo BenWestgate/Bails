@@ -36,12 +36,18 @@ import_wallet() {
     [[ -n "$name" && "$name" != *[/\\]* && "$name" != . && "$name" != .. ]] || fail 'Use a nonempty wallet name without slashes.'
     rpc -named createwallet wallet_name="$name" disable_private_keys=true blank=true >/dev/null
     rpc -rpcwallet="$name" -stdin importdescriptors < "$directory/descriptors" > "$directory/results"
-    json 'assert d and all(x["success"] is True for x in d)' < "$directory/results" || fail "Import incomplete. Do not use $name. Inspect it in Core."
+    # A failed rescan (pruned or assumeutxo node) still imports the descriptors.
+    json 'errors = [x["error"]["message"] for x in d if x["success"] is not True]
+rescan = [e for e in errors if e.startswith("Rescan failed")]
+notes = [e for e in errors if e not in rescan] + rescan[:1] + [w for x in d for w in x.get("warnings", [])]
+sys.stdout.writelines(n + "\n" for n in dict.fromkeys(notes))
+sys.exit(len(rescan) < len(errors))' < "$directory/results" > "$directory/notes" || fail "Import failed. Do not use $name. Core said: $(cat "$directory/notes")"
     json 'for pair in d.get("labels", {}).items(): print(json.dumps(pair))' < "$directory/data" > "$directory/labels"
     while IFS= read -r label; do
         rpc -rpcwallet="$name" -named setlabel address="$(json 'print(d[0])' <<< "$label")" label="$(json 'print(d[1])' <<< "$label")"
     done < "$directory/labels"
-    dialog --info --text="Imported $name. Select it in Bitcoin Core."
+    [ -s "$directory/notes" ] || { dialog --info --text="Imported $name. Select it in Bitcoin Core."; return; }
+    dialog --warning --text="Imported $name. Select it in Bitcoin Core. Core said: $(cat "$directory/notes")"
 }
 check_address() {
     address=$(python3 -I -c 'import re, sys; s=sys.stdin.read(); assert re.fullmatch(r"[A-Za-z0-9:?=&%._+-]+", s); print(s)' < "$directory/data")

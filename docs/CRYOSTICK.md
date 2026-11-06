@@ -21,9 +21,10 @@ but it cannot spend.
    never mix them up.
 4. Disable networking on the offline computer in its BIOS, or remove the
    Wi-Fi card.
-5. Start Tails from the copy. In the Welcome Screen, choose **+**
-   (Additional Settings) > **Offline Mode**, then unlock your Persistent
-   Storage. Do not set an Administration Password.
+5. Start Tails from the copy. In the Welcome Screen, unlock your Persistent
+   Storage first, then choose **+** (Additional Settings) > **Offline Mode**.
+   If the CipherStick saved its Welcome Screen settings, unlocking restores
+   them and turns Offline Mode off again. Do not set an Administration Password.
 6. CipherStick sees that Offline Mode was selected and asks
    **Make a CryoStick?** Choose **Make CryoStick**.
 7. If the **Welcome Screen** feature of the Persistent Storage is not
@@ -44,7 +45,8 @@ CryoStick checks after login, so it cannot protect you before then.
 
 If CryoStick warns that it must shut down, unplug any network cable and let it
 shut down. Closing the warning will not stop this. If the computer stays on,
-turn it off. Next time, select **Offline Mode** in the Welcome Screen.
+turn it off. Next time, unlock your Persistent Storage, then select **Offline
+Mode** in the Welcome Screen.
 
 CryoStick also checks at every login that the **Welcome Screen** Persistent
 Storage feature is enabled. If it is not, CryoStick opens Persistent Storage
