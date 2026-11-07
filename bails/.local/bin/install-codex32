@@ -23,8 +23,7 @@
 set -euo pipefail
 
 readonly REPOSITORY="https://github.com/BenWestgate/python-codex32.git"
-readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
-readonly REVISION_REF="refs/tags/bails-recovery-1938b60"
+readonly REVISION="b045908d2ab16220899022624875c08be986e076"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 
@@ -68,7 +67,8 @@ fi
 
 # A corrupt index makes fetch and checkout fail; checkout --force rebuilds it.
 rm -f -- "$SOURCE_DIR/.git/index"
-git -C "$SOURCE_DIR" fetch --depth=1 origin "$REVISION_REF"
+# Fetch the reviewed GUI integration commit directly; no maintenance tag is needed.
+git -C "$SOURCE_DIR" fetch --depth=1 origin "$REVISION"
 git -C "$SOURCE_DIR" checkout --detach --force "$REVISION"
 git -C "$SOURCE_DIR" clean -ffdx
 
