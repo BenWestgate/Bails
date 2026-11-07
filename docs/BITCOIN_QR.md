@@ -15,7 +15,8 @@ scanning also stops after three minutes.
    **Window** > **Receiving addresses**.
 
 The export contains public descriptors and labels, without private keys.
-It preserves descriptor timestamps, ranges, and next address indexes.
+Each receive and change pair travels as one `<0;1>` descriptor, keeping its
+range, next address index and earliest timestamp. If a signet node is running, Bitcoin QR uses signet.
 Saved payment requests are not copied; later changes do not synchronize.
 If the name already exists, scan again and choose another name.
 If import fails, the new wallet may be incomplete. Do not use it until fixed.

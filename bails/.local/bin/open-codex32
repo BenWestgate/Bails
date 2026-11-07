@@ -50,11 +50,13 @@ source_is_usable() {
 }
 
 core_is_compatible() {
-    local info version
+    local chain info="" version
 
-    if ! info="$(bitcoin-cli -datadir="$BITCOIN_DATA_DIR" getnetworkinfo 2>/dev/null)"; then
-        return 2
-    fi
+    # codex32 asks which network when both answer; signet is for practice.
+    for chain in main signet; do
+        info="$(bitcoin-cli -datadir="$BITCOIN_DATA_DIR" -chain="$chain" getnetworkinfo 2>/dev/null)" && break
+    done
+    [ -n "$info" ] || return 2
 
     version="$(sed -n 's/.*"version":[[:space:]]*\([0-9][0-9]*\).*/\1/p' <<< "$info")"
     [ -n "$version" ] || return 2
