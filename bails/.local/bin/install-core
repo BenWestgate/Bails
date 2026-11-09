@@ -199,7 +199,7 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 cd bitcoin-core-"$VER" || exit 1 # Switch into latest bitcoin-core directory
 if [ ! -f SHA256SUMS ]; then
-    zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
+    zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --width=480 "$ICON" && \
     install-core	# Launch this script again
     exit 1
 fi
@@ -211,7 +211,7 @@ while true; do
     good_sig=$(count_good_signatures)
     # TODO: When my PR is merged to bitcoin-core, lets update this file to use it entirely for the download process, using wget only to fetch the latest version number.
     if ((good_sig >= BINVERIFY_MIN_GOOD_SIGS)); then
-        zenity --question --title='Further download verification' --text="Your Bitcoin Core download has been successfully verified by $good_sig signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue Setup' --default-cancel --ok-label='More Verification' "$ICON" --icon-name=gtk-dialog-authentication
+        zenity --question --title='Further download verification' --width=480 --text="Your Bitcoin Core download has been successfully verified by $good_sig signatures from individuals trusted by $who_trusts.\n\nFurther download verification is optional. It requires around 5 to 10 minutes.\n\nPerforming additional verification gives further assurance you have not downloaded an unexpected or tampered version of Bitcoin." --cancel-label='Continue Setup' --default-cancel --ok-label='More Verification' "$ICON" --icon-name=security-high
         verified=$?
         ((verified)) && break
         ((BINVERIFY_MIN_GOOD_SIGS++))
@@ -232,7 +232,7 @@ if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
     stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
-    zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
+    zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --width=480 "$ICON" && \
     install-core	# Launch this script again
     exit 1
 fi
