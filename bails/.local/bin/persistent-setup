@@ -106,21 +106,21 @@ pgrep -f spaced-repetition || if /usr/local/lib/tpscli is-unlocked; then
     until [ -f $SET_UP ]; do
         existing_passphrase="$(prompt_passphrase)"
         if [ -z "$existing_passphrase" ]; then
-            zenity --error --title="Error" --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
+            zenity --error --title="Error" --width=480 --text="Existing Persistent Storage passphrase is required. Please provide the passphrase." "$ICON"
         else
             # Estimate passphrase strength to see if we can proceed; word separators add no entropy
             if ! bits=$(printf '%s' "${existing_passphrase// /}" | passphrase_bits) || \
                 [[ ! "$bits" =~ ^[0-9]+$ ]]; then
-                zenity --warning --title='Passphrase strength not checked' "$ICON" \
+                zenity --warning --title='Passphrase strength not checked' --width=480 "$ICON" \
                   --text='CipherStick could not check the strength of your passphrase because the zxcvbn estimator is unavailable. Tails recommends a passphrase of 5 to 7 random words.'
                 break
             elif ((bits >= 64)); then # The most Tails' zxcvbn can report
                 break
             elif ((bits > 50)); then
-                zenity --question --icon-name=dialog-warning --title='Warning: Weak Passphrase Detected' \
+                zenity --question --icon-name=dialog-warning --title='Warning: Weak Passphrase Detected' --width=480 \
                   --text="<b>Your passphrase is too weak to protect against a state-sponsored attacker with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nIf a state-sponsored attacker with physical access to your device is part of your <a href='https://ssd.eff.org/module/your-security-plan'>threat model</a>, you MUST restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue' --default-cancel --cancel-label='Restart Now' && break
             else
-                zenity --question --icon-name=dialog-warning --title='WARNING: Weak Passphrase Detected' \
+                zenity --question --icon-name=dialog-warning --title='WARNING: Weak Passphrase Detected' --width=480 \
                   --text="<b>Your passphrase is too weak to protect against attackers with physical access to your USB stick.</b>\n\nTails recommends choosing a long passphrase made of 5 to 7 random words.\n<a href='https://theintercept.com/2015/03/26/passphrases-can-memorize-attackers-cant-guess/'>Learn about the maths behind memorizable and secure passphrases</a>.\n\nWe strongly recommend you restart, delete this Persistent Storage and use a recommended passphrase.\n\nFor more information, please read the Tails security advisory on passphrase security: <a href='https://tails.net/security/argon2id/#understanding'>Understanding weak passphrases</a>\n\nBe sure to save your work before clicking 'Restart Now'." "$ICON" --ok-label='Continue Anyway' --default-cancel --cancel-label='Restart Now' && break
             fi
             systemctl reboot

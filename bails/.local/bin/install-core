@@ -199,7 +199,7 @@ printf '\033]2;Getting Bitcoin Core signatures...\a'
 ps -p $sig_dl &>/dev/null && fg %"$(jobs -l | grep $sig_dl | cut -f1 -d' ' | tr -c -d '[:digit:]')"
 cd bitcoin-core-"$VER" || exit 1 # Switch into latest bitcoin-core directory
 if [ ! -f SHA256SUMS ]; then
-    zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
+    zenity --error --title="Signature file not found" --text="Click OK to try downloading Bitcoin Core again." --width=480 "$ICON" && \
     install-core	# Launch this script again
     exit 1
 fi
@@ -241,7 +241,7 @@ if file_name=$(sha256sum --ignore-missing --check SHA256SUMS); then
     zenity --notification --text="Bitcoin Core download integrity successfully verified." --window-icon=checkbox-checked
     stop-btc # Kill Bitcoin Core if running, wait for it to shutdown safely
 else
-    zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --ellipsize "$ICON" && \
+    zenity --error --title="Download integrity failure" --text="Checksum does not match what was expected.\n\nClick OK to try downloading Bitcoin Core again." --width=480 "$ICON" && \
     install-core	# Launch this script again
     exit 1
 fi
