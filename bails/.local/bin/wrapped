@@ -65,8 +65,10 @@ fi
 
 # Tails normally resets GNOME favorites on reboot; only set them if
 # this session has no user override. Respect changes made by the user.
+# Plain dconf read also returns system defaults, so compare with them.
+key=/org/gnome/shell/favorite-apps
 if command -v dconf >/dev/null 2>&1 &&
-    [ -z "$(dconf read /org/gnome/shell/favorite-apps)" ]; then
+    [ "$(dconf read "$key")" = "$(dconf read -d "$key")" ]; then
     python3 - <<'PYTHON'
 from gi.repository import Gio
 settings = Gio.Settings.new('org.gnome.shell')
