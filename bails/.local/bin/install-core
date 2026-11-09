@@ -219,7 +219,7 @@ while true; do
         zenity --warning --title='Verify Bitcoin Core download' --width=480 --text='Download verification is required.\n\nPerforming the verification steps ensures that you have not downloaded an unexpected or tampered version of Bitcoin, which may result in loss of funds.' --ok-label='Verify Now' "$ICON" --icon-name=security-high
         verified=0
     fi
-    [[ "$who_trusts" == "you" ]] || zenity --info --title="Choose trustworthy individuals" --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. You decide which of these public keys you trust.\n\nTo validate your download's signatures, choose a few individuals who you find trustworthy." "$ICON" --icon-name=security-high
+    [[ "$who_trusts" == "you" ]] || zenity --info --title="Choose trustworthy individuals" --width=480 --text="Bitcoin releases are signed by a number of individuals, each with a unique public key. You decide which of these public keys you trust.\n\nTo validate your download's signatures, choose a few individuals who you find trustworthy." "$ICON" --icon-name=security-high
     who_trusts="you"
     check_sigs "$BINVERIFY_MIN_GOOD_SIGS" || BINVERIFY_MIN_GOOD_SIGS=3
 done
