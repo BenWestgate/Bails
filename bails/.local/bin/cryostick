@@ -178,26 +178,23 @@ if [ "$make_cryostick" = 1 ]; then
     touch "$CRYOSTICK"
 fi
 
-# GNOME resolves nested desktop IDs, overrides, and category syntax.
+# Hide only system-installed Network apps, not Bails or user launchers.
 network_apps="$(python3 - <<'PY'
 from gi.repository import Gio
 for app in Gio.AppInfo.get_all():
-    if "Network" in (app.get_categories() or "").split(";"):
-        print(app.get_id(), app.get_filename(), sep="\t")
+    path = app.get_filename() or ""
+    if path.startswith(("/usr/share/applications/", "/usr/local/share/applications/")) and \
+            "Network" in (app.get_categories() or "").split(";"):
+        print(app.get_id())
 PY
 )" || exit 1
 applications="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 mkdir -p "$applications" || exit 1
-while IFS=$'\t' read -r entry_id file; do
-  case "$entry_id" in
-    ''|bails.desktop|bitcoin-qt.desktop|io.github.benwestgate.codex32.desktop) continue ;;
-  esac
-  if [[ "$file" == "$applications"/* ]]; then
-    sed -i '/^Hidden *=/d; /^\[Desktop Entry\]$/aHidden=true' "$file" || exit 1
-  else
-    printf '[Desktop Entry]\nHidden=true\n' > "$applications/$entry_id" || exit 1
-  fi
+while IFS= read -r entry_id; do
+  [ -n "$entry_id" ] || continue
+  printf '[Desktop Entry]\nHidden=true\n' > "$applications/$entry_id" || exit 1
 done <<< "$network_apps"
+# Keep Bails apps available under Office while leaving the Internet menu empty.
 sed -i '/^Categories=/s/Network;//' \
   "$DOTFILES/.local/share/applications/"{bails,bitcoin-qt}.desktop
 
