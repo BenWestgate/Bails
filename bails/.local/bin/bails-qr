@@ -49,7 +49,8 @@ print(json.dumps(d))' "$directory/multipath" < "$directory/listed" > "$directory
         rpc -rpcwallet="$wallet" -named getaddressesbylabel label="$(json 'print(d)' <<< "$label")" | json 'print(json.dumps(dict.fromkeys(d, json.loads(sys.argv[1]))))' "$label"
     done < "$directory/labels" > "$directory/labels.json"
     json 'd["labels"] = {k:v for line in open(sys.argv[1]) for k,v in json.loads(line).items()}; print(json.dumps(d, separators=(",", ":")))' "$directory/labels.json" < "$directory/export" > "$directory/data"
-    show "${wallet:-Default wallet} watch-only wallet"
+    # Keep the file name under 255 bytes even for 4-byte characters.
+    show "${wallet:0:40}${wallet:+ }watch-only wallet"
 }
 import_wallet() {
     json 'assert isinstance(d["wallet_name"], str); labels=d.get("labels", {}); assert isinstance(labels, dict) and all(isinstance(v, str) for v in labels.values()); assert isinstance(d["descriptors"], list) and d["descriptors"]; print(json.dumps(d["descriptors"], separators=(",", ":")))' < "$directory/data" > "$directory/descriptors"
