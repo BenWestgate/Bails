@@ -247,9 +247,9 @@ sed 's/bitcoin=electrum/bitcoin=bitcoin-qt/g' /usr/share/applications/mimeinfo.c
 [ -e "$DOTFILES/.bitcoin/bitcoin.conf" ] && rm -v "$LOCAL_DIR/bitcoin.conf"
 rsync -vhb --ignore-missing-args --remove-source-files \
   "$LOCAL_DIR"/{bitcoin.conf,README.md} $DOTFILES/.bitcoin
-sed -i 's/#rpcport=<port>/rpcport=17600/' "$DOTFILES/.bitcoin/bitcoin.conf"     # set -rpcport for Tails
 sed -i "s,#datadir=<dir>,datadir=$DATA_DIR," "$DOTFILES/.bitcoin/bitcoin.conf"  # set -datadir for Tails
 sed -i "s,#debuglogfile=<file>,debuglogfile=$HOME/.bitcoin/debug.log," "$DOTFILES/.bitcoin/bitcoin.conf" # set log to tmpfs
+sed -i 's/#server=1/server=1/; s/#proxy=<ip>\[:<port>\]|unix:<path>\[=<network>\]/proxy=127.0.0.1:9050/' "$DOTFILES/.bitcoin/bitcoin.conf" # Tor and RPC on every chain
 link-dotfiles
 printf "\033]2;Bitcoin Core %s complete!\a" $action
 
@@ -276,11 +276,6 @@ else
     prune_GB=$((space > 2 ? space : 2 ))
     # Disable pruning if USB stick is large enough
     prune_MiB=$((space > assumed_blockchain_size ? 0 : prune_GB * 10 ** 9 / 1024 ** 2))
-    echo '{
-        "onion": "127.0.0.1:9050",
-        "proxy": "127.0.0.1:9050",
-        "server": true
-    }' > $DATA_DIR/settings.json # Enable server and proxies for Tor
     # Prune in bitcoin.conf, so wrapped can raise it and a GUI choice outranks it
     sed -i "s/#prune=<n>/prune=$prune_MiB/" "$DOTFILES/.bitcoin/bitcoin.conf"
     # Update $PATH environment variable to include new user bin
