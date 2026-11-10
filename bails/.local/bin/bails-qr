@@ -17,13 +17,14 @@ rpc() { bitcoin-cli -chain="$chain" "$@"; }
 json() { python3 -I -c $'import json, sys; d=json.load(sys.stdin)\n'"$1" "${@:2}"; }
 show() {
     [ "$(wc -c < "$directory/data")" -le 2953 ] || fail 'Too large for one QR. Use Core file transfer with encrypted removable storage.'
-    image=$(mktemp "$directory/qr.XXXXXXXX.png")
+    # Name the image for its content; the viewer shows it as the title.
+    image="$directory/${1//[\/$'\n']/-}.png"
     python3-qr --factory=pil --error-correction=L < "$directory/data" > "$image"
     xdg-open "$image"
 }
 export_wallet() {
     rpc listwallets > "$directory/wallets"
-    choice=$(json 'for i, w in enumerate(d): print(i); print(json.dumps(w))' < "$directory/wallets" | dialog --list --column=ID --column=Wallet --hide-column=1 --print-column=1) || exit 0
+    choice=$(json 'for i, w in enumerate(d): print(i); print(w.replace("\n", " ") or "Default wallet")' < "$directory/wallets" | dialog --list --column=ID --column=Wallet --hide-column=1 --print-column=1) || exit 0
     wallet=$(json 'print(d[int(sys.argv[1])])' "$choice" < "$directory/wallets")
     rpc -rpcwallet="$wallet" listdescriptors false > "$directory/listed"
     # Fold each receive /0/* and change /1/* pair into one <0;1>/* descriptor
@@ -43,12 +44,12 @@ for base, pair in pairs.items():
     d["descriptors"].append({"desc": folded[base], "active": True, "timestamp": min(x["timestamp"] for x in pair),
         "range": [0, max(x["range"][1] for x in pair)], "next_index": max(x["next_index"] for x in pair)})
 print(json.dumps(d))' "$directory/multipath" < "$directory/listed" > "$directory/export"
-    rpc -rpcwallet="$wallet" listlabels | json 'for label in d: print(json.dumps(label))' > "$directory/labels"
+    rpc -rpcwallet="$wallet" listlabels | json 'for label in d: label and print(json.dumps(label))' > "$directory/labels"
     while IFS= read -r label; do
         rpc -rpcwallet="$wallet" -named getaddressesbylabel label="$(json 'print(d)' <<< "$label")" | json 'print(json.dumps(dict.fromkeys(d, json.loads(sys.argv[1]))))' "$label"
     done < "$directory/labels" > "$directory/labels.json"
     json 'd["labels"] = {k:v for line in open(sys.argv[1]) for k,v in json.loads(line).items()}; print(json.dumps(d, separators=(",", ":")))' "$directory/labels.json" < "$directory/export" > "$directory/data"
-    show
+    show "${wallet:-Default wallet} watch-only wallet"
 }
 import_wallet() {
     json 'assert isinstance(d["wallet_name"], str); labels=d.get("labels", {}); assert isinstance(labels, dict) and all(isinstance(v, str) for v in labels.values()); assert isinstance(d["descriptors"], list) and d["descriptors"]; print(json.dumps(d["descriptors"], separators=(",", ":")))' < "$directory/data" > "$directory/descriptors"
@@ -127,7 +128,7 @@ while action=$(dialog --list --column=Action 'Scan QR' 'Send PSBT' 'Export Watch
             tr -d '[:space:]' < "$directory/text" > "$directory/encoded"
             { cat "$directory/encoded"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null
             base64 -d < "$directory/encoded" > "$directory/data"
-            show ;;
+            show PSBT ;;
         'Scan QR')
             receive_psbt --check 2>/dev/null || fail 'Cannot open the clipboard window. Start Bitcoin QR from the Tails desktop or use Core file transfer.'
             timeout 180 zbarcam --nodbus --raw -Sdisable -Sqrcode.enable -Sbinary --oneshot > "$directory/data"
