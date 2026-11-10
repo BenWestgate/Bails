@@ -6,6 +6,9 @@ repository. Follow the [merge policy](CONTRIBUTING.md#merge-policy) when
 preparing changes for review. Low-effort maintainability and PELD-inspired
 design are core requirements.
 
+When a change alters behaviour that [llms.txt](llms.txt) describes, update
+llms.txt in the same PR.
+
 Required background:
 
 - [Tails: Improve Tails source code](https://tails.net/contribute/how/code/)
