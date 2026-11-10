@@ -15,8 +15,10 @@ but it cannot spend.
 ## Make a CryoStick
 
 1. Set up a CipherStick as usual, but don't create a wallet yet.
-2. Open **CipherStick** > **Backup** and back it up to a second USB stick,
-   including the Persistent Storage.
+2. After Bitcoin Core installs, CipherStick asks **Make a CryoStick?**
+   Choose **Make CryoStick** and back it up to a second USB stick in Tails
+   Cloner. If you chose **Not Now**, open **CipherStick** > **Backup**
+   later, before you create a wallet.
 3. Mark the copy and the offline computer, for example with tape, so you
    never mix them up.
 4. Disable networking on the offline computer in its BIOS, or remove the

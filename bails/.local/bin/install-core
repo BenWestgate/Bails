@@ -282,6 +282,19 @@ else
     # shellcheck source=/dev/null
     . "$HOME"/.profile
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
+    # Copy before Core starts: no wallets and no blocks to transfer yet
+    zenity --question --title='Make a CryoStick?' --width=480 \
+        --icon-name=cryostick128 --ok-label='Make CryoStick' \
+        --cancel-label='Not Now' --text='A CryoStick is an offline copy of CipherStick for creating your wallet and signing. It never goes online, and it cannot download Bitcoin Core itself, so it is made by copying this stick.
+
+Now is the best time: this CipherStick has no wallets yet and no block chain to copy.
+
+You need:
+\t• A second USB stick of at least 8 GB. Everything on it will be erased.
+\t• About 10 minutes.
+
+Tails Cloner will open. Afterwards, start the copy in Offline Mode on a computer with networking disabled.' &&
+        tails-installer --backup
     # Start syncing before the Welcome dialog says it has begun
     wrapped bitcoin-qt -min -startupnotify=chainstate-preload
     
