@@ -46,19 +46,19 @@ elif [[ $(id -u) = "0" ]]; then # Check for root.
   "
     read -rp "PRESS ENTER TO EXIT SCRIPT, AND RUN AGAIN AS $USER. "
 else
-  printf '\033]2;Welcome to CipherStick!\a'
+  [ -z "$1" ] && printf '\033]2;Welcome to CipherStick!\a'
   # Install CipherStick to tmpfs
   # Core's GUI saves the user's choices in Bitcoin-Qt.conf, so ship ours only as
   # a first-install default.
   qt_conf=.config/Bitcoin/Bitcoin-Qt.conf
-  rsync -rvh --perms --exclude="/$qt_conf" "$BAILS_DIR/bails/" "$HOME"
+  rsync -r --perms --exclude="/$qt_conf" "$BAILS_DIR/bails/" "$HOME"
   [ -e "$HOME/$qt_conf" ] || cp "$BAILS_DIR/bails/$qt_conf" "$HOME/$qt_conf"
   # Delete files the previous version installed that this version dropped.
   # Its saved checkout's git tree lists them; the files themselves were moved.
   old="$DOTFILES/.local/share/bails/.git"
   [ -d "$old" ] && git --git-dir="$old" ls-tree -r -z --name-only HEAD:bails |
     while IFS= read -r -d '' f; do
-      [ -e "$BAILS_DIR/bails/$f" ] || rm -fv -- "$HOME/$f" "$DOTFILES/$f"
+      [ -e "$BAILS_DIR/bails/$f" ] || rm -f -- "$HOME/$f" "$DOTFILES/$f"
     done
   # shellcheck disable=SC1091
   . "$HOME/.profile"
@@ -73,16 +73,16 @@ else
         sleep 1
     done
     # Install CipherStick to Persistent Storage
-    rsync -rvh --perms --exclude="/$qt_conf" --remove-source-files \
+    rsync -r --perms --exclude="/$qt_conf" --remove-source-files \
       "$BAILS_DIR/bails/" $DOTFILES
     [ -e "$DOTFILES/$qt_conf" ] || cp "$BAILS_DIR/bails/$qt_conf" "$DOTFILES/$qt_conf"
-    rsync -rvh --perms --delete --exclude=/release-key.asc --remove-source-files \
+    rsync -r --perms --delete --exclude=/release-key.asc --remove-source-files \
       "$BAILS_DIR"/ $DOTFILES/.local/share/bails
     wallets='/live/persistence/TailsData_unlocked/Persistent/.bitcoin/wallets'
     if [ -d "$wallets" ] && [ ! -L "$wallets" ]; then
       chmod u+w "$wallets"
     fi
-    rm -rvf "$BAILS_DIR"
+    rm -rf "$BAILS_DIR"
     link-dotfiles
   ) & # Run persistent setup in background
   setup_pid=$!
@@ -116,6 +116,7 @@ else
     notify-send --transient --icon=bails128 'CipherStick update complete' \
       "CipherStick has been updated to $FULL_VERSION."
   fi
+  echo "CipherStick $FULL_VERSION is ready. You can close this window."
   exit 0
 fi
 exit 1
