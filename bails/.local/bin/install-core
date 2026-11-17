@@ -282,7 +282,10 @@ else
     # shellcheck source=/dev/null
     . "$HOME"/.profile
     export DONT_ASK_DONATIONS=1 # Don't ask for donations on first install
-    # Copy before Core starts: no wallets and no blocks to transfer yet
+    # Copy before Core starts: no wallets and no blocks to transfer yet.
+    # Offline, the copy can't download CipherStick's files or codex32.
+    [ -z "${setup_pid:-}" ] || wait "$setup_pid"
+    install-codex32 &&
     zenity --question --title='Make a CryoStick?' --width=480 \
         --icon-name=cryostick128 --ok-label='Make CryoStick' \
         --cancel-label='Not Now' --text='A CryoStick is an offline copy of CipherStick for creating your wallet and signing. It never goes online, and it cannot download Bitcoin Core itself, so it is made by copying this stick.
