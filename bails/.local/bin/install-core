@@ -148,7 +148,8 @@ pkill tca &>/dev/null # Close tor connection assistant to clean up the screen
 set -m # Enable job control to bring background downloads to the foreground
 
 # Download to Persistent Storage if setup, otherwise amnesia
-cd "$XDG_DATA_HOME/bitcoin" 2>/dev/null || cd "$HOME/.local/share/bitcoin" || exit 1
+cd "$XDG_DATA_HOME/bitcoin" 2>/dev/null ||
+    { mkdir -p ~/.local/share/bitcoin && cd ~/.local/share/bitcoin; } || exit 1
 DOWNLOAD_DIR=$PWD
 retry_on_fail wget "$BITCOIN_CORE_DOMAIN/en/download" # Query latest version
 VER=$(grep -oPm1 '(?<=bitcoin-core-).*(?=/SHA256SUMS.asc)' download)
