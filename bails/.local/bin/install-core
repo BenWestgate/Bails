@@ -41,6 +41,14 @@ readonly XDG_DATA_HOME="$LOCAL_DIR/share"
 readonly BITCOIN_CORE_DOMAIN="https://bitcoincore.org"
 readonly BITCOIN_CHAINPARAMS_URL="https://raw.githubusercontent.com/bitcoin/bitcoin/master/src/kernel/chainparams.cpp"
 readonly GUIX_SIGS_REPO_URL="https://github.com/bitcoin-core/guix.sigs"
+# Builders trusted on first install. Keys come from guix.sigs/builder-keys.
+readonly TRUSTED_BUILDERS=(
+    9EDAFF80E080659604F4A76B2EBB056FD847F8A7 # Emzy
+    152812300785C96444D3334D17565732E08E5E41 # achow101
+    0AD83877C1F0CD1EE9BD660AD7CC770B81FD22A8 # benthecarman
+    71A3B16735405025D447E8F274810B012346C9A6 # laanwj
+    133EAC179436F14A5CF1B794860FEB804E669320 # sipa
+)
 
 
 # Count distinct valid signatures made by release builders.
@@ -170,16 +178,16 @@ if OLD_VER=$(bitcoind --version 2>/dev/null); then # Refresh keys if updating
     action=update
     printf '\033]2;Updating all keys from keyserver...\a'
     gpg --refresh-keys
-else # Import a trusted set on first-run.
+else # First install: import pinned builders' keys from guix.sigs.
     action=installation
-    for key in ./trusted-keys/*; do
-        trusted_fingerprint=$(gpg --batch --with-colons --show-keys "$key" | awk -F: '$1 == "fpr" { print $10; exit }')
-        if awk -F: -v fingerprint="$trusted_fingerprint" \
-            '$1 == "fpr" && $10 == fingerprint { found = 1 } END { exit !found }' builder-keys; then
+    for name in guix.sigs/"$VER"/*; do
+        key="${name/"$VER"/builder-keys}.gpg"
+        # Accept a key file only if it holds one key with a pinned fingerprint.
+        fpr=$(gpg --batch --with-colons --show-keys "$key" | awk -F: '
+            $1 == "pub" { n++; p = 1 } $1 == "fpr" && p { f = $10; p = 0 }
+            END { if (n == 1) print f }')
+        [[ -n "$fpr" && " ${TRUSTED_BUILDERS[*]} " == *" $fpr "* ]] &&
             gpg --import "$key"
-        else
-            echo "Warning: CipherStick trusted key ${key/'./trusted-keys/'} did not sign Bitcoin Core version $VER, skipping."
-        fi
     done
 fi
 # Download chain parameters in background to size prune
