@@ -14,7 +14,7 @@ CipherStick is a script that installs Bitcoin Core on Tails. The legacy in-tree 
 
 1. **Planned Multi-party Multi-sig for Inheritance Protection**: The planned inheritance design uses multi-party multi-sig so spending requires collaboration between independent parties.
 
-1. **Planned Offline Private Keys**: The planned savings design keeps private keys off Internet-connected devices and moves signing data by QR code.
+1. **Offline Signing**: [CryoStick](CRYOSTICK.md) keeps the signing wallet on an offline Tails USB. [Bitcoin QR](BITCOIN_QR.md) transfers public wallet data and PSBTs without copying signing keys to the online CipherStick.
 
 1. **Minimal Software Beyond Bitcoin Core**: CipherStick minimizes code, primarily using python and bash scripts making it easily auditable.
 
@@ -32,9 +32,9 @@ CipherStick is a script that installs Bitcoin Core on Tails. The legacy in-tree 
 
 1. **Fast Setup**: CipherStick can be completed by non-technologists with minimal effort in under an hour.
 
-1. **CipherStick Cloning**: CipherStick installations can be cloned for friends and family, saving time required to sync the blockchain for the recipient and providing an additional encrypted wallet backup for the CipherStick cloned.
+1. **Planned Safe Cloning**: CipherStick's guided Clone action is unfinished. A copy for another person must exclude Persistent Storage containing wallet secrets; Tails Cloner copies Persistent Storage only when that option is selected.
 
-1. **CipherStick Backup USBs**: CipherStick creates backup USB sticks of itself, saving time in case of USB loss or damage.
+1. **Planned Backup USBs**: CipherStick's guided Backup action is unfinished. A private backup may include Persistent Storage, but should not be shared as a wallet-free clone.
 
 ## Disadvantages
 
