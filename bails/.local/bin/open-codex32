@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-readonly REVISION="1938b604182b5553f4e724fd2aea814496a24cd4"
+readonly REVISION="b045908d2ab16220899022624875c08be986e076"
 readonly DATA_HOME="${XDG_DATA_HOME:-/live/persistence/TailsData_unlocked/dotfiles/.local/share}"
 readonly SOURCE_DIR="$DATA_HOME/python-codex32"
 readonly BITCOIN_DATA_DIR="/live/persistence/TailsData_unlocked/Persistent/.bitcoin"
