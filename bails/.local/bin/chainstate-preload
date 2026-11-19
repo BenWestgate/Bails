@@ -52,16 +52,23 @@ else
     fi
 fi &>/dev/null &
 
+# Low MemFree only means the page cache is full. Warn when wrapped sizes a
+# sync's dbcache, 75% of (RAM - 2 GiB), below Core's assumed chainstate size,
+# about where IBD gains from a larger dbcache level off (bitcoin/bitcoin#28358).
+state=/live/persistence/TailsData_unlocked/dotfiles/.local/state
+assumed=$(sed -n 's/^chain_state_gb=//p' "$state/core-assumed-sizes" 2>/dev/null)
+if (( (total_mem / 1024 - 2048) * 3 / 4 < ${assumed:-0} * 10**9 / 2**20 )) &&
+    [ -z "$(find "$state/bitcoin-core-synced" -mtime -14 2>/dev/null)" ]; then
+    zenity --info --title='Your computer is low on memory' \
+        --text='Additional RAM might significantly improve sync performance.\n\nBitcoin Core will continue syncing normally.' \
+        "$ICON" --icon-name=computer --timeout=6 &
+fi
+
 until sync_complete; do
     cat chainstate/* &> /dev/null & full_speed=$!
     # exit when free memory <10% total memory
     if (( $(awk 'NR==2 {print $2}' /proc/meminfo)*100/total_mem < 10 )); then
         kill $full_speed &>/dev/null
-        if ! sync_complete; then
-            zenity --info --title='Your computer is low on memory' \
-                --text='Additional RAM might significantly improve sync performance.\n\nBitcoin Core will continue syncing normally.' \
-                "$ICON" --icon-name=computer --timeout=6 &
-        fi
         exit 1
     fi
     sleep $((++i))
