@@ -57,7 +57,7 @@ Bitcoin Core will continue to connect to both clearnet and Tor (onion) peers.' -
 
 # Display menu and get user response
 response=$(zenity --question --window-icon="$XDG_DATA_HOME/icons/bails128.png" \
-    --icon-name="bails128" --title="CipherStick menu" \
+    --icon-name="bails128" --title="CipherStick menu" --width=480 \
     --text="Clone - Create a synchronized CipherStick node for a friend.
 
 Backup - Duplicate your CipherStick node to protect data.
