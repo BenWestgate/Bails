@@ -3,7 +3,8 @@
 # Distributed under the MIT license; see LICENSE.
 set -o pipefail
 umask 077
-dialog() { zenity --title='Bitcoin QR' --no-markup "$@"; }
+# Drop GTK warnings so they don't bury our error messages.
+dialog() { zenity --title='Bitcoin QR' --no-markup "$@" 2>/dev/null; }
 fail() { printf '%s\n' "$*" >&2; exit 1; }
 for command in zenity zbarcam python3-qr bitcoin-cli python3 xdg-open timeout; do
     command -v "$command" >/dev/null || { dialog --error --text="Missing $command"; exit 1; }
@@ -125,7 +126,8 @@ while action=$(dialog --list --column=Action 'Scan QR' 'Send PSBT' 'Export Watch
         'Send PSBT')
             dialog --text-info --editable --title='Paste PSBT from Core; press OK to show QR' > "$directory/text" || exit 0
             tr -d '[:space:]' < "$directory/text" > "$directory/encoded"
-            { cat "$directory/encoded"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null
+            { cat "$directory/encoded"; printf '\n'; } | rpc -stdin decodepsbt >/dev/null ||
+                fail "Paste the text from Core's Copy to Clipboard, not a saved .psbt file."
             base64 -d < "$directory/encoded" > "$directory/data"
             show ;;
         'Scan QR')
