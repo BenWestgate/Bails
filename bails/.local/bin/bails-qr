@@ -86,10 +86,10 @@ check_address() {
             if json 'sys.exit(d["private_keys_enabled"] is not False)' < "$directory/wallet"; then
                 message='WARNING: This watch-only wallet has no signing keys. YOU CANNOT SPEND WITH THIS WALLET ALONE. Verify the address in your offline signing wallet before sending funds.'
             fi
-            dialog --warning --text="Address recognized by wallet $wallet:\n$address\n\n$message\n\nIf encrypted, ensure you have the passphrase and can unlock the wallet."
+            dialog --warning --text="$(printf 'Address recognized by wallet %s:\n%s\n\n%s\n\nIf encrypted, ensure you have the passphrase and can unlock the wallet.' "$wallet" "$address" "$message")"
         fi
     done < "$directory/wallets"
-    $found || dialog --warning --text="WARNING: Address not owned.\n$address\n\nNo open wallet recognizes this address. If it came from YOUR wallet, check carefully: your computer and Bitcoin Core may be compromised. Do not send funds."
+    $found || dialog --warning --text="$(printf 'WARNING: Address not owned.\n%s\n\nNo open wallet recognizes this address. If it came from YOUR wallet, check carefully: your computer and Bitcoin Core may be compromised. Do not send funds.' "$address")"
 }
 receive_psbt() {
     python3 -I -c '
